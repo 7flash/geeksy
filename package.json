@@ -13,17 +13,19 @@
         "telegram": "bun run src/connectors/telegram.ts"
     },
     "dependencies": {
-        "@types/react": "^19.2.14",
-        "@types/react-dom": "^19.2.3",
         "js-yaml": "^4.1.0",
+        "jsx-ai": "^0.1.0",
         "measure-fn": "latest",
         "melina": "latest",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "satidb": "latest",
+        "smart-agent": "link:smart-agent",
         "zod": "^3.22.0"
     },
     "devDependencies": {
-        "@types/bun": "latest"
+        "@types/bun": "latest",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3"
     }
 }

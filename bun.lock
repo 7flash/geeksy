@@ -5,18 +5,20 @@
     "": {
       "name": "geeksy",
       "dependencies": {
-        "@types/react": "^19.2.14",
-        "@types/react-dom": "^19.2.3",
         "js-yaml": "^4.1.0",
+        "jsx-ai": "^0.1.0",
         "measure-fn": "latest",
         "melina": "latest",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "satidb": "latest",
+        "smart-agent": "link:smart-agent",
         "zod": "^3.22.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
       },
     },
   },
@@ -101,6 +103,8 @@
 
     "js-yaml": ["js-yaml@4.1.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA=="],
 
+    "jsx-ai": ["jsx-ai@0.1.0", "", { "dependencies": { "measure-fn": "^3.7.0" } }, "sha512-DVzedpd0Pt4GLniBowl9Rh25liRv8bFA1Pd5fkvswLo5I6JQYxjbI0fGUMKoQoLXbxvwRAdAxSJyOkNqgt5Jbg=="],
+
     "lightningcss": ["lightningcss@1.30.2", "", { "dependencies": { "detect-libc": "^2.0.3" }, "optionalDependencies": { "lightningcss-android-arm64": "1.30.2", "lightningcss-darwin-arm64": "1.30.2", "lightningcss-darwin-x64": "1.30.2", "lightningcss-freebsd-x64": "1.30.2", "lightningcss-linux-arm-gnueabihf": "1.30.2", "lightningcss-linux-arm64-gnu": "1.30.2", "lightningcss-linux-arm64-musl": "1.30.2", "lightningcss-linux-x64-gnu": "1.30.2", "lightningcss-linux-x64-musl": "1.30.2", "lightningcss-win32-arm64-msvc": "1.30.2", "lightningcss-win32-x64-msvc": "1.30.2" } }, "sha512-utfs7Pr5uJyyvDETitgsaqSyjCb2qNRAtuqUeWIAKztsOYdcACf2KtARYXg2pSvhkt+9NfoaNY7fxjl6nuMjIQ=="],
 
     "lightningcss-android-arm64": ["lightningcss-android-arm64@1.30.2", "", { "os": "android", "cpu": "arm64" }, "sha512-BH9sEdOCahSgmkVhBLeU7Hc9DWeZ1Eb6wNS6Da8igvUwAe0sqROHddIlvU06q3WyXVEOYDZ6ykBZQnjTbmo4+A=="],
@@ -148,6 +152,8 @@
     "satidb": ["satidb@2.2.1", "", { "dependencies": { "zod": "^3.25.67" }, "peerDependencies": { "typescript": "^5.0.0" }, "bin": { "satidb": "dist/satidb.js" } }, "sha512-pdEH18fAuZuZKeDwudBVhnMJb+gv41xoZ9GSe14oBbxarQjwtHEK5i8uKtuYlqINgH9eymG2EKSnyGtxBOkaqw=="],
 
     "scheduler": ["scheduler@0.27.0", "", {}, "sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q=="],
+
+    "smart-agent": ["smart-agent@link:smart-agent", {}],
 
     "source-map-js": ["source-map-js@1.2.1", "", {}, "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="],
 
