@@ -4,6 +4,7 @@ import {
     streamingEl, streamingContent, lastThinkingMessage, lastThinkingEl,
     setStreamingEl, setStreamingContent, setLastThinking,
     activeLoadingEl, setActiveLoadingEl,
+    isQuickResponse, setQuickResponse,
 } from './state'
 import {
     appendCard, appendDivider, appendToolCard, updateLastTool,
@@ -15,6 +16,17 @@ export function clearLoading() {
     if (activeLoadingEl) { activeLoadingEl.remove(); setActiveLoadingEl(null) }
 }
 
+/** Strip tool‐call JSON blocks from thinking text — tool cards show this already */
+function cleanThinkingText(text: string): string {
+    return text
+        // Remove ```json blocks containing tool calls
+        .replace(/```json\s*[\s\S]*?```/g, '')
+        // Remove standalone inline tool JSON objects  
+        .replace(/\[?\s*\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"params"\s*:[\s\S]*?\}\s*\]?/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+}
+
 export function handleEvent(type: string, data: any) {
     const agent = getActiveAgent()
 
@@ -24,14 +36,36 @@ export function handleEvent(type: string, data: any) {
             break
         case 'replanning':
             clearLoading()
-            appendCard('thinking', 'Replanning', `Adjusting objectives for: "${data.message}"`)
+            // Only show replanning card for non-quick (task) responses
+            if (!isQuickResponse) {
+                appendCard('thinking', 'Replanning', `Adjusting objectives for: "${data.message}"`)
+            }
             break
-        case 'planning':
-            state.objectives = (data.objectives || []).map((o: any) => ({ ...o, met: undefined, reason: undefined }))
+        case 'planning': {
+            const objectives = (data.objectives || [])
+
+            // Detect quick response mode — all objectives have _quick flag or are all "respond" type
+            const allQuick = objectives.every((o: any) => o._quick || o.type === 'respond')
+            setQuickResponse(allQuick)
+
+            // Preserve completed status — completed objectives show as met
+            state.objectives = objectives.map((o: any) => ({
+                ...o,
+                met: o.completed ? true : undefined,
+                reason: o.completed ? 'Previously completed' : undefined,
+            }))
             renderObjectivesPane()
-            switchTab('objectives')
-            appendCard('planning', 'Planned Objectives', state.objectives.map((o: any) => `• ${o.name} — ${o.description}`).join('\n'))
+
+            // Only show objectives card for task mode (not quick responses)
+            if (!allQuick) {
+                switchTab('objectives')
+                const newObjectives = objectives.filter((o: any) => !o.completed)
+                if (newObjectives.length > 0) {
+                    appendCard('planning', 'Planned Objectives', newObjectives.map((o: any) => `• ${o.name} — ${o.description}`).join('\n'))
+                }
+            }
             break
+        }
         case 'awaiting_confirmation': {
             clearLoading()
             // Show confirmation card with Proceed / Cancel buttons
@@ -81,11 +115,17 @@ export function handleEvent(type: string, data: any) {
                 setStreamingEl(null)
                 setStreamingContent('')
             }
-            appendDivider(`Iteration ${data.iteration} · ${((data.elapsed || 0) / 1000).toFixed(1)}s`)
+            // Skip iteration dividers for quick responses — it's just noise
+            if (!isQuickResponse) {
+                appendDivider(`Iteration ${data.iteration} · ${((data.elapsed || 0) / 1000).toFixed(1)}s`)
+            }
             break
         case 'thinking_delta': {
             clearLoading()
             setStreamingContent(streamingContent + (data.delta || ''))
+            // Clean tool call JSON from display — show only natural language
+            const displayText = cleanThinkingText(streamingContent)
+            if (!displayText) break // nothing to show yet (just JSON so far)
             if (!streamingEl) {
                 const el = document.createElement('div')
                 el.className = 'msg msg-agent streaming'
@@ -94,7 +134,7 @@ export function handleEvent(type: string, data: any) {
                 setStreamingEl(el)
             }
             const textEl = streamingEl!.querySelector('.stream-text')
-            if (textEl) textEl.textContent = streamingContent
+            if (textEl) textEl.textContent = displayText
             scrollDown()
             break
         }
@@ -105,7 +145,8 @@ export function handleEvent(type: string, data: any) {
                 if (cursor) cursor.remove()
                 streamingEl.classList.remove('streaming')
                 // Track as last thinking so 'complete' handler can convert to response bubble
-                setLastThinking(streamingContent, streamingEl)
+                // Prefer data.message (server-cleaned, tool JSON stripped) over raw streamingContent
+                setLastThinking(data.message || streamingContent, streamingEl)
                 setStreamingEl(null)
                 setStreamingContent('')
             } else {
@@ -153,17 +194,26 @@ export function handleEvent(type: string, data: any) {
             }
             if (lastThinkingMessage) {
                 if (lastThinkingEl) lastThinkingEl.remove()
-                appendResponseBubble(lastThinkingMessage)
+                const cleaned = cleanThinkingText(lastThinkingMessage)
+                if (cleaned) appendResponseBubble(cleaned)
             }
-            const iters = (data.iteration || 0) + 1
-            const elapsed = ((data.elapsed || 0) / 1000).toFixed(1)
-            appendCard('complete', '✓ Complete', `${iters} iteration${iters > 1 ? 's' : ''} · ${elapsed}s`)
+
+            // For quick responses, show minimal completion (no card)
+            // For tasks, show full completion card
+            if (!isQuickResponse) {
+                const iters = (data.iteration || 0) + 1
+                const elapsed = ((data.elapsed || 0) / 1000).toFixed(1)
+                appendCard('complete', '✓ Complete', `${iters} iteration${iters > 1 ? 's' : ''} · ${elapsed}s`)
+            }
+
             setLastThinking('', null)
+            setQuickResponse(false) // reset for next message
             fetchSchedules()
             break
         }
         case 'error':
             appendCard('error', 'Error', data.error || '')
+            setQuickResponse(false) // reset
             break
         case 'max_iterations': {
             if (streamingEl) {
@@ -173,10 +223,12 @@ export function handleEvent(type: string, data: any) {
             }
             if (lastThinkingMessage) {
                 if (lastThinkingEl) lastThinkingEl.remove()
-                appendResponseBubble(lastThinkingMessage)
+                const cleaned = cleanThinkingText(lastThinkingMessage)
+                if (cleaned) appendResponseBubble(cleaned)
             }
             appendCard('error', 'Reached Limit', `Stopped after ${data.iteration} iterations. Try rephrasing your request or breaking it into smaller steps.`)
             setLastThinking('', null)
+            setQuickResponse(false) // reset
             break
         }
         case 'cancelled': {
@@ -187,11 +239,13 @@ export function handleEvent(type: string, data: any) {
             }
             if (lastThinkingMessage) {
                 if (lastThinkingEl) lastThinkingEl.remove()
-                appendResponseBubble(lastThinkingMessage)
+                const cleaned = cleanThinkingText(lastThinkingMessage)
+                if (cleaned) appendResponseBubble(cleaned)
             }
             const elapsed = ((data.elapsed || 0) / 1000).toFixed(1)
             appendCard('cancelled', '■ Cancelled', `Stopped after ${(data.iteration || 0) + 1} iteration${data.iteration > 0 ? 's' : ''} · ${elapsed}s`)
             setLastThinking('', null)
+            setQuickResponse(false) // reset
             break
         }
     }

@@ -33,6 +33,7 @@ export let streamingContent = ''
 export let activeLoadingEl: HTMLElement | null = null
 export let lastThinkingMessage = ''
 export let lastThinkingEl: HTMLElement | null = null
+export let isQuickResponse = false
 
 export function setStreamingEl(el: HTMLElement | null) { streamingEl = el }
 export function setStreamingContent(s: string) { streamingContent = s }
@@ -41,6 +42,7 @@ export function setLastThinking(msg: string, el: HTMLElement | null) {
     lastThinkingMessage = msg
     lastThinkingEl = el
 }
+export function setQuickResponse(v: boolean) { isQuickResponse = v }
 
 // ── DOM refs (set once in mount()) ──
 

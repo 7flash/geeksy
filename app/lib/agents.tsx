@@ -86,7 +86,7 @@ export async function deleteAgent(id: number) {
                     <button class="example-chip" data-prompt="tell me a short joke">🎭 tell me a joke</button>
                     <button class="example-chip" data-prompt="list all files in the current directory">📂 list files here</button>
                     <button class="example-chip" data-prompt="create a hello.txt file that says Hello World">📝 create hello.txt</button>
-                    <button class="example-chip" data-prompt="what version of bun is installed?">⚡ bun version</button>
+                    <button class="example-chip" data-prompt="solve ARC puzzle 0d3d703e">🧩 solve ARC puzzle</button>
                 </div>
             </div>`
             dom.chatArea.innerHTML = emptyHtml
