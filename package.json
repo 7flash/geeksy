@@ -8,6 +8,7 @@
         "start": "bun run app/server.ts"
     },
     "dependencies": {
+        "bgrun": "^3.4.0",
         "js-yaml": "^4.1.0",
         "jsx-ai": "^0.1.0",
         "measure-fn": "latest",
