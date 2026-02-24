@@ -82,7 +82,7 @@ app/                    # Melina.js chat frontend
 
 | Package | Role |
 |---------|------|
-| `@mements/smart-agent` | Agentic loop — Agent, Session, objectives, skills |
+| `smart-agent-ai` | Agentic loop — Agent, Session, objectives, skills |
 | `jsx-ai` | LLM primitives — callLLM, callText, streamLLM |
 | `melina` | Web framework — SSR, routing, client runtime |
 | `measure-fn` | Performance instrumentation |
