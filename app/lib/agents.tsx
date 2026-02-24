@@ -80,7 +80,7 @@ export async function deleteAgent(id: number) {
             dom.chatArea.innerHTML = ''
             const emptyHtml = `<div class="empty-state" id="empty-state">
                 <div class="empty-icon">🤖</div>
-                <h2>Smart Agent Workspace</h2>
+                <h2>Geeksy</h2>
                 <p>Create a new agent or select one from the sidebar, then describe what you want it to do.</p>
                 <div class="example-chips">
                     <button class="example-chip" data-prompt="tell me a short joke">🎭 tell me a joke</button>

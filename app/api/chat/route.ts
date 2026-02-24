@@ -1,7 +1,7 @@
-// app/src/api/chat/route.ts — SSE streaming endpoint with Session pipeline
+// app/api/chat/route.ts — SSE streaming endpoint with Session pipeline
 import { measure, measureSync } from "measure-fn"
-import { Session } from "../../../../src"
-import type { AgentConfig } from "../../../../src"
+import { Session } from "smart-agent"
+import type { AgentConfig } from "smart-agent"
 // DB persistence stub (db module was removed)
 const addMessage = (_agentId: number, _role: string, _content: string) => { }
 import { join } from "path"
@@ -10,7 +10,7 @@ import { readdirSync } from "fs"
 // Ensure saved API keys are loaded into process.env
 import '../models/route'
 
-const skillsDir = join(import.meta.dir, "../../../../skills")
+const skillsDir = join(process.cwd(), "skills")
 
 // In-memory session store (keyed by session ID)
 const sessions = new Map<string, Session>()

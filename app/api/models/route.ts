@@ -63,7 +63,7 @@ const PROVIDERS: ProviderDef[] = [
 // ── Persistent key storage ──
 // Store keys in a JSON file alongside the DB
 
-const KEYS_PATH = join(process.cwd(), '.smart-agent-keys.json')
+const KEYS_PATH = join(process.cwd(), '.geeksy-keys.json')
 
 async function loadKeys(): Promise<Record<string, string>> {
     try {

@@ -46,7 +46,7 @@ export default function Page() {
                     <div className="chat-area" id="chat-area">
                         <div className="empty-state" id="empty-state">
                             <div className="empty-icon">🤖</div>
-                            <h2>Smart Agent Workspace</h2>
+                            <h2>Geeksy</h2>
                             <p>Create a new agent or select one from the sidebar, then describe what you want it to do.</p>
                             <div className="example-chips">
                                 <button className="example-chip" data-prompt="tell me a short joke">🎭 tell me a joke</button>

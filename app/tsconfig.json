@@ -7,10 +7,13 @@
         "moduleResolution": "bundler",
         "strict": true,
         "noEmit": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "types": [
+            "bun-types"
+        ]
     },
     "include": [
-        "src/**/*",
+        "**/*",
         "server.ts"
     ]
 }

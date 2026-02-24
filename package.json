@@ -8,13 +8,22 @@
         "geeksy": "./src/cli.ts"
     },
     "scripts": {
-        "dev": "bun run src/cli.ts serve",
-        "start": "bun run src/cli.ts serve",
+        "dev": "bun run app/server.ts",
+        "start": "bun run app/server.ts",
         "telegram": "bun run src/connectors/telegram.ts"
     },
     "dependencies": {
-        "gx402": "file:../../",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "js-yaml": "^4.1.0",
+        "measure-fn": "latest",
+        "melina": "latest",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
         "satidb": "latest",
         "zod": "^3.22.0"
+    },
+    "devDependencies": {
+        "@types/bun": "latest"
     }
 }

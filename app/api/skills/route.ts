@@ -1,10 +1,10 @@
-// app/src/api/skills/route.ts — Skill discovery API
+// app/api/skills/route.ts — Skill discovery API
 import { join } from 'path'
 import { readdirSync } from 'fs'
 import yaml from 'js-yaml'
 import { measureSync } from 'measure-fn'
 
-const skillsDir = join(import.meta.dir, '../../../../skills')
+const skillsDir = join(process.cwd(), 'skills')
 
 export interface SkillInfo {
     id: string         // filename without extension
