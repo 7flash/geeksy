@@ -99,12 +99,23 @@ export function handleEvent(type: string, data: any) {
             break
         }
         case 'thinking':
-            if (streamingEl) {
-                streamingEl.remove()
+            if (streamingEl && streamingContent) {
+                // Finalize the streaming bubble — remove cursor, mark as complete
+                const cursor = streamingEl.querySelector('.stream-cursor')
+                if (cursor) cursor.remove()
+                streamingEl.classList.remove('streaming')
+                // Track as last thinking so 'complete' handler can convert to response bubble
+                setLastThinking(streamingContent, streamingEl)
                 setStreamingEl(null)
                 setStreamingContent('')
+            } else {
+                if (streamingEl) {
+                    streamingEl.remove()
+                    setStreamingEl(null)
+                    setStreamingContent('')
+                }
+                setLastThinking(data.message || '', appendThinkingCard(data.message || ''))
             }
-            setLastThinking(data.message || '', appendThinkingCard(data.message || ''))
             break
         case 'tool_start':
             if (streamingEl) {
