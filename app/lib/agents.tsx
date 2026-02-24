@@ -53,6 +53,36 @@ function pushAgentUrl(agentId: number | null) {
 }
 
 // ══════════════════════════════════════
+// EMPTY STATE
+// ══════════════════════════════════════
+
+/** Show the welcome/empty state with example chips inside chat-area */
+function showEmptyState() {
+    const existing = document.getElementById('empty-state')
+    if (existing) return // already showing
+    const el = document.createElement('div')
+    el.className = 'empty-state'
+    el.id = 'empty-state'
+    el.innerHTML = `
+        <div class="empty-icon">🤖</div>
+        <h2>Geeksy</h2>
+        <p>Create a new agent or select one from the sidebar, then describe what you want it to do.</p>
+        <div class="example-chips">
+            <button class="example-chip" data-prompt="tell me a short joke">🎭 tell me a joke</button>
+            <button class="example-chip" data-prompt="list all files in the current directory">📂 list files here</button>
+            <button class="example-chip" data-prompt="create a hello.txt file that says Hello World">📝 create hello.txt</button>
+            <button class="example-chip" data-prompt="solve ARC puzzle 0d3d703e">🧩 solve ARC puzzle</button>
+        </div>
+    `
+    dom.chatArea.prepend(el)
+}
+
+/** Remove the empty state (when messages start appearing) */
+export function hideEmptyState() {
+    document.getElementById('empty-state')?.remove()
+}
+
+// ══════════════════════════════════════
 // AGENT MANAGEMENT
 // ══════════════════════════════════════
 
@@ -102,23 +132,7 @@ export async function deleteAgent(id: number) {
             state.files = []
             toolCards.length = 0
             pushAgentUrl(null)
-
-            const content = dom.chatArea.closest('.chat-content')
-            if (content) {
-                const empty = document.getElementById('empty-state')
-                if (!empty) {
-                    const emptyDiv = document.createElement('div')
-                    emptyDiv.id = 'empty-state'
-                    emptyDiv.innerHTML = /* fallback empty state */ `
-                        <div class="empty-brand">✦ smart-agent</div>
-                        <p class="empty-sub">Your autonomous coding assistant</p>
-                        <div class="example-chips">
-                            <button class="example-chip" data-prompt="solve ARC puzzle 0d3d703e">🧩 solve ARC puzzle</button>
-                        </div>
-                    `
-                    content.insertBefore(emptyDiv, dom.chatArea)
-                }
-            }
+            showEmptyState()
             renderObjectivesPane()
             renderFilesPane()
         }
@@ -184,10 +198,12 @@ export async function selectAgent(id: number) {
         } catch { /* fresh agent, no state yet */ }
     }
 
-    // Handle empty state display
-    const empty = document.getElementById('empty-state')
-    if (dom.chatArea.childElementCount > 0 && empty) {
-        empty.remove()
+    // Show empty state if no messages, hide if there are messages
+    const hasMessages = dom.chatArea.querySelector('.user-bubble, .response-bubble, .typing-indicator')
+    if (hasMessages) {
+        hideEmptyState()
+    } else {
+        showEmptyState()
     }
 
     state.schedules = []
@@ -231,6 +247,8 @@ export function clearCurrentChat() {
     toolCards.length = 0
     agent.sessionId = null
     agentChatStore.delete(agent.id)
+
+    showEmptyState()
 
     fetch('/api/state', {
         method: 'POST',
@@ -309,8 +327,7 @@ export async function sendMessage() {
     dom.inputEl.style.height = 'auto'
     renderSidebar()
 
-    const empty = document.getElementById('empty-state')
-    if (empty) empty.remove()
+    hideEmptyState()
 
     if (!agent.sessionId) {
         agent.name = text.length > 24 ? text.substring(0, 24) + '…' : text
