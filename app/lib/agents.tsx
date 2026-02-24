@@ -8,7 +8,7 @@ import {
 import { appendUserBubble, appendLoading, appendCard, appendResponseBubble } from './chat-ui'
 import { renderObjectivesPane, renderFilesPane, renderSchedulePane } from './panels'
 import { handleEvent, clearLoading } from './events'
-import type { AgentEntry } from './types'
+import type { AgentEntry, ToolCardEntry } from './types'
 
 // ══════════════════════════════════════
 // RESTORE
@@ -26,11 +26,30 @@ export async function restoreState() {
             status: 'idle' as const,
             model: a.model,
         }))
+        renderSidebar()
 
-        if (state.agents.length > 0) {
-            await selectAgent(state.agents[0].id)
+        // Select agent: URL path > first in list
+        const urlAgentId = getAgentIdFromUrl()
+        const targetId = urlAgentId ?? state.agents[0].id
+        const target = state.agents.find(a => a.id === targetId)
+        if (target) {
+            await selectAgent(target.id)
         }
     } catch { /* first load, no agents yet */ }
+}
+
+/** Extract agent ID from URL path like /agent/123 */
+function getAgentIdFromUrl(): number | null {
+    const match = window.location.pathname.match(/\/agent\/(\d+)/)
+    return match ? Number(match[1]) : null
+}
+
+/** Push agent URL without full navigation */
+function pushAgentUrl(agentId: number | null) {
+    const path = agentId ? `/agent/${agentId}` : '/'
+    if (window.location.pathname !== path) {
+        window.history.pushState({ agentId }, '', path)
+    }
 }
 
 // ══════════════════════════════════════
@@ -54,8 +73,9 @@ export async function createAgent() {
             model: created.model,
         }
         state.agents.push(agent)
-        selectAgent(agent.id)
+        await selectAgent(agent.id)
         renderSidebar()
+        saveState()
     } catch (e) {
         console.error('Failed to create agent:', e)
     }
@@ -63,35 +83,42 @@ export async function createAgent() {
 
 export async function deleteAgent(id: number) {
     if (state.isRunning && state.activeAgentId === id) return
-    const idx = state.agents.findIndex(a => a.id === id)
-    if (idx < 0) return
-    state.agents.splice(idx, 1)
-    agentChatStore.delete(id)
 
-    fetch(`/api/agents?id=${id}`, { method: 'DELETE' }).catch(() => { })
+    try {
+        await fetch(`/api/agents?id=${id}`, { method: 'DELETE' })
+    } catch { }
+
+    state.agents = state.agents.filter(a => a.id !== id)
+    agentChatStore.delete(id)
 
     if (state.activeAgentId === id) {
         if (state.agents.length > 0) {
-            selectAgent(state.agents[Math.max(0, idx - 1)].id)
+            selectAgent(state.agents[0].id)
         } else {
             state.activeAgentId = null
-            dom.agentHeaderName.textContent = 'Select or create an agent'
-            dom.agentStatusDot.className = 'agent-status-dot'
             dom.chatArea.innerHTML = ''
-            const emptyHtml = `<div class="empty-state" id="empty-state">
-                <div class="empty-icon">🤖</div>
-                <h2>Geeksy</h2>
-                <p>Create a new agent or select one from the sidebar, then describe what you want it to do.</p>
-                <div class="example-chips">
-                    <button class="example-chip" data-prompt="tell me a short joke">🎭 tell me a joke</button>
-                    <button class="example-chip" data-prompt="list all files in the current directory">📂 list files here</button>
-                    <button class="example-chip" data-prompt="create a hello.txt file that says Hello World">📝 create hello.txt</button>
-                    <button class="example-chip" data-prompt="solve ARC puzzle 0d3d703e">🧩 solve ARC puzzle</button>
-                </div>
-            </div>`
-            dom.chatArea.innerHTML = emptyHtml
+            dom.agentHeaderName.textContent = ''
             state.objectives = []
             state.files = []
+            toolCards.length = 0
+            pushAgentUrl(null)
+
+            const content = dom.chatArea.closest('.chat-content')
+            if (content) {
+                const empty = document.getElementById('empty-state')
+                if (!empty) {
+                    const emptyDiv = document.createElement('div')
+                    emptyDiv.id = 'empty-state'
+                    emptyDiv.innerHTML = /* fallback empty state */ `
+                        <div class="empty-brand">✦ smart-agent</div>
+                        <p class="empty-sub">Your autonomous coding assistant</p>
+                        <div class="example-chips">
+                            <button class="example-chip" data-prompt="solve ARC puzzle 0d3d703e">🧩 solve ARC puzzle</button>
+                        </div>
+                    `
+                    content.insertBefore(emptyDiv, dom.chatArea)
+                }
+            }
             renderObjectivesPane()
             renderFilesPane()
         }
@@ -103,37 +130,25 @@ export async function deleteAgent(id: number) {
 export async function selectAgent(id: number) {
     const prev = state.activeAgentId
 
+    // Save current agent's state before switching
     if (prev && prev !== id) {
-        agentChatStore.set(prev, {
-            html: dom.chatArea.innerHTML,
-            objectives: [...state.objectives],
-            files: [...state.files],
-            toolCards: [...toolCards],
-        })
+        saveState()
     }
 
     state.activeAgentId = id
+    pushAgentUrl(id)
     const agent = state.agents.find(a => a.id === id)
     if (!agent) return
 
     dom.agentHeaderName.textContent = agent.name
     dom.agentStatusDot.className = `agent-status-dot ${agent.status === 'running' ? 'active' : ''}`
 
+    // Try in-memory cache first, then server DB
     const saved = agentChatStore.get(id)
     if (saved) {
-        dom.chatArea.innerHTML = saved.html
-        state.objectives = saved.objectives
-        state.files = saved.files
-        toolCards.length = 0
-        toolCards.push(...saved.toolCards)
-        dom.chatArea.querySelectorAll('.card-thinking .thinking-toggle').forEach(toggle => {
-            const card = toggle.closest('.card-thinking') as HTMLElement
-            if (card && !card.dataset.bound) {
-                card.dataset.bound = '1'
-                toggle.addEventListener('click', () => card.classList.toggle('collapsed'))
-            }
-        })
+        restoreChatSnapshot(saved)
     } else {
+        // Fetch from server DB
         dom.chatArea.innerHTML = ''
         state.objectives = []
         state.files = []
@@ -155,7 +170,7 @@ export async function selectAgent(id: number) {
                 state.objectives = data.objectives.map((o: any) => ({
                     name: o.name,
                     description: o.description,
-                    type: o.status,
+                    type: o.type,
                     met: o.status === 'complete' ? true : o.status === 'failed' ? false : undefined,
                     reason: o.result,
                 }))
@@ -163,10 +178,16 @@ export async function selectAgent(id: number) {
             if (data.files?.length) {
                 state.files = data.files.map((f: any) => ({
                     path: f.path,
-                    action: f.action === 'modified' ? 'write' as const : 'read' as const,
+                    action: f.action === 'write' ? 'write' as const : 'read' as const,
                 }))
             }
         } catch { /* fresh agent, no state yet */ }
+    }
+
+    // Handle empty state display
+    const empty = document.getElementById('empty-state')
+    if (dom.chatArea.childElementCount > 0 && empty) {
+        empty.remove()
     }
 
     state.schedules = []
@@ -176,6 +197,28 @@ export async function selectAgent(id: number) {
     renderSidebar()
     saveState()
 }
+
+/** Restore a chat snapshot into the DOM */
+function restoreChatSnapshot(saved: { html: string; objectives: any[]; files: any[]; toolCards: ToolCardEntry[] }) {
+    dom.chatArea.innerHTML = saved.html
+    state.objectives = saved.objectives
+    state.files = saved.files
+    toolCards.length = 0
+    toolCards.push(...saved.toolCards)
+    rebindThinkingToggles()
+}
+
+/** Re-bind thinking card collapse toggles after restoring HTML */
+function rebindThinkingToggles() {
+    dom.chatArea.querySelectorAll('.card-thinking .thinking-toggle').forEach(toggle => {
+        const card = toggle.closest('.card-thinking') as HTMLElement
+        if (card && !card.dataset.bound) {
+            card.dataset.bound = '1'
+            toggle.addEventListener('click', () => card.classList.toggle('collapsed'))
+        }
+    })
+}
+
 
 export function clearCurrentChat() {
     if (state.isRunning || !state.activeAgentId) return

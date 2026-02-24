@@ -2,8 +2,7 @@
 import { measure, measureSync } from "measure-fn"
 import { Session } from "smart-agent-ai"
 import type { AgentConfig } from "smart-agent-ai"
-// DB persistence stub (db module was removed)
-const addMessage = (_agentId: number, _role: string, _content: string) => { }
+import { db } from '../../lib/db'
 import { join } from "path"
 import { readdirSync } from "fs"
 
@@ -117,7 +116,7 @@ export async function POST(req: Request) {
 
             // Persist user message to DB
             if (body.agentId) {
-                addMessage(body.agentId, 'user', body.message)
+                db.messages.insert({ agentId: body.agentId, role: 'user', content: body.message })
             }
 
             // Emit session ID
@@ -132,11 +131,54 @@ export async function POST(req: Request) {
 
                     // Accumulate assistant response text
                     if (event.type === 'thinking_delta') assistantText += (event as any).delta || ''
+
+                    // Persist objectives when planned
+                    if (event.type === 'planning' && body.agentId) {
+                        const objectives = (event as any).objectives || []
+                        for (const obj of objectives) {
+                            try {
+                                db.objectives.upsert(
+                                    { agentId: body.agentId, name: obj.name },
+                                    { agentId: body.agentId, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
+                                )
+                            } catch { }
+                        }
+                    }
+
+                    // Update objective status
+                    if (event.type === 'objective_check' && body.agentId) {
+                        const results = (event as any).results || []
+                        for (const r of results) {
+                            const existing = db.objectives.select().where({ agentId: body.agentId, name: r.name }).first()
+                            if (existing) {
+                                db.objectives.update(existing.id, {
+                                    status: r.met ? 'complete' : 'failed',
+                                    result: r.reason || '',
+                                })
+                            }
+                        }
+                    }
+
+                    // Persist file accesses
+                    if (event.type === 'tool_start' && body.agentId) {
+                        const tool = (event as any).tool
+                        const params = (event as any).params || {}
+                        if (tool === 'readFile' && params.path) {
+                            try { db.files.upsert({ agentId: body.agentId, path: params.path }, { agentId: body.agentId, path: params.path, action: 'read' }) } catch { }
+                        } else if (tool === 'writeFile' && params.path) {
+                            try { db.files.upsert({ agentId: body.agentId, path: params.path }, { agentId: body.agentId, path: params.path, action: 'write' }) } catch { }
+                        }
+                    }
                 }
 
                 // Persist assistant response
                 if (body.agentId && assistantText) {
-                    addMessage(body.agentId, 'assistant', assistantText)
+                    db.messages.insert({ agentId: body.agentId, role: 'assistant', content: assistantText })
+                }
+
+                // Save sessionId to agent record
+                if (body.agentId) {
+                    db.agents.update(body.agentId, { sessionId: session.id })
                 }
 
                 measureSync(`SSE complete (${eventCount} events)`)

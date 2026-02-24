@@ -13,6 +13,7 @@
         "react-dom": "^19.2.4",
         "satidb": "latest",
         "smart-agent-ai": "^1.0.0",
+        "sqlite-zod-orm": "^3.26.0",
         "zod": "^3.22.0",
       },
       "devDependencies": {
@@ -156,6 +157,8 @@
     "smart-agent-ai": ["smart-agent-ai@1.0.0", "", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "^0.1.0", "measure-fn": "latest" } }, "sha512-fcQl94QSjsRFUKzTc4z5Bgk0z6vTq80cjLhzyBMZDergTQwBL5cuYcTsPg6HpI34XmU+n9+V8niIx1f5YGexJg=="],
 
     "source-map-js": ["source-map-js@1.2.1", "", {}, "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="],
+
+    "sqlite-zod-orm": ["sqlite-zod-orm@3.26.0", "", { "dependencies": { "measure-fn": "^3.3.0", "zod": "^3.25.67" }, "peerDependencies": { "typescript": "^5.0.0" } }, "sha512-fwYEg0g9r6OcFZ1cxBgz7GxunTQaL6QFC8LwgpmV84NXfTixgp6/Pj9FOBf+CN2uo5xAJvLLasEP/m2fX6fCAA=="],
 
     "tailwindcss": ["tailwindcss@4.1.18", "", {}, "sha512-4+Z+0yiYyEtUVCScyfHCxOYP06L5Ne+JiHhY2IjR2KWMIWhJOYZKLSGZaP5HkZ8+bY0cxfzwDE5uOmzFXyIwxw=="],
 

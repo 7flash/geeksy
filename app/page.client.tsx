@@ -6,7 +6,7 @@ import { switchTab } from './lib/panels'
 import {
     createAgent, deleteAgent, clearCurrentChat, exportChatAsMarkdown,
     sendMessage, stopAgent, loadSkills, loadModels, restoreState, setupResizeHandle,
-    renderSidebar,
+    renderSidebar, selectAgent,
 } from './lib/agents'
 
 configure({ timestamps: true })
@@ -156,6 +156,14 @@ export default function mount() {
             dom.inputEl.style.height = Math.min(dom.inputEl.scrollHeight, 100) + 'px'
         }
         dom.inputEl.focus()
+    })
+
+    // Browser back/forward navigation
+    window.addEventListener('popstate', (e) => {
+        const agentId = e.state?.agentId
+        if (agentId && state.agents.find(a => a.id === agentId)) {
+            selectAgent(agentId)
+        }
     })
 
     // Restore persisted state from server

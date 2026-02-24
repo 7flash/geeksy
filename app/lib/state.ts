@@ -16,7 +16,7 @@ export const state: WorkspaceState = {
     activeTab: 'objectives',
 }
 
-// Per-agent chat + state persistence (for instant tab switching)
+// Per-agent chat + state persistence (in-memory for instant tab switching within session)
 export const agentChatStore = new Map<number, {
     html: string
     objectives: WorkspaceState['objectives']
