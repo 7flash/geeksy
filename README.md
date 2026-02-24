@@ -1,103 +1,92 @@
-# 🤖 Geeksy
+# geeksy
 
-**Multi-Agent Orchestration System with Observability Dashboard**
-
-Geeksy is an agent orchestration platform that provides:
-- **Message Bus** - Central event stream for incoming messages from various sources (Telegram, Discord, API, etc.)
-- **Agent Registry** - Manage agent lifecycle with bgr
-- **Activity Stream** - Real-time observability of all agent actions
-- **Response Channel** - Collect and dispatch agent responses back to users
-- **Dashboard UI** - Beautiful observability interface
-
-## Architecture
+Chat interface for autonomous AI agents. Built with [Melina.js](https://github.com/7flash/melina), powered by [smart-agent](https://github.com/7flash/smart-agent) and [jsx-ai](https://github.com/7flash/jsx-ai).
 
 ```
-                    ┌──────────────────────────────────────────┐
-                    │         MESSAGE SOURCES                   │
-                    │  ┌──────────┐  ┌──────────┐  ┌─────────┐ │
-                    │  │ Telegram │  │ Discord  │  │ Test UI │ │
-                    │  └────┬─────┘  └────┬─────┘  └────┬────┘ │
-                    └───────┼─────────────┼─────────────┼──────┘
-                            └─────────────┼─────────────┘
-                                          ▼
-                    ┌──────────────────────────────────────────┐
-                    │            MESSAGE BUS                    │
-                    │     (Central queue with SatiDB)           │
-                    └──────────────────────────────────────────┘
-                            │             │             │
-                ┌───────────┼─────────────┼─────────────┼───────────┐
-                ▼           ▼             ▼             ▼           │
-        ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐   │
-        │ Agent A   │ │ Agent B   │ │ Agent C   │ │ Agent D   │   │
-        │ (handles) │ │ (ignores) │ │ (spawns)  │ │ (responds)│   │
-        └───────────┘ └───────────┘ └───────────┘ └───────────┘   │
-                                                                   │
-                    ┌──────────────────────────────────────────────┘
-                    ▼
-        ┌──────────────────────────────────────────────────────┐
-        │              OBSERVABILITY DASHBOARD                  │
-        │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐  │
-        │  │ Agent List  │  │ Message     │  │ Activity     │  │
-        │  │ & Status    │  │ Stream      │  │ Logs         │  │
-        │  └─────────────┘  └─────────────┘  └──────────────┘  │
-        │  ┌─────────────────────────────────────────────────┐ │
-        │  │              Test Message Sender                 │ │
-        │  └─────────────────────────────────────────────────┘ │
-        └──────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│  Geeksy                                          gemini-2.5 ▼ │
+├──────────┬─────────────────────────────────────────────────────┤
+│ Agents   │                                                    │
+│          │                  🤖 Geeksy                         │
+│ + New    │     Create an agent and describe what you want.     │
+│          │                                                    │
+│          │   [tell me a joke]  [list files]  [create file]    │
+│          │                                                    │
+│          ├─────────────────────────────────────────────────────┤
+│          │  Type your command or question...            [➤]   │
+│          ├─────────────────────────────────────────────────────┤
+│ Models   │  Objectives │ Files │ Schedule                     │
+│ Skills   │  No objectives yet.                                │
+│ Plugins  │                                                    │
+├──────────┴─────────────────────────────────────────────────────┤
+│ ⚙ Settings                                                    │
+└────────────────────────────────────────────────────────────────┘
 ```
-
-## Agent Actions
-
-Each agent can decide to:
-- **handle** - Process the message silently (log, analyze, store)
-- **ignore** - Skip this message, it's not relevant
-- **spawn** - Generate new agent code and start a new bgr process
-- **respond** - Send a response back to the user
 
 ## Quick Start
 
 ```bash
-# Start the dashboard
-cd packages/geeksy
+bun install
 bun run dev
-
-# Or use bgr
-bgr --name geeksy --command "bun run src/cli.ts serve" --directory .
+# → http://localhost:3737
 ```
+
+Set an API key in the Settings panel or via environment:
+
+```bash
+export GEMINI_API_KEY=your-key
+bun run dev
+```
+
+## How It Works
+
+1. **Create an agent** — click "New Agent", pick a model, add skills
+2. **Chat** — type a message, the agent plans objectives and executes them
+3. **Watch** — objectives, tool calls, and file changes stream in real-time via SSE
+
+Under the hood:
+- **[smart-agent](https://github.com/7flash/smart-agent)** runs the agentic loop — planner generates objectives, worker executes tools, validator checks success
+- **[jsx-ai](https://github.com/7flash/jsx-ai)** handles LLM calls — provider routing (Gemini, OpenAI, Anthropic, DeepSeek), streaming, retries
+- **[Melina.js](https://github.com/7flash/melina)** serves the frontend — SSR + vanilla client runtime, zero React on the client
+
+## Project Structure
+
+```
+app/                    # Melina.js chat frontend
+├── server.ts           # Entry point — starts Melina on port 3737
+├── page.tsx            # Main chat page (SSR)
+├── globals.css         # Dark theme styles
+├── lib/                # Client-side modules
+│   ├── agents.tsx      # Agent CRUD + chat logic
+│   ├── chat.tsx        # SSE streaming + message rendering
+│   └── settings.tsx    # API key management
+└── api/                # Backend API routes
+    ├── chat/route.ts   # SSE streaming chat endpoint (Session pipeline)
+    ├── agents/route.ts # Agent management (in-memory)
+    ├── models/route.ts # Model listing + API key storage
+    ├── skills/route.ts # Skill file discovery
+    └── schedule/route.ts
+```
+
+## API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/chat` | POST | Start a chat session, returns SSE stream |
+| `/api/agents` | GET/POST/PUT/DELETE | Agent CRUD |
+| `/api/models` | GET | List available LLM models |
+| `/api/models/keys` | GET/POST | API key management |
+| `/api/skills` | GET | List available skill files |
 
 ## Dependencies
 
-- **gx402** - AI inference (OpenAI, Anthropic, Gemini)
-- **satidb** - Persistent storage
-- **bgr** - Process management
-- **melina** - Frontend framework
-
-## API Routes
-
-- `GET /api/agents` - List all registered agents
-- `POST /api/agents` - Start/stop an agent
-- `GET /api/messages` - Get recent messages
-- `POST /api/messages` - Publish a new message
-- `GET /api/activities` - Get activity stream
-
-## Creating an Agent
-
-```typescript
-import { Agent, LLM } from 'gx402';
-import { z } from 'zod';
-
-const myAgent = new Agent({
-    llm: LLM['gemini-2.0-flash'],
-    inputFormat: z.object({
-        message: z.string(),
-    }),
-    outputFormat: z.object({
-        action: z.string(), // 'handle', 'ignore', 'spawn', 'respond'
-        response: z.string(),
-    }),
-    systemPrompt: `Decide what to do with incoming messages...`,
-});
-```
+| Package | Role |
+|---------|------|
+| `@mements/smart-agent` | Agentic loop — Agent, Session, objectives, skills |
+| `jsx-ai` | LLM primitives — callLLM, callText, streamLLM |
+| `melina` | Web framework — SSR, routing, client runtime |
+| `measure-fn` | Performance instrumentation |
+| `satidb` | SQLite persistence (Zod schemas) |
 
 ## License
 
