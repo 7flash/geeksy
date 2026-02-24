@@ -5,7 +5,6 @@
     "": {
       "name": "geeksy",
       "dependencies": {
-        "@mements/smart-agent": "0.2.0",
         "js-yaml": "^4.1.0",
         "jsx-ai": "^0.1.0",
         "measure-fn": "latest",
@@ -13,6 +12,7 @@
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "satidb": "latest",
+        "smart-agent-ai": "^1.0.0",
         "zod": "^3.22.0",
       },
       "devDependencies": {
@@ -34,8 +34,6 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
-
-    "@mements/smart-agent": ["@mements/smart-agent@0.2.0", "", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "^0.1.0", "measure-fn": "latest" } }, "sha512-iClHqTw46TbFSmlbhrwTm21+gh4WaPWkvgXymx3NKYI6rS/FLtjt5rymO8XqUECjLbTzfd17I+mjc5Mxu68xbA=="],
 
     "@tailwindcss/node": ["@tailwindcss/node@4.1.18", "", { "dependencies": { "@jridgewell/remapping": "^2.3.4", "enhanced-resolve": "^5.18.3", "jiti": "^2.6.1", "lightningcss": "1.30.2", "magic-string": "^0.30.21", "source-map-js": "^1.2.1", "tailwindcss": "4.1.18" } }, "sha512-DoR7U1P7iYhw16qJ49fgXUlry1t4CpXeErJHnQ44JgTSKMaZUdf17cfn5mHchfJ4KRBZRFA/Coo+MUF5+gOaCQ=="],
 
@@ -154,6 +152,8 @@
     "satidb": ["satidb@2.2.1", "", { "dependencies": { "zod": "^3.25.67" }, "peerDependencies": { "typescript": "^5.0.0" }, "bin": { "satidb": "dist/satidb.js" } }, "sha512-pdEH18fAuZuZKeDwudBVhnMJb+gv41xoZ9GSe14oBbxarQjwtHEK5i8uKtuYlqINgH9eymG2EKSnyGtxBOkaqw=="],
 
     "scheduler": ["scheduler@0.27.0", "", {}, "sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q=="],
+
+    "smart-agent-ai": ["smart-agent-ai@1.0.0", "", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "^0.1.0", "measure-fn": "latest" } }, "sha512-fcQl94QSjsRFUKzTc4z5Bgk0z6vTq80cjLhzyBMZDergTQwBL5cuYcTsPg6HpI34XmU+n9+V8niIx1f5YGexJg=="],
 
     "source-map-js": ["source-map-js@1.2.1", "", {}, "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="],
 
