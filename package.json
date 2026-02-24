@@ -20,7 +20,7 @@
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "satidb": "latest",
-        "smart-agent": "link:smart-agent",
+        "@mements/smart-agent": "^0.1.0",
         "zod": "^3.22.0"
     },
     "devDependencies": {
