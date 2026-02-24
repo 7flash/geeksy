@@ -8,7 +8,7 @@
         "start": "bun run app/server.ts"
     },
     "dependencies": {
-        "@mements/smart-agent": "^0.1.0",
+        "@mements/smart-agent": "0.2.0",
         "js-yaml": "^4.1.0",
         "jsx-ai": "^0.1.0",
         "measure-fn": "latest",

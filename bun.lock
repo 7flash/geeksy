@@ -5,7 +5,7 @@
     "": {
       "name": "geeksy",
       "dependencies": {
-        "@mements/smart-agent": "^0.1.0",
+        "@mements/smart-agent": "0.2.0",
         "js-yaml": "^4.1.0",
         "jsx-ai": "^0.1.0",
         "measure-fn": "latest",
@@ -35,7 +35,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@mements/smart-agent": ["@mements/smart-agent@0.1.0", "", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "^0.1.0", "measure-fn": "latest" } }, "sha512-rg+TYdXT3q2kfoJi6kAJlXV2lKxSgcDVGeXFmD/d6GP4TwMXUcP52BWjkVoAh1DA71mcHj27XSWSSSraoF7Imw=="],
+    "@mements/smart-agent": ["@mements/smart-agent@0.2.0", "", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "^0.1.0", "measure-fn": "latest" } }, "sha512-iClHqTw46TbFSmlbhrwTm21+gh4WaPWkvgXymx3NKYI6rS/FLtjt5rymO8XqUECjLbTzfd17I+mjc5Mxu68xbA=="],
 
     "@tailwindcss/node": ["@tailwindcss/node@4.1.18", "", { "dependencies": { "@jridgewell/remapping": "^2.3.4", "enhanced-resolve": "^5.18.3", "jiti": "^2.6.1", "lightningcss": "1.30.2", "magic-string": "^0.30.21", "source-map-js": "^1.2.1", "tailwindcss": "4.1.18" } }, "sha512-DoR7U1P7iYhw16qJ49fgXUlry1t4CpXeErJHnQ44JgTSKMaZUdf17cfn5mHchfJ4KRBZRFA/Coo+MUF5+gOaCQ=="],
 
