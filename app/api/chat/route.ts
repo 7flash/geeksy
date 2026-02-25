@@ -90,7 +90,7 @@ export async function POST(req: Request) {
 
     // Resolve skill paths
     const skillPaths = measureSync('Resolve skill paths', () =>
-        (body.skills || []).map(s => join(skillsDir, `${s}.yaml`))
+        (body.skills || []).map(s => join(skillsDir, `${s}.md`))
     )!
 
     const config: AgentConfig = {
@@ -210,8 +210,8 @@ export async function GET() {
         const result: string[] = []
         try {
             for (const f of readdirSync(skillsDir)) {
-                if (f.endsWith(".yaml") || f.endsWith(".yml")) {
-                    result.push(f.replace(/\.(yaml|yml)$/, ""))
+                if (f.endsWith(".md")) {
+                    result.push(f.replace(/\.md$/, ""))
                 }
             }
         } catch { }

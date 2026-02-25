@@ -70,12 +70,13 @@ export async function POST(req: Request) {
         version: manifest?.version || body.version,
     })
 
-    // Auto-register bundled skills
+    // Auto-register bundled skills (.md files with YAML frontmatter)
     const registeredSkills: string[] = []
     if (manifest?.skills) {
         for (const skillPath of manifest.skills) {
             try {
                 const { dirname, basename } = await import('path')
+                const { parseSkillFile } = await import('jsx-ai')
                 // Find the manifest source dir
                 let sourceDir = ''
                 for (const p of manifestPaths) {
@@ -87,17 +88,14 @@ export async function POST(req: Request) {
                 const fullPath = join(sourceDir, skillPath)
                 const skillFile = Bun.file(fullPath)
                 if (await skillFile.exists()) {
-                    const content = await skillFile.text()
-                    // Extract skill name from YAML
-                    const nameMatch = content.match(/^name:\s*(.+)$/m)
-                    const skillName = nameMatch?.[1]?.trim() || skillPath.replace(/.*\//, '').replace('.yaml', '')
-                    registeredSkills.push(skillName)
+                    const skill = parseSkillFile(fullPath)
+                    registeredSkills.push(skill.name)
 
-                    // Copy skill file to geeksy's skills directory
+                    // Copy skill .md file to geeksy's skills directory
                     const destPath = join(process.cwd(), 'skills', basename(skillPath))
-                    const { mkdirSync } = await import('fs')
+                    const { mkdirSync, copyFileSync } = await import('fs')
                     mkdirSync(join(process.cwd(), 'skills'), { recursive: true })
-                    await Bun.write(destPath, content)
+                    copyFileSync(fullPath, destPath)
                 }
             } catch { }
         }

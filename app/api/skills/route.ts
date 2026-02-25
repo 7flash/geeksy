@@ -1,7 +1,7 @@
 // app/api/skills/route.ts — Skill discovery API
 import { join } from 'path'
 import { readdirSync } from 'fs'
-import yaml from 'js-yaml'
+import { parseSkillFile } from 'jsx-ai'
 import { measureSync } from 'measure-fn'
 
 const skillsDir = join(process.cwd(), 'skills')
@@ -10,37 +10,29 @@ export interface SkillInfo {
     id: string         // filename without extension
     name: string
     description: string
-    commands: Array<{
-        name: string
-        description: string
-        usage: string
-        params?: Record<string, string>
-    }>
+    content: string    // full markdown body
     filePath: string
 }
 
-// ── GET /api/skills — Discover and return all skill files ──
+// ── GET /api/skills — Discover and return all .md skill files ──
 
 export async function GET() {
     const skills = measureSync('Discover skills', () => {
         const result: SkillInfo[] = []
         try {
             for (const f of readdirSync(skillsDir)) {
-                if (!f.endsWith('.yaml') && !f.endsWith('.yml')) continue
-                const id = f.replace(/\.(yaml|yml)$/, '')
+                if (!f.endsWith('.md')) continue
+                const id = f.replace(/\.md$/, '')
                 const filePath = join(skillsDir, f)
                 try {
-                    const content = require('fs').readFileSync(filePath, 'utf-8')
-                    const parsed = yaml.load(content) as any
-                    if (parsed?.name && parsed?.commands) {
-                        result.push({
-                            id,
-                            name: parsed.name,
-                            description: parsed.description || '',
-                            commands: parsed.commands || [],
-                            filePath,
-                        })
-                    }
+                    const skill = parseSkillFile(filePath)
+                    result.push({
+                        id,
+                        name: skill.name,
+                        description: skill.description,
+                        content: skill.content,
+                        filePath,
+                    })
                 } catch { /* skip unparseable files */ }
             }
         } catch { /* skills dir doesn't exist yet */ }
