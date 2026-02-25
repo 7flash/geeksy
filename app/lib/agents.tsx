@@ -446,8 +446,18 @@ export async function stopAgent() {
 
 export async function loadSkills() {
     await measure('Load skills', async () => {
-        const res = await fetch('/api/chat')
-        state.availableSkills = await res.json()
+        try {
+            const res = await fetch('/api/skills')
+            state.availableSkills = await res.json()
+            // Auto-enable all skills on first load
+            if (state.activeSkills.size === 0) {
+                for (const s of state.availableSkills) {
+                    state.activeSkills.add(s.id)
+                }
+            }
+        } catch {
+            state.availableSkills = []
+        }
         renderSkillChips()
     })
 }
@@ -510,14 +520,15 @@ export function renderSkillChips() {
         <div className="skill-toggles">
             {state.availableSkills.map(skill => (
                 <button
-                    className={`skill-chip ${state.activeSkills.has(skill) ? 'active' : ''}`}
+                    className={`skill-chip ${state.activeSkills.has(skill.id) ? 'active' : ''}`}
                     onClick={() => {
-                        if (state.activeSkills.has(skill)) state.activeSkills.delete(skill)
-                        else state.activeSkills.add(skill)
+                        if (state.activeSkills.has(skill.id)) state.activeSkills.delete(skill.id)
+                        else state.activeSkills.add(skill.id)
                         renderSkillChips()
                     }}
+                    title={skill.description}
                 >
-                    {skill}
+                    {skill.name}
                 </button>
             ))}
         </div>,

@@ -67,6 +67,7 @@ export default function Page() {
                         <button className="tab" data-tab="files">Files</button>
                         <button className="tab" data-tab="schedule">Schedule</button>
                         <button className="tab" data-tab="data">Data</button>
+                        <button className="tab" data-tab="skills">Skills</button>
                     </div>
                     <div className="tab-content" id="tab-content">
                         <div className="tab-pane active" id="pane-objectives">
@@ -80,6 +81,9 @@ export default function Page() {
                         </div>
                         <div className="tab-pane" id="pane-data">
                             <div className="overview-empty">No state data yet.</div>
+                        </div>
+                        <div className="tab-pane" id="pane-skills">
+                            <div className="overview-empty">Loading skills…</div>
                         </div>
                     </div>
                 </div>

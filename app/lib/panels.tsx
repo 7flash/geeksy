@@ -2,7 +2,7 @@
 import { render } from 'melina/client'
 import { state, dom } from './state'
 import { appendResponseBubble } from './chat-ui'
-import type { ObjectiveEntry, ObjectiveGroup, ScheduleEntry, StateEntry } from './types'
+import type { ObjectiveEntry, ObjectiveGroup, ScheduleEntry, StateEntry, SkillInfo } from './types'
 
 // ══════════════════════════════════════
 // OBJECTIVES TIMELINE
@@ -321,9 +321,98 @@ async function deleteStateEntry(agentId: number, key: string) {
     renderDataPane()
 }
 
+// ══════════════════════════════════════
+// SKILLS (YAML skill files from skills/ directory)
+// ══════════════════════════════════════
+
+const SKILL_ICONS: Record<string, string> = {
+    bun: '⚡',
+    docker: '🐳',
+    git: '📦',
+    npm: '📋',
+    project: '🏗️',
+}
+
+let expandedSkillId: string | null = null
+
+export function renderSkillsPane() {
+    const pane = document.getElementById('pane-skills')!
+    if (!pane) return
+
+    const skills = state.availableSkills
+
+    if (skills.length === 0) {
+        render(
+            <div className="overview-empty">No skill files found in <code>skills/</code> directory.<br />Create <code>.yaml</code> files to define new skills.</div>,
+            pane
+        )
+        return
+    }
+
+    render(
+        <div className="skills-panel-list">
+            {skills.map(skill => {
+                const icon = SKILL_ICONS[skill.id] || '🔧'
+                const isActive = state.activeSkills.has(skill.id)
+                const isExpanded = expandedSkillId === skill.id
+
+                return (
+                    <div className={`skill-panel-card ${isActive ? 'active' : ''} ${isExpanded ? 'expanded' : ''}`} key={skill.id}>
+                        <div className="skill-panel-header">
+                            <div className="skill-panel-identity" onClick={() => { expandedSkillId = isExpanded ? null : skill.id; renderSkillsPane() }}>
+                                <span className="skill-panel-icon">{icon}</span>
+                                <div>
+                                    <div className="skill-panel-name">{skill.name}</div>
+                                    <div className="skill-panel-desc">{skill.description}</div>
+                                </div>
+                            </div>
+                            <div className="skill-panel-actions">
+                                <span className="skill-panel-count">{skill.commands.length} cmd{skill.commands.length !== 1 ? 's' : ''}</span>
+                                <button
+                                    className={`skill-toggle-btn ${isActive ? 'on' : 'off'}`}
+                                    onClick={() => {
+                                        if (isActive) state.activeSkills.delete(skill.id)
+                                        else state.activeSkills.add(skill.id)
+                                        renderSkillsPane()
+                                    }}
+                                >
+                                    {isActive ? 'ON' : 'OFF'}
+                                </button>
+                            </div>
+                        </div>
+                        {isExpanded && (
+                            <div className="skill-panel-commands">
+                                {skill.commands.map(cmd => (
+                                    <div className="skill-cmd-row" key={cmd.name}>
+                                        <div className="skill-cmd-header">
+                                            <code className="skill-cmd-name">{cmd.name}</code>
+                                            <span className="skill-cmd-desc">{cmd.description}</span>
+                                        </div>
+                                        <div className="skill-cmd-usage"><code>{cmd.usage}</code></div>
+                                        {cmd.params && Object.keys(cmd.params).length > 0 && (
+                                            <div className="skill-cmd-params">
+                                                {Object.entries(cmd.params).map(([k, v]) => (
+                                                    <div className="skill-param" key={k}>
+                                                        <code>{k}</code> <span>{v}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )
+            })}
+        </div>,
+        pane
+    )
+}
+
 // ── Tab Switching ──
 
-export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'data') {
+export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'data' | 'skills') {
     state.activeTab = tab
 
     document.querySelectorAll('#tab-bar .tab').forEach(t => {
@@ -341,5 +430,9 @@ export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'data') {
         startDataPolling()
     } else {
         stopDataPolling()
+    }
+
+    if (tab === 'skills') {
+        renderSkillsPane()
     }
 }

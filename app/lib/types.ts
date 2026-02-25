@@ -77,6 +77,19 @@ export interface StateEntry {
     value: string
 }
 
+export interface SkillInfo {
+    id: string
+    name: string
+    description: string
+    commands: Array<{
+        name: string
+        description: string
+        usage: string
+        params?: Record<string, string>
+    }>
+    filePath: string
+}
+
 export interface ToolCardEntry {
     el: HTMLElement
     name: string
@@ -94,6 +107,6 @@ export interface WorkspaceState {
     stateEntries: StateEntry[]
     isRunning: boolean
     activeSkills: Set<string>
-    availableSkills: string[]
-    activeTab: 'objectives' | 'files' | 'schedule' | 'data'
+    availableSkills: SkillInfo[]
+    activeTab: 'objectives' | 'files' | 'schedule' | 'data' | 'skills'
 }
