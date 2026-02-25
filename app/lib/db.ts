@@ -50,6 +50,17 @@ export const db = new Database(dbPath, {
         key: z.string(),
         value: z.string(),
     }),
+    plugins: z.object({
+        name: z.string(),                          // display name e.g. "Telegram"
+        packageName: z.string(),                   // npm package e.g. "geeksy-telegram-plugin"
+        status: z.string().default('installed'),   // installed | running | stopped | error
+        port: z.number().optional(),               // port the plugin serves on
+        config: z.string().default('{}'),          // JSON config blob
+        error: z.string().optional(),              // last error message
+        version: z.string().optional(),            // installed version
+        description: z.string().optional(),        // short description
+        icon: z.string().default('🧩'),            // emoji icon
+    }),
 }, {
     timestamps: true,
     relations: {
@@ -63,6 +74,7 @@ export const db = new Database(dbPath, {
         files: ['agentId'],
         schedules: ['status', 'agentId'],
         agentState: ['agentId'],
+        plugins: ['packageName'],
     },
     cascade: {
         agents: ['messages', 'objectives', 'files', 'agentState'],
