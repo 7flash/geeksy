@@ -3,6 +3,7 @@ import { measure, measureSync } from "measure-fn"
 import { Session } from "smart-agent-ai"
 import type { AgentConfig } from "smart-agent-ai"
 import { db } from '../../lib/db'
+import { createScheduleTool } from '../../lib/schedule-tool'
 import { join } from "path"
 import { readdirSync } from "fs"
 
@@ -97,6 +98,7 @@ export async function POST(req: Request) {
         cwd,
         skills: skillPaths.length > 0 ? skillPaths : undefined,
         maxIterations: 10,
+        tools: [createScheduleTool(body.agentId)],
     }
 
     // Get or create session

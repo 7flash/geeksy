@@ -73,6 +73,7 @@ export async function POST(req: Request) {
         model?: string
         maxTurns?: number
         resume?: boolean
+        pass2?: boolean
     }
 
     const split = body.split || 'training'
@@ -80,6 +81,7 @@ export async function POST(req: Request) {
     const model = body.model || 'gemini-2.5-flash'
     const maxTurns = body.maxTurns || 10
     const resume = body.resume || false
+    const pass2 = body.pass2 || false
     const ids = body.ids?.join(',') || ''
 
     // Build command
@@ -93,6 +95,7 @@ export async function POST(req: Request) {
 
     if (ids) parts.push('--ids', ids)
     if (resume) parts.push('--resume')
+    if (pass2) parts.push('--pass2')
 
     const name = `arc-batch-${Date.now()}`
 

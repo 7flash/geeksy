@@ -8,8 +8,10 @@ export const state: WorkspaceState = {
     agents: [],
     activeAgentId: null,
     objectives: [],
+    objectiveGroups: [],
     files: [],
     schedules: [],
+    stateEntries: [],
     isRunning: false,
     activeSkills: new Set(),
     availableSkills: [],
@@ -20,6 +22,7 @@ export const state: WorkspaceState = {
 export const agentChatStore = new Map<number, {
     html: string
     objectives: WorkspaceState['objectives']
+    objectiveGroups: WorkspaceState['objectiveGroups']
     files: WorkspaceState['files']
     toolCards: ToolCardEntry[]
 }>()
@@ -77,6 +80,7 @@ export function saveState() {
         agentChatStore.set(state.activeAgentId, {
             html: dom.chatArea.innerHTML,
             objectives: [...state.objectives],
+            objectiveGroups: state.objectiveGroups.map(g => ({ ...g, objectives: [...g.objectives] })),
             files: [...state.files],
             toolCards: [...toolCards],
         })

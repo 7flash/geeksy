@@ -24,11 +24,30 @@ export interface AgentEntry {
 export interface ScheduleEntry {
     id: string
     name: string
-    scriptPath: string
-    intervalSec: number
-    nextRun: number
+    type: 'sequential' | 'interval' | 'once'
+    status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+    agentId?: number
+    message?: string
+    scriptPath?: string
+    intervalSec?: number
+    nextRun?: number
     lastRun?: number
-    lastResult?: { success: boolean; output: string; error?: string }
+    lastError?: string
+    lastOutput?: string
+    progress?: {
+        completed: number
+        total: number
+        currentTask?: string
+    }
+    tasks?: ScheduleTask[]
+}
+
+export interface ScheduleTask {
+    id: string
+    name: string
+    message: string
+    status: 'pending' | 'running' | 'completed' | 'failed'
+    result?: string
 }
 
 export interface ObjectiveEntry {
@@ -39,9 +58,23 @@ export interface ObjectiveEntry {
     reason?: string
 }
 
+export interface ObjectiveGroup {
+    id: number
+    timestamp: number
+    label: string  // e.g. "Initial plan" or "Replanning"
+    objectives: ObjectiveEntry[]
+}
+
 export interface FileEntry {
     path: string
     action: 'read' | 'write'
+}
+
+export interface StateEntry {
+    id: number
+    agentId: number
+    key: string
+    value: string
 }
 
 export interface ToolCardEntry {
@@ -55,10 +88,12 @@ export interface WorkspaceState {
     agents: AgentEntry[]
     activeAgentId: number | null
     objectives: ObjectiveEntry[]
+    objectiveGroups: ObjectiveGroup[]
     files: FileEntry[]
     schedules: ScheduleEntry[]
+    stateEntries: StateEntry[]
     isRunning: boolean
     activeSkills: Set<string>
     availableSkills: string[]
-    activeTab: 'objectives' | 'files' | 'schedule'
+    activeTab: 'objectives' | 'files' | 'schedule' | 'data'
 }

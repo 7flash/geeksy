@@ -48,18 +48,32 @@ export function handleEvent(type: string, data: any) {
             const allQuick = objectives.every((o: any) => o._quick || o.type === 'respond')
             setQuickResponse(allQuick)
 
-            // Preserve completed status — completed objectives show as met
-            state.objectives = objectives.map((o: any) => ({
+            // Build objective entries
+            const entries = objectives.map((o: any) => ({
                 ...o,
                 met: o.completed ? true : undefined,
                 reason: o.completed ? 'Previously completed' : undefined,
             }))
+
+            // Push as a new group to the timeline (preserve history)
+            const isFirst = state.objectiveGroups.length === 0
+            const newObjectives = entries.filter((o: any) => !o.completed)
+            if (newObjectives.length > 0) {
+                state.objectiveGroups.push({
+                    id: Date.now(),
+                    timestamp: Date.now(),
+                    label: isFirst ? 'Plan' : 'Replan',
+                    objectives: entries,
+                })
+            }
+
+            // Keep flat list for backward compat
+            state.objectives = entries
             renderObjectivesPane()
 
             // Only show objectives card for task mode (not quick responses)
             if (!allQuick) {
                 switchTab('objectives')
-                const newObjectives = objectives.filter((o: any) => !o.completed)
                 if (newObjectives.length > 0) {
                     appendCard('planning', 'Planned Objectives', newObjectives.map((o: any) => `• ${o.name} — ${o.description}`).join('\n'))
                 }

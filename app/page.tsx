@@ -44,17 +44,7 @@ export default function Page() {
                 {/* Chat + Input */}
                 <div className="chat-section">
                     <div className="chat-area" id="chat-area">
-                        <div className="empty-state" id="empty-state">
-                            <div className="empty-icon">🤖</div>
-                            <h2>Geeksy</h2>
-                            <p>Create a new agent or select one from the sidebar, then describe what you want it to do.</p>
-                            <div className="example-chips">
-                                <button className="example-chip" data-prompt="tell me a short joke">🎭 tell me a joke</button>
-                                <button className="example-chip" data-prompt="list all files in the current directory">📂 list files here</button>
-                                <button className="example-chip" data-prompt="create a hello.txt file that says Hello World">📝 create hello.txt</button>
-                                <button className="example-chip" data-prompt="solve ARC puzzle 0d3d703e">🧩 solve ARC puzzle</button>
-                            </div>
-                        </div>
+                        {/* Empty state is created dynamically by client JS via showEmptyState() */}
                     </div>
 
                     <div className="input-area">
@@ -76,6 +66,7 @@ export default function Page() {
                         <button className="tab active" data-tab="objectives">Objectives</button>
                         <button className="tab" data-tab="files">Files</button>
                         <button className="tab" data-tab="schedule">Schedule</button>
+                        <button className="tab" data-tab="data">Data</button>
                     </div>
                     <div className="tab-content" id="tab-content">
                         <div className="tab-pane active" id="pane-objectives">
@@ -86,6 +77,9 @@ export default function Page() {
                         </div>
                         <div className="tab-pane" id="pane-schedule">
                             <div className="overview-empty">No scheduled tasks yet.</div>
+                        </div>
+                        <div className="tab-pane" id="pane-data">
+                            <div className="overview-empty">No state data yet.</div>
                         </div>
                     </div>
                 </div>

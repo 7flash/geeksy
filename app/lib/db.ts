@@ -28,6 +28,28 @@ export const db = new Database(dbPath, {
         path: z.string(),
         action: z.string().default('read'), // read | write
     }),
+    schedules: z.object({
+        name: z.string(),
+        type: z.string().default('once'),         // sequential | interval | once
+        status: z.string().default('pending'),     // pending | running | completed | failed | cancelled
+        agentId: z.number().optional(),
+        message: z.string().optional(),            // single prompt (for chat-based tasks)
+        scriptPath: z.string().optional(),         // path to script file (for script-based tasks)
+        tasks: z.string().optional(),              // JSON array of { id, name, message, status }
+        intervalSec: z.number().optional(),
+        nextRun: z.number().optional(),
+        lastRun: z.number().optional(),
+        lastError: z.string().optional(),
+        lastOutput: z.string().optional(),         // last script stdout
+        completedCount: z.number().default(0),
+        totalCount: z.number().default(1),
+        currentTask: z.string().optional(),
+    }),
+    agentState: z.object({
+        agentId: z.number(),
+        key: z.string(),
+        value: z.string(),
+    }),
 }, {
     timestamps: true,
     relations: {
@@ -39,8 +61,10 @@ export const db = new Database(dbPath, {
         messages: ['agentId'],
         objectives: ['agentId'],
         files: ['agentId'],
+        schedules: ['status', 'agentId'],
+        agentState: ['agentId'],
     },
     cascade: {
-        agents: ['messages', 'objectives', 'files'],
+        agents: ['messages', 'objectives', 'files', 'agentState'],
     },
 })

@@ -6,7 +6,7 @@ import {
     setActiveLoadingEl,
 } from './state'
 import { appendUserBubble, appendLoading, appendCard, appendResponseBubble } from './chat-ui'
-import { renderObjectivesPane, renderFilesPane, renderSchedulePane } from './panels'
+import { renderObjectivesPane, renderFilesPane, renderSchedulePane, resetMessageCount } from './panels'
 import { handleEvent, clearLoading } from './events'
 import type { AgentEntry, ToolCardEntry } from './types'
 
@@ -129,6 +129,7 @@ export async function deleteAgent(id: number) {
             dom.chatArea.innerHTML = ''
             dom.agentHeaderName.textContent = ''
             state.objectives = []
+            state.objectiveGroups = []
             state.files = []
             toolCards.length = 0
             pushAgentUrl(null)
@@ -150,12 +151,16 @@ export async function selectAgent(id: number) {
     }
 
     state.activeAgentId = id
+    resetMessageCount()
     pushAgentUrl(id)
     const agent = state.agents.find(a => a.id === id)
     if (!agent) return
 
     dom.agentHeaderName.textContent = agent.name
     dom.agentStatusDot.className = `agent-status-dot ${agent.status === 'running' ? 'active' : ''}`
+
+    // Hide SSR empty state immediately — will re-show if agent has no messages
+    hideEmptyState()
 
     // Try in-memory cache first, then server DB
     const saved = agentChatStore.get(id)
@@ -165,13 +170,12 @@ export async function selectAgent(id: number) {
         // Fetch from server DB
         dom.chatArea.innerHTML = ''
         state.objectives = []
+        state.objectiveGroups = []
         state.files = []
         toolCards.length = 0
         try {
             const data = await fetch(`/api/state?agentId=${id}`).then(r => r.json())
             if (data.messages?.length) {
-                const empty = document.getElementById('empty-state')
-                if (empty) empty.remove()
                 for (const msg of data.messages) {
                     if (msg.role === 'user') {
                         appendUserBubble(msg.content)
@@ -181,13 +185,20 @@ export async function selectAgent(id: number) {
                 }
             }
             if (data.objectives?.length) {
-                state.objectives = data.objectives.map((o: any) => ({
+                const restored = data.objectives.map((o: any) => ({
                     name: o.name,
                     description: o.description,
                     type: o.type,
                     met: o.status === 'complete' ? true : o.status === 'failed' ? false : undefined,
                     reason: o.result,
                 }))
+                state.objectives = restored
+                state.objectiveGroups = [{
+                    id: Date.now(),
+                    timestamp: Date.now(),
+                    label: 'Restored',
+                    objectives: restored,
+                }]
             }
             if (data.files?.length) {
                 state.files = data.files.map((f: any) => ({
@@ -199,7 +210,7 @@ export async function selectAgent(id: number) {
     }
 
     // Show empty state if no messages, hide if there are messages
-    const hasMessages = dom.chatArea.querySelector('.user-bubble, .response-bubble, .typing-indicator')
+    const hasMessages = dom.chatArea.querySelector('.msg-user, .msg-agent, .loading')
     if (hasMessages) {
         hideEmptyState()
     } else {
@@ -215,9 +226,10 @@ export async function selectAgent(id: number) {
 }
 
 /** Restore a chat snapshot into the DOM */
-function restoreChatSnapshot(saved: { html: string; objectives: any[]; files: any[]; toolCards: ToolCardEntry[] }) {
+function restoreChatSnapshot(saved: { html: string; objectives: any[]; objectiveGroups?: any[]; files: any[]; toolCards: ToolCardEntry[] }) {
     dom.chatArea.innerHTML = saved.html
     state.objectives = saved.objectives
+    state.objectiveGroups = saved.objectiveGroups || []
     state.files = saved.files
     toolCards.length = 0
     toolCards.push(...saved.toolCards)
@@ -243,6 +255,7 @@ export function clearCurrentChat() {
 
     dom.chatArea.innerHTML = ''
     state.objectives = []
+    state.objectiveGroups = []
     state.files = []
     toolCards.length = 0
     agent.sessionId = null
