@@ -81,22 +81,30 @@ export function mount() {
 
         if (el.classList.contains('start')) {
             el.addEventListener('click', async () => {
-                await fetch('/api/plugins', {
+                el.textContent = 'Starting…'
+                el.disabled = true
+                const res = await fetch('/api/plugins', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: Number(id), status: 'running' })
+                    body: JSON.stringify({ id: Number(id), action: 'start' })
                 })
+                const data = await res.json()
+                if (!data.ok) alert(data.error || 'Failed to start')
                 window.location.reload()
             })
         }
 
         if (el.classList.contains('stop')) {
             el.addEventListener('click', async () => {
-                await fetch('/api/plugins', {
+                el.textContent = 'Stopping…'
+                el.disabled = true
+                const res = await fetch('/api/plugins', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: Number(id), status: 'stopped' })
+                    body: JSON.stringify({ id: Number(id), action: 'stop' })
                 })
+                const data = await res.json()
+                if (!data.ok) alert(data.error || 'Failed to stop')
                 window.location.reload()
             })
         }

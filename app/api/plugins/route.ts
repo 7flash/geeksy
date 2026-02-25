@@ -33,24 +33,78 @@ export async function POST(req: Request) {
         return Response.json({ error: 'Plugin already installed', plugin: existing }, { status: 409 })
     }
 
+    // Try to read plugin.json manifest from the package
+    let manifest: any = null
+    const { join, resolve } = await import('path')
+    const { readdirSync, existsSync } = await import('fs')
+    const codeDir = resolve(process.cwd(), '..')
+    const manifestPaths = [
+        join(process.cwd(), 'node_modules', body.packageName, 'plugin.json'),
+        join(codeDir, body.packageName, 'plugin.json'),  // sibling dir
+    ]
+    // Also scan inside sibling workspace dirs (e.g. galaxyclaw/geeksy-telegram-plugin)
+    try {
+        for (const dir of readdirSync(codeDir)) {
+            const nested = join(codeDir, dir, body.packageName, 'plugin.json')
+            if (existsSync(nested)) manifestPaths.push(nested)
+        }
+    } catch { }
+    for (const p of manifestPaths) {
+        try {
+            const f = Bun.file(p)
+            if (await f.exists()) {
+                manifest = await f.json()
+                break
+            }
+        } catch { }
+    }
+
     const plugin = db.plugins.insert({
-        name: body.name,
+        name: manifest?.displayName || body.name,
         packageName: body.packageName,
         status: 'installed',
-        port: body.port,
-        config: JSON.stringify(body.config || {}),
-        description: body.description,
-        icon: body.icon || '🧩',
-        version: body.version,
+        port: body.port || manifest?.defaultPort,
+        config: JSON.stringify(body.config || manifest?.env || {}),
+        description: body.description || manifest?.description,
+        icon: manifest?.icon || body.icon || '🧩',
+        version: manifest?.version || body.version,
     })
 
-    return Response.json(plugin, { status: 201 })
+    // Auto-register bundled skills
+    const registeredSkills: string[] = []
+    if (manifest?.skills) {
+        for (const skillPath of manifest.skills) {
+            try {
+                const { dirname } = await import('path')
+                // Find the manifest source dir
+                let sourceDir = ''
+                for (const p of manifestPaths) {
+                    const f = Bun.file(p)
+                    if (await f.exists()) { sourceDir = dirname(p); break }
+                }
+                if (!sourceDir) continue
+
+                const fullPath = join(sourceDir, skillPath)
+                const skillFile = Bun.file(fullPath)
+                if (await skillFile.exists()) {
+                    const content = await skillFile.text()
+                    // Extract skill name from YAML
+                    const nameMatch = content.match(/^name:\s*(.+)$/m)
+                    const skillName = nameMatch?.[1]?.trim() || skillPath.replace(/.*\//, '').replace('.yaml', '')
+                    registeredSkills.push(skillName)
+                }
+            } catch { }
+        }
+    }
+
+    return Response.json({ ...plugin, registeredSkills }, { status: 201 })
 }
 
 /** PUT /api/plugins — update plugin config or status */
 export async function PUT(req: Request) {
     const body = await req.json() as {
         id: number
+        action?: 'start' | 'stop'
         status?: string
         config?: Record<string, any>
         port?: number
@@ -67,6 +121,22 @@ export async function PUT(req: Request) {
         return Response.json({ error: 'Plugin not found' }, { status: 404 })
     }
 
+    // Lifecycle actions — actually start/stop the process
+    if (body.action === 'start') {
+        const { startPlugin } = await import('./lifecycle')
+        const result = await startPlugin(body.id)
+        const updated = db.plugins.select().where({ id: body.id } as any).first()
+        return Response.json({ ...result, plugin: updated })
+    }
+
+    if (body.action === 'stop') {
+        const { stopPlugin } = await import('./lifecycle')
+        const result = await stopPlugin(body.id)
+        const updated = db.plugins.select().where({ id: body.id } as any).first()
+        return Response.json({ ...result, plugin: updated })
+    }
+
+    // Regular update (config, port, manual status, etc.)
     const updates: Record<string, any> = {}
     if (body.status !== undefined) updates.status = body.status
     if (body.config !== undefined) updates.config = JSON.stringify(body.config)
