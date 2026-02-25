@@ -18,6 +18,20 @@ export default function mount() {
     loadSkills()
     loadModels()
 
+    // Model change → instantly persist to agent
+    dom.modelSelect.addEventListener('change', () => {
+        const agent = getActiveAgent()
+        if (!agent) return
+        const model = dom.modelSelect.value
+        agent.model = model
+        renderSidebar()
+        fetch(`/api/agents?id=${agent.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model }),
+        }).catch(() => { })
+    })
+
     // Tab switching
     document.getElementById('tab-bar')!.addEventListener('click', (e) => {
         const tab = (e.target as HTMLElement).closest('.tab') as HTMLElement | null
