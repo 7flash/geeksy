@@ -66,7 +66,7 @@ export default function Page() {
                         <button className="tab active" data-tab="objectives">Objectives</button>
                         <button className="tab" data-tab="files">Files</button>
                         <button className="tab" data-tab="schedule">Schedule</button>
-                        <button className="tab" data-tab="data">Data</button>
+                        <button className="tab" data-tab="memory">Memory</button>
                         <button className="tab" data-tab="skills">Skills</button>
                     </div>
                     <div className="tab-content" id="tab-content">
@@ -79,8 +79,8 @@ export default function Page() {
                         <div className="tab-pane" id="pane-schedule">
                             <div className="overview-empty">No scheduled tasks yet.</div>
                         </div>
-                        <div className="tab-pane" id="pane-data">
-                            <div className="overview-empty">No state data yet.</div>
+                        <div className="tab-pane" id="pane-memory">
+                            <div className="overview-empty">No memory entries yet. Agents can store structured data here.</div>
                         </div>
                         <div className="tab-pane" id="pane-skills">
                             <div className="overview-empty">Loading skills…</div>

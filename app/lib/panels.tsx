@@ -1,4 +1,4 @@
-// app/src/lib/panels.tsx — Overview panes: Objectives Timeline, Files, Schedule, Data
+// app/src/lib/panels.tsx — Overview panes: Objectives Timeline, Files, Schedule, Memory
 import { render } from 'melina/client'
 import { state, dom } from './state'
 import { appendResponseBubble } from './chat-ui'
@@ -256,30 +256,30 @@ async function cancelTask(id: string) {
 }
 
 // ══════════════════════════════════════
-// DATA (agent state — key/value entries)
+// MEMORY (agent state — key/value entries)
 // ══════════════════════════════════════
 
-let dataPoller: ReturnType<typeof setInterval> | null = null
+let memoryPoller: ReturnType<typeof setInterval> | null = null
 
-export async function fetchStateEntries() {
+export async function fetchMemoryEntries() {
     if (!state.activeAgentId) return
     try {
         const res = await fetch(`/api/agent-state?agentId=${state.activeAgentId}`)
         if (res.ok) {
             state.stateEntries = await res.json()
-            renderDataPane()
+            renderMemoryPane()
         }
     } catch { /* ignore */ }
 }
 
-export function startDataPolling() {
-    if (dataPoller) return
-    fetchStateEntries()
-    dataPoller = setInterval(fetchStateEntries, 3000)
+export function startMemoryPolling() {
+    if (memoryPoller) return
+    fetchMemoryEntries()
+    memoryPoller = setInterval(fetchMemoryEntries, 3000)
 }
 
-export function stopDataPolling() {
-    if (dataPoller) { clearInterval(dataPoller); dataPoller = null }
+export function stopMemoryPolling() {
+    if (memoryPoller) { clearInterval(memoryPoller); memoryPoller = null }
 }
 
 function truncateValue(v: string, maxLen = 200): string {
@@ -287,26 +287,61 @@ function truncateValue(v: string, maxLen = 200): string {
     return v.substring(0, maxLen) + '…'
 }
 
-export function renderDataPane() {
-    const pane = document.getElementById('pane-data')!
+export function renderMemoryPane() {
+    const pane = document.getElementById('pane-memory')!
+    if (!pane) return
     if (!state.activeAgentId) {
-        render(<div className="overview-empty">Select an agent to view its state.</div>, pane)
+        render(<div className="overview-empty">Select an agent to view its memory.</div>, pane)
         return
     }
     if (state.stateEntries.length === 0) {
-        render(<div className="overview-empty">No state data for this agent. Scripts can persist state via the STATE_URL API.</div>, pane)
-    } else {
         render(
-            <div className="data-list">
-                {state.stateEntries.map(entry => (
-                    <div className="data-item" key={entry.id}>
-                        <div className="data-key">{entry.key}</div>
-                        <div className="data-value">{truncateValue(entry.value)}</div>
-                        <button
-                            className="data-delete"
-                            onClick={() => deleteStateEntry(entry.agentId, entry.key)}
-                            title="Delete entry"
-                        >{'✕'}</button>
+            <div className="overview-empty">
+                <div className="memory-empty-icon">🧠</div>
+                <div>No memory entries yet.</div>
+                <div className="memory-empty-hint">Agents store structured data here via <code>getState</code> / <code>setState</code> in scripts, or through the agent-state API.</div>
+            </div>,
+            pane
+        )
+    } else {
+        // Group entries by key prefix (e.g. "users." → Users collection)
+        const groups = new Map<string, typeof state.stateEntries>()
+        for (const entry of state.stateEntries) {
+            const prefix = entry.key.includes('.') ? entry.key.split('.')[0] : '_ungrouped'
+            if (!groups.has(prefix)) groups.set(prefix, [])
+            groups.get(prefix)!.push(entry)
+        }
+
+        render(
+            <div className="memory-list">
+                {Array.from(groups.entries()).map(([group, entries]) => (
+                    <div className="memory-group" key={group}>
+                        {group !== '_ungrouped' && (
+                            <div className="memory-group-header">
+                                <span className="memory-group-icon">📁</span>
+                                <span className="memory-group-name">{group}</span>
+                                <span className="memory-group-count">{entries.length}</span>
+                            </div>
+                        )}
+                        {entries.map(entry => {
+                            const isJson = entry.value.startsWith('{') || entry.value.startsWith('[')
+                            const shortKey = entry.key.includes('.') ? entry.key.split('.').slice(1).join('.') : entry.key
+                            return (
+                                <div className="memory-item" key={entry.id}>
+                                    <div className="memory-item-header">
+                                        <span className="memory-key">{shortKey}</span>
+                                        <button
+                                            className="memory-delete"
+                                            onClick={() => deleteMemoryEntry(entry.agentId, entry.key)}
+                                            title="Delete entry"
+                                        >✕</button>
+                                    </div>
+                                    <div className={`memory-value ${isJson ? 'json' : ''}`}>
+                                        {isJson ? formatJsonPreview(entry.value) : truncateValue(entry.value)}
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
                 ))}
             </div>,
@@ -315,10 +350,21 @@ export function renderDataPane() {
     }
 }
 
-async function deleteStateEntry(agentId: number, key: string) {
+function formatJsonPreview(value: string): string {
+    try {
+        const parsed = JSON.parse(value)
+        if (Array.isArray(parsed)) return `[${parsed.length} items] ${JSON.stringify(parsed.slice(0, 3)).slice(0, 150)}…`
+        const keys = Object.keys(parsed)
+        return `{${keys.slice(0, 5).join(', ')}${keys.length > 5 ? ', …' : ''}}`
+    } catch {
+        return truncateValue(value)
+    }
+}
+
+async function deleteMemoryEntry(agentId: number, key: string) {
     await fetch(`/api/agent-state?agentId=${agentId}&key=${encodeURIComponent(key)}`, { method: 'DELETE' })
     state.stateEntries = state.stateEntries.filter(e => e.key !== key)
-    renderDataPane()
+    renderMemoryPane()
 }
 
 // ══════════════════════════════════════
@@ -412,7 +458,7 @@ export function renderSkillsPane() {
 
 // ── Tab Switching ──
 
-export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'data' | 'skills') {
+export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'memory' | 'skills') {
     state.activeTab = tab
 
     document.querySelectorAll('#tab-bar .tab').forEach(t => {
@@ -424,12 +470,12 @@ export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'data' | 's
     })
 
     // Schedule polling always runs in background (for chat auto-refresh)
-    // Only start/stop Data polling based on tab
+    // Only start/stop Memory polling based on tab
     startSchedulePolling()
-    if (tab === 'data') {
-        startDataPolling()
+    if (tab === 'memory') {
+        startMemoryPolling()
     } else {
-        stopDataPolling()
+        stopMemoryPolling()
     }
 
     if (tab === 'skills') {
