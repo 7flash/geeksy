@@ -29,6 +29,10 @@ export default function RootLayout({ children }: { children: any }) {
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v6m0 8v6M2 12h6m8 0h6" /><circle cx="12" cy="12" r="4" /></svg>
                                 <span>Plugins</span>
                             </a>
+                            <a className="nav-rail-btn" href="http://localhost:3800" target="_blank" data-page="explorer" title="Prompt Explorer">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                                <span>Explorer</span>
+                            </a>
                         </div>
                         <div className="nav-rail-bottom">
                             <button className="nav-rail-btn" title="Settings" id="nav-settings-btn">
