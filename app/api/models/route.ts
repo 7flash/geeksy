@@ -90,6 +90,20 @@ async function applyKeys() {
             process.env[envVar] = value
         }
     }
+
+    // Load explorer URL from .config.toml [explorer] section
+    try {
+        const { resolve } = await import('path')
+        const configPath = resolve(process.cwd(), '.config.toml')
+        const configFile = Bun.file(configPath)
+        if (await configFile.exists()) {
+            const toml = await configFile.text()
+            const explorerMatch = toml.match(/\[explorer\][\s\S]*?url\s*=\s*"([^"]+)"/)
+            if (explorerMatch?.[1] && !process.env.JSX_AI_EXPLORER_URL) {
+                process.env.JSX_AI_EXPLORER_URL = explorerMatch[1]
+            }
+        }
+    } catch { }
 }
 
 // Eagerly apply on module load

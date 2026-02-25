@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     if (manifest?.skills) {
         for (const skillPath of manifest.skills) {
             try {
-                const { dirname } = await import('path')
+                const { dirname, basename } = await import('path')
                 // Find the manifest source dir
                 let sourceDir = ''
                 for (const p of manifestPaths) {
@@ -92,6 +92,12 @@ export async function POST(req: Request) {
                     const nameMatch = content.match(/^name:\s*(.+)$/m)
                     const skillName = nameMatch?.[1]?.trim() || skillPath.replace(/.*\//, '').replace('.yaml', '')
                     registeredSkills.push(skillName)
+
+                    // Copy skill file to geeksy's skills directory
+                    const destPath = join(process.cwd(), 'skills', basename(skillPath))
+                    const { mkdirSync } = await import('fs')
+                    mkdirSync(join(process.cwd(), 'skills'), { recursive: true })
+                    await Bun.write(destPath, content)
                 }
             } catch { }
         }

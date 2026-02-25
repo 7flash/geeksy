@@ -1,0 +1,99 @@
+name: telegram
+description: |
+  Read and send Telegram messages via the geeksy-telegram-plugin.
+  The plugin runs as a separate process on TELEGRAM_URL (default: http://localhost:3738).
+  It uses MTProto (user account, not bot API) — agents can read from any chat
+  the user has access to, and send messages or replies.
+
+env:
+  TELEGRAM_URL: "Plugin API URL (default: http://localhost:3738)"
+
+commands:
+  - name: status
+    description: Check if the Telegram plugin is connected and get account info
+    usage: |
+      curl "$TELEGRAM_URL/api/status"
+    example: |
+      curl "http://localhost:3738/api/status"
+      # → { "plugin": "geeksy-telegram-plugin", "telegram": { "status": "connected", "phone": "+1234...", "me": { "username": "..." } }, "channels": 2, "messages": 47 }
+
+  - name: list-channels
+    description: List tracked channels being polled for messages
+    usage: |
+      curl "$TELEGRAM_URL/api/channels?phone={phone}"
+    params:
+      phone: "Phone number of the authenticated account (from /api/status)"
+    example: |
+      curl "http://localhost:3738/api/channels?phone=%2B1234567890"
+      # → [{ "id": 1, "channelId": "5045128454", "title": "My Group", "type": "group", "enabled": true, "lastMessageId": 49884 }]
+
+  - name: list-dialogs
+    description: List all Telegram chats/channels from the authenticated account (not just tracked ones)
+    usage: |
+      curl "$TELEGRAM_URL/api/dialogs"
+    example: |
+      curl "http://localhost:3738/api/dialogs"
+      # → [{ "id": "123456", "title": "My Channel", "type": "channel" }, { "id": "789", "title": "Alice", "type": "private" }]
+
+  - name: track-channel
+    description: Start tracking a channel/group for automatic message polling
+    usage: |
+      curl -X POST "$TELEGRAM_URL/api/channels" \
+        -H "Content-Type: application/json" \
+        -d '{"accountPhone": "{phone}", "channelId": "{channelId}", "title": "{title}", "type": "{type}"}'
+    params:
+      phone: "Authenticated phone number"
+      channelId: "Telegram channel/chat ID (from list-dialogs)"
+      title: "Display name for the channel"
+      type: "channel | group | private"
+
+  - name: read-messages
+    description: Read polled messages from tracked channels. Messages include sender names, timestamps, and reply chains.
+    usage: |
+      curl "$TELEGRAM_URL/api/messages?channelId={channelId}&limit={limit}"
+    params:
+      channelId: "Optional. Channel ID to filter. Omit for all channels."
+      limit: "Number of messages (default 50)"
+    example: |
+      curl "http://localhost:3738/api/messages?channelId=5045128454&limit=20"
+      # → [{ "messageId": 49884, "channelId": "5045128454", "text": "Hello!", "senderName": "@alice", "senderId": "123", "date": 1740000000, "replyToId": 49883 }, ...]
+      # Messages are sorted newest-first. date is a unix timestamp.
+
+  - name: send-message
+    description: Send a new message to a tracked channel/group
+    usage: |
+      curl -X POST "$TELEGRAM_URL/api/send-message" \
+        -H "Content-Type: application/json" \
+        -d '{"channelId": "{channelId}", "text": "{text}"}'
+    params:
+      channelId: "Target channel/group ID"
+      text: "Message text to send"
+    example: |
+      curl -X POST "http://localhost:3738/api/send-message" \
+        -H "Content-Type: application/json" \
+        -d '{"channelId": "5045128454", "text": "Hello from the agent!"}'
+      # → { "ok": true, "messageId": 49885 }
+
+  - name: reply-to-message
+    description: Reply to a specific message in a channel/group (creates a threaded reply)
+    usage: |
+      curl -X POST "$TELEGRAM_URL/api/send-message" \
+        -H "Content-Type: application/json" \
+        -d '{"channelId": "{channelId}", "text": "{text}", "replyToMsgId": {messageId}}'
+    params:
+      channelId: "Target channel/group ID"
+      text: "Reply text"
+      replyToMsgId: "Integer ID of the message to reply to (from read-messages)"
+    example: |
+      curl -X POST "http://localhost:3738/api/send-message" \
+        -H "Content-Type: application/json" \
+        -d '{"channelId": "5045128454", "text": "Great point!", "replyToMsgId": 49884}'
+      # → { "ok": true, "messageId": 49886 }
+
+best_practices:
+  - Always check /api/status first — if disconnected, tell the user to authenticate via the plugin UI
+  - Get the phone number from /api/status to use with /api/channels
+  - Messages are polled every 5 seconds, so after sending there may be a brief delay before your message appears in read-messages
+  - Use replyToMsgId when responding to a specific message to maintain conversation threading
+  - Each message has a unix timestamp (date field) — useful for scheduling or calculating time intervals
+  - When forwarding messages, preserve the original interval by computing gaps between consecutive message timestamps

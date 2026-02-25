@@ -112,10 +112,10 @@ export default function PluginsPage() {
                                 )}
                                 <div className="plugin-card-actions">
                                     {p.status === 'running' && (
-                                        <>
+                                        <div className="plugin-action-group">
                                             <button className="plugin-action-btn stop" data-id={p.id}>Stop</button>
                                             {p.port && <a className="plugin-action-btn open" href={`http://localhost:${p.port}`} target="_blank">Open UI ↗</a>}
-                                        </>
+                                        </div>
                                     )}
                                     {(p.status === 'installed' || p.status === 'stopped') && (
                                         <button className="plugin-action-btn start" data-id={p.id}>Start</button>
