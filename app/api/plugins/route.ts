@@ -40,13 +40,23 @@ export async function POST(req: Request) {
     const codeDir = resolve(process.cwd(), '..')
     const manifestPaths = [
         join(process.cwd(), 'node_modules', body.packageName, 'plugin.json'),
-        join(codeDir, body.packageName, 'plugin.json'),  // sibling dir
+        join(codeDir, body.packageName, 'plugin.json'),  // sibling dir with matching name
     ]
-    // Also scan inside sibling workspace dirs (e.g. galaxyclaw/geeksy-telegram-plugin)
+    // Scan sibling workspace dirs — check nested paths AND direct plugin.json by name match
     try {
         for (const dir of readdirSync(codeDir)) {
-            const nested = join(codeDir, dir, body.packageName, 'plugin.json')
+            const dirPath = join(codeDir, dir)
+            // Nested: e.g. galaxyclaw/geeksy-telegram-plugin/plugin.json
+            const nested = join(dirPath, body.packageName, 'plugin.json')
             if (existsSync(nested)) manifestPaths.push(nested)
+            // Direct: sibling dir with plugin.json whose name matches packageName
+            const direct = join(dirPath, 'plugin.json')
+            if (existsSync(direct)) {
+                try {
+                    const m = JSON.parse(require('fs').readFileSync(direct, 'utf-8'))
+                    if (m.name === body.packageName) manifestPaths.push(direct)
+                } catch { }
+            }
         }
     } catch { }
     for (const p of manifestPaths) {
