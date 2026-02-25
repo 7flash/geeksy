@@ -159,6 +159,12 @@ export async function selectAgent(id: number) {
     dom.agentHeaderName.textContent = agent.name
     dom.agentStatusDot.className = `agent-status-dot ${agent.status === 'running' ? 'active' : ''}`
 
+    // Restore agent's model in dropdown
+    if (agent.model && dom.modelSelect) {
+        const opt = dom.modelSelect.querySelector(`option[value="${agent.model}"]`) as HTMLOptionElement
+        if (opt && !opt.disabled) dom.modelSelect.value = agent.model
+    }
+
     // Hide SSR empty state immediately — will re-show if agent has no messages
     hideEmptyState()
 
@@ -412,6 +418,18 @@ export async function sendMessage() {
     dom.agentStatusDot.className = 'agent-status-dot'
     setSendButtonMode('send')
     dom.inputEl.focus()
+
+    // Persist model choice to agent
+    const currentModel = dom.modelSelect.value
+    if (currentModel && agent.model !== currentModel) {
+        agent.model = currentModel
+        fetch(`/api/agents?id=${agent.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: currentModel }),
+        }).catch(() => { })
+    }
+
     renderSidebar()
     saveState()
 }
@@ -541,13 +559,17 @@ export function renderSkillChips() {
 // ══════════════════════════════════════
 
 function SidebarAgent({ agent, isActive }: { agent: AgentEntry; isActive: boolean }) {
+    const shortModel = (agent.model || '').replace(/^(gemini|gpt|claude|deepseek)-?/, '').replace(/-latest$/, '')
     return (
         <button
             className={`sidebar-agent ${isActive ? 'active' : ''}`}
             onClick={() => selectAgent(agent.id)}
         >
             <span className={`agent-dot ${agent.status === 'running' ? 'running' : 'idle'}`} />
-            <span className="sidebar-agent-name">{agent.name}</span>
+            <div className="sidebar-agent-info">
+                <span className="sidebar-agent-name">{agent.name}</span>
+                {agent.model && <span className="sidebar-agent-model">{shortModel}</span>}
+            </div>
             <span
                 className="sidebar-agent-delete"
                 onClick={(e: Event) => { e.stopPropagation(); deleteAgent(agent.id) }}
