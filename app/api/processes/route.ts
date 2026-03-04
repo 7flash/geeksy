@@ -1,33 +1,55 @@
 // app/api/processes/route.ts — bgrun process list + management
-// Proxies to bgrun's HTTP API to list, stop, restart processes
+// Proxies to bgrun CLI for process listing, stop, restart
 
-const BGRUN_API = 'http://localhost:3001'
+// Fields that are safe to expose to the client
+const SAFE_FIELDS = ['name', 'status', 'pid', 'command', 'directory', 'startedAt', 'uptime', 'port']
 
-/** GET /api/processes — list all bgrun processes */
-export async function GET() {
-    try {
-        const res = await fetch(`${BGRUN_API}/api/processes`, {
-            signal: AbortSignal.timeout(3000),
-        })
-        if (res.ok) {
-            const data = await res.json()
-            return Response.json(data)
-        }
-    } catch { }
+function sanitizeProcess(p: any) {
+    const safe: any = {}
+    for (const key of SAFE_FIELDS) {
+        if (p[key] !== undefined) safe[key] = p[key]
+    }
+    // Normalize status — bgrun uses 'running'/'stopped'/'crashed'
+    if (typeof safe.status === 'string') {
+        safe.status = safe.status.toLowerCase()
+    }
+    // If we have a PID and status is not explicitly set, check if process is alive
+    if (safe.pid && !safe.status) {
+        safe.status = 'running'
+    }
+    return safe
+}
 
-    // Fallback: try to parse bgrun CLI output
+async function getProcessList(): Promise<any[]> {
+    // Try bgrun --json CLI
     try {
         const proc = Bun.spawn(['bgrun', '--json'], {
             stdio: ['ignore', 'pipe', 'pipe'],
         })
         await proc.exited
         const stdout = await new Response(proc.stdout).text()
-        try {
-            return Response.json(JSON.parse(stdout))
-        } catch { }
+        const parsed = JSON.parse(stdout)
+        return (Array.isArray(parsed) ? parsed : []).map(sanitizeProcess)
     } catch { }
 
-    return Response.json([])
+    // Try bgrun HTTP API (port 3001)
+    try {
+        const res = await fetch('http://localhost:3001/api/processes', {
+            signal: AbortSignal.timeout(2000),
+        })
+        if (res.ok) {
+            const data = await res.json()
+            return (Array.isArray(data) ? data : data.processes || []).map(sanitizeProcess)
+        }
+    } catch { }
+
+    return []
+}
+
+/** GET /api/processes — list all bgrun processes */
+export async function GET() {
+    const processes = await getProcessList()
+    return Response.json(processes)
 }
 
 /** DELETE /api/processes — stop a process */
