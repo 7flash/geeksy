@@ -458,7 +458,7 @@ export function renderSkillsPane() {
 
 // ── Tab Switching ──
 
-export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'memory' | 'skills') {
+export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'processes' | 'memory' | 'skills') {
     state.activeTab = tab
 
     document.querySelectorAll('#tab-bar .tab').forEach(t => {
@@ -481,4 +481,137 @@ export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'memory' | 
     if (tab === 'skills') {
         renderSkillsPane()
     }
+    if (tab === 'processes') {
+        fetchProcesses()
+        startProcessPolling()
+    } else {
+        stopProcessPolling()
+    }
 }
+
+// ══════════════════════════════════════
+// PROCESSES (bgrun process list)
+// ══════════════════════════════════════
+
+interface BgrunProcess {
+    name: string
+    status: 'running' | 'stopped' | 'crashed'
+    pid?: number
+    uptime?: string
+    command?: string
+    directory?: string
+    startedAt?: string
+}
+
+let processPoller: ReturnType<typeof setInterval> | null = null
+
+export async function fetchProcesses() {
+    try {
+        const res = await fetch('/api/processes')
+        if (res.ok) {
+            const data = await res.json()
+            renderProcessesPane(Array.isArray(data) ? data : data.processes || [])
+        }
+    } catch {
+        renderProcessesPane([])
+    }
+}
+
+export function startProcessPolling() {
+    if (processPoller) return
+    fetchProcesses()
+    processPoller = setInterval(fetchProcesses, 5000)
+}
+
+export function stopProcessPolling() {
+    if (processPoller) { clearInterval(processPoller); processPoller = null }
+}
+
+function formatUptime(startedAt: string | undefined): string {
+    if (!startedAt) return ''
+    const diff = Date.now() - new Date(startedAt).getTime()
+    const sec = Math.floor(diff / 1000)
+    if (sec < 60) return `${sec}s`
+    const min = Math.floor(sec / 60)
+    if (min < 60) return `${min}m`
+    const hrs = Math.floor(min / 60)
+    return `${hrs}h ${min % 60}m`
+}
+
+function processStatusDot(status: string) {
+    if (status === 'running') return <span className="proc-dot proc-running" title="Running">●</span>
+    if (status === 'stopped') return <span className="proc-dot proc-stopped" title="Stopped">●</span>
+    return <span className="proc-dot proc-crashed" title="Crashed">●</span>
+}
+
+function renderProcessesPane(processes: BgrunProcess[]) {
+    const pane = document.getElementById('pane-processes')
+    if (!pane) return
+
+    if (processes.length === 0) {
+        render(
+            <div className="overview-empty">
+                <div>No processes running.</div>
+                <div className="memory-empty-hint">Processes are spawned by plugins and agent scripts via bgrun.</div>
+            </div>,
+            pane
+        )
+        return
+    }
+
+    const running = processes.filter(p => p.status === 'running')
+    const stopped = processes.filter(p => p.status !== 'running')
+
+    render(
+        <div className="process-list">
+            <div className="process-summary">
+                <span className="process-count">{running.length} running</span>
+                {stopped.length > 0 && <span className="process-count-dim"> · {stopped.length} stopped</span>}
+            </div>
+            {processes.map(p => (
+                <div className={`process-item process-${p.status}`} key={p.name}>
+                    <div className="process-left">
+                        {processStatusDot(p.status)}
+                        <div className="process-info">
+                            <div className="process-name">{p.name}</div>
+                            {p.command && <div className="process-cmd">{p.command}</div>}
+                            <div className="process-meta">
+                                {p.pid && <span>PID {p.pid}</span>}
+                                {p.startedAt && p.status === 'running' && <span> · up {formatUptime(p.startedAt)}</span>}
+                                {p.directory && <span> · {p.directory.replace(/.*[/\\]/, '')}</span>}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="process-actions">
+                        {p.status === 'running' && (
+                            <button className="process-btn stop" onClick={() => stopProcess(p.name)} title="Stop">■</button>
+                        )}
+                        {p.status !== 'running' && (
+                            <button className="process-btn start" onClick={() => restartProcess(p.name)} title="Restart">▶</button>
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>,
+        pane
+    )
+}
+
+async function stopProcess(name: string) {
+    await fetch('/api/processes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+    })
+    fetchProcesses()
+}
+
+async function restartProcess(name: string) {
+    await fetch('/api/processes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, action: 'restart' }),
+    })
+    fetchProcesses()
+}
+

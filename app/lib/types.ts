@@ -108,5 +108,5 @@ export interface WorkspaceState {
     isRunning: boolean
     activeSkills: Set<string>
     availableSkills: SkillInfo[]
-    activeTab: 'objectives' | 'files' | 'schedule' | 'memory' | 'skills'
+    activeTab: 'objectives' | 'files' | 'schedule' | 'processes' | 'memory' | 'skills'
 }
