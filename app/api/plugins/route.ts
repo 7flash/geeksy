@@ -39,23 +39,29 @@ export async function POST(req: Request) {
     const { readdirSync, existsSync } = await import('fs')
     const codeDir = resolve(process.cwd(), '..')
     const manifestPaths = [
+        join(process.cwd(), 'node_modules', body.packageName, 'geeksy-plugin.json'),
         join(process.cwd(), 'node_modules', body.packageName, 'plugin.json'),
-        join(codeDir, body.packageName, 'plugin.json'),  // sibling dir with matching name
+        join(codeDir, body.packageName, 'geeksy-plugin.json'),
+        join(codeDir, body.packageName, 'plugin.json'),
     ]
     // Scan sibling workspace dirs — check nested paths AND direct plugin.json by name match
     try {
         for (const dir of readdirSync(codeDir)) {
             const dirPath = join(codeDir, dir)
-            // Nested: e.g. galaxyclaw/geeksy-telegram-plugin/plugin.json
-            const nested = join(dirPath, body.packageName, 'plugin.json')
-            if (existsSync(nested)) manifestPaths.push(nested)
-            // Direct: sibling dir with plugin.json whose name matches packageName
-            const direct = join(dirPath, 'plugin.json')
-            if (existsSync(direct)) {
-                try {
-                    const m = JSON.parse(require('fs').readFileSync(direct, 'utf-8'))
-                    if (m.name === body.packageName) manifestPaths.push(direct)
-                } catch { }
+            // Nested: e.g. galaxyclaw/geeksy-telegram-plugin/
+            for (const mf of ['geeksy-plugin.json', 'plugin.json']) {
+                const nested = join(dirPath, body.packageName, mf)
+                if (existsSync(nested)) manifestPaths.push(nested)
+            }
+            // Direct: sibling dir with manifest whose packageName matches
+            for (const mf of ['geeksy-plugin.json', 'plugin.json']) {
+                const direct = join(dirPath, mf)
+                if (existsSync(direct)) {
+                    try {
+                        const m = JSON.parse(require('fs').readFileSync(direct, 'utf-8'))
+                        if (m.packageName === body.packageName || m.name === body.packageName) manifestPaths.push(direct)
+                    } catch { }
+                }
             }
         }
     } catch { }
