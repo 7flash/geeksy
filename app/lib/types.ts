@@ -83,6 +83,13 @@ export interface SkillInfo {
     description: string
     content: string  // Full markdown body of the skill file
     filePath: string
+    plugin?: {       // Source plugin (if skill came from a plugin)
+        name: string
+        icon: string
+        packageName: string
+        status: string
+        api?: any
+    }
 }
 
 export interface ToolCardEntry {

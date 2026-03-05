@@ -1081,6 +1081,113 @@ body {
     color: var(--accent);
 }
 
+/* Plugin-grouped skill chips */
+.skill-plugin-group {
+    display: inline-flex;
+}
+
+.skill-chip.plugin-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.skill-chip.plugin-chip.partial {
+    background: rgba(139, 92, 246, 0.08);
+    border-color: rgba(139, 92, 246, 0.3);
+    color: var(--text-2);
+}
+
+.skill-chip-icon {
+    font-size: 11px;
+    line-height: 1;
+}
+
+.skill-chip-count {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0 4px;
+    font-size: 9px;
+    min-width: 14px;
+    text-align: center;
+    opacity: 0.6;
+}
+
+.skill-chip.active .skill-chip-count {
+    background: rgba(139, 92, 246, 0.2);
+    opacity: 1;
+}
+
+/* Composition mode badge */
+.composition-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 8px;
+    border-radius: 14px;
+    font-size: 9px;
+    font-weight: 600;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    animation: compositionPulse 2s ease-in-out infinite;
+    font-family: 'Inter', sans-serif;
+}
+
+@keyframes compositionPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 8px 1px rgba(251, 191, 36, 0.15);
+    }
+}
+
+/* Composition templates */
+.composition-templates {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.composition-label {
+    font-size: 9px;
+    color: #fbbf24;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+}
+
+.composition-template {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 9px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: 'Inter', sans-serif;
+    background: rgba(251, 191, 36, 0.06);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+    white-space: nowrap;
+}
+
+.composition-template:hover {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.4);
+    transform: translateY(-1px);
+}
+
+.skill-toggles {
+    flex-wrap: wrap;
+}
+
 /* ══════════════════════════════════════
    CHAT SECTION
    ══════════════════════════════════════ */

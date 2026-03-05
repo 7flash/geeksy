@@ -549,9 +549,61 @@ export async function loadModels() {
 export function renderSkillChips() {
     const container = document.getElementById('skill-toggles')
     if (!container) return
+
+    // Group skills by plugin
+    const pluginGroups = new Map<string, typeof state.availableSkills>()
+    const standaloneSkills: typeof state.availableSkills = []
+
+    for (const skill of state.availableSkills) {
+        if (skill.plugin) {
+            const key = skill.plugin.packageName
+            if (!pluginGroups.has(key)) pluginGroups.set(key, [])
+            pluginGroups.get(key)!.push(skill)
+        } else {
+            standaloneSkills.push(skill)
+        }
+    }
+
+    // Detect active plugin count for composition mode
+    const activePluginNames = new Set<string>()
+    for (const skill of state.availableSkills) {
+        if (state.activeSkills.has(skill.id) && skill.plugin) {
+            activePluginNames.add(skill.plugin.packageName)
+        }
+    }
+    const isCompositionMode = activePluginNames.size >= 2
+
+    // Composition templates — only shown when 2+ plugins are active
+    const compositionTemplates = isCompositionMode ? getCompositionTemplates(activePluginNames) : []
+
     render(
         <div className="skill-toggles">
-            {state.availableSkills.map(skill => (
+            {Array.from(pluginGroups.entries()).map(([pkg, skills]) => {
+                const plugin = skills[0].plugin!
+                const allActive = skills.every(s => state.activeSkills.has(s.id))
+                const someActive = skills.some(s => state.activeSkills.has(s.id))
+                return (
+                    <div className={`skill-plugin-group ${someActive ? 'active' : ''}`} key={pkg}>
+                        <button
+                            className={`skill-chip plugin-chip ${allActive ? 'active' : someActive ? 'partial' : ''}`}
+                            onClick={() => {
+                                if (allActive) {
+                                    skills.forEach(s => state.activeSkills.delete(s.id))
+                                } else {
+                                    skills.forEach(s => state.activeSkills.add(s.id))
+                                }
+                                renderSkillChips()
+                            }}
+                            title={`${plugin.name} — ${skills.map(s => s.name).join(', ')}`}
+                        >
+                            <span className="skill-chip-icon">{plugin.icon}</span>
+                            <span>{plugin.name}</span>
+                            <span className="skill-chip-count">{skills.length}</span>
+                        </button>
+                    </div>
+                )
+            })}
+            {standaloneSkills.map(skill => (
                 <button
                     className={`skill-chip ${state.activeSkills.has(skill.id) ? 'active' : ''}`}
                     onClick={() => {
@@ -564,10 +616,59 @@ export function renderSkillChips() {
                     {skill.name}
                 </button>
             ))}
+            {isCompositionMode && (
+                <span className="composition-badge" title="Cross-plugin composition active">
+                    ⚡ {activePluginNames.size} plugins
+                </span>
+            )}
+            {compositionTemplates.length > 0 && (
+                <div className="composition-templates">
+                    <span className="composition-label">⚡ Templates:</span>
+                    {compositionTemplates.map(tpl => (
+                        <button
+                            className="composition-template"
+                            onClick={() => {
+                                const input = document.getElementById('chatInput') as HTMLTextAreaElement
+                                if (input) {
+                                    input.value = tpl.prompt
+                                    input.focus()
+                                    input.dispatchEvent(new Event('input', { bubbles: true }))
+                                }
+                            }}
+                            title={tpl.prompt}
+                        >
+                            {tpl.label}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>,
         container
     )
 }
+
+function getCompositionTemplates(activePlugins: Set<string>): { label: string; prompt: string }[] {
+    const templates: { label: string; prompt: string; requires: string[] }[] = [
+        {
+            requires: ['geeksy-telegram-plugin', 'geeksy-pumpfun-plugin'],
+            label: '📱→📈 Listen & Trade',
+            prompt: 'Listen to the Telegram channel @PumpAlpha for new token mentions. When a Solana token mint address is mentioned, automatically add it to the trading bot via the Pumpfun Trading plugin.',
+        },
+        {
+            requires: ['geeksy-telegram-plugin', 'geeksy-pumpfun-plugin'],
+            label: '📈→📱 Trade Alerts',
+            prompt: 'Monitor my active trading positions via the Pumpfun Trading plugin. When any token reaches 2x profit or drops 50%, send me an alert message via Telegram.',
+        },
+        {
+            requires: ['geeksy-telegram-plugin', 'geeksy-pumpfun-plugin'],
+            label: '📱 Channel Scanner',
+            prompt: 'Scan all tracked Telegram channels for messages mentioning Solana tokens (look for base58 addresses or $TICKER patterns). List all unique tokens found in the last 24 hours and ask me which ones to add to the trading bot.',
+        },
+    ]
+
+    return templates.filter(t => t.requires.every(r => activePlugins.has(r)))
+}
+
 
 // ══════════════════════════════════════
 // SIDEBAR
