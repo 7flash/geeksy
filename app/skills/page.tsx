@@ -4,7 +4,7 @@ export default function SkillsPage() {
         <div className="page-container" id="skills-page">
             <div className="page-header">
                 <h1>Agent Skills</h1>
-                <p className="page-subtitle">Skills are YAML files that teach your agents how to use CLI tools. They're automatically discovered from the <code>skills/</code> directory.</p>
+                <p className="page-subtitle">Skills are Markdown files that teach your agents how to use tools and APIs. They're automatically discovered from the <code>skills/</code> directory.</p>
             </div>
             <div id="skills-content" className="skills-content">
                 <div className="overview-empty">Discovering skills…</div>
