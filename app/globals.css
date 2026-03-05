@@ -3434,3 +3434,178 @@ body {
     text-align: right;
     font-family: 'JetBrains Mono', monospace;
 }
+
+/* ══════════════════════════════════════
+   PLUGIN CONFIG MODAL
+   ══════════════════════════════════ */
+
+.config-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn .15s ease;
+}
+
+.config-modal {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 520px;
+    max-width: 90vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .5), 0 0 40px rgba(99, 102, 241, .08);
+    animation: slideUp .2s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.config-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.config-modal-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+.config-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background .15s, color .15s;
+}
+
+.config-modal-close:hover {
+    background: rgba(99, 102, 241, .1);
+    color: var(--text-1);
+}
+
+.config-modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.config-field-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+.config-field-required {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+.config-field-desc {
+    font-size: 11px;
+    color: var(--text-3);
+    line-height: 1.4;
+}
+
+.config-field-input {
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text-1);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    transition: border-color .2s, box-shadow .2s;
+    outline: none;
+}
+
+.config-field-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, .15);
+}
+
+.config-field-input::placeholder {
+    color: var(--text-3);
+    opacity: .6;
+}
+
+.config-field-textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.config-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+}
+
+.config-modal-cancel {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.config-modal-cancel:hover {
+    background: var(--bg-3);
+}
+
+.config-modal-save {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: opacity .15s, box-shadow .15s;
+}
+
+.config-modal-save:hover {
+    opacity: .9;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, .3);
+}
+
+.config-modal-save:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}

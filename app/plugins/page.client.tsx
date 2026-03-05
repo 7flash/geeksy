@@ -118,23 +118,154 @@ export function mount() {
         }
 
         if (el.classList.contains('configure')) {
-            el.addEventListener('click', () => {
-                // Find the plugin card to get current config
-                const card = el.closest('.plugin-card')
-                const pkg = card?.querySelector('.plugin-card-pkg')?.textContent || ''
-                const configJson = prompt(`Enter config JSON for ${pkg}:`, '{}')
-                if (configJson === null) return
-
+            el.addEventListener('click', async () => {
+                const pluginId = Number(id)
+                // Fetch manifest config schema
+                let schema: Record<string, any> = {}
+                let currentConfig: Record<string, any> = {}
+                let pluginName = ''
                 try {
-                    const config = JSON.parse(configJson)
-                    fetch('/api/plugins', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: Number(id), config })
-                    }).then(() => window.location.reload())
-                } catch {
-                    alert('Invalid JSON')
+                    const res = await fetch(`/api/plugins/manifest?id=${pluginId}`)
+                    const data = await res.json()
+                    schema = data.config || {}
+                    currentConfig = data.currentConfig || {}
+                    pluginName = data.name || 'Plugin'
+                } catch { }
+
+                const schemaKeys = Object.keys(schema)
+
+                // Build modal
+                const overlay = document.createElement('div')
+                overlay.className = 'config-modal-overlay'
+                overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove() })
+
+                const modal = document.createElement('div')
+                modal.className = 'config-modal'
+                modal.innerHTML = `
+                    <div class="config-modal-header">
+                        <h2>Configure ${pluginName}</h2>
+                        <button class="config-modal-close" title="Close">✕</button>
+                    </div>
+                    <div class="config-modal-body"></div>
+                    <div class="config-modal-footer">
+                        <button class="config-modal-cancel">Cancel</button>
+                        <button class="config-modal-save">Save Configuration</button>
+                    </div>
+                `
+                overlay.appendChild(modal)
+
+                const body = modal.querySelector('.config-modal-body')!
+                const fields: Map<string, HTMLInputElement | HTMLTextAreaElement> = new Map()
+
+                if (schemaKeys.length > 0) {
+                    // Render form fields from manifest config schema
+                    for (const key of schemaKeys) {
+                        const spec = schema[key]
+                        const fieldDiv = document.createElement('div')
+                        fieldDiv.className = 'config-field'
+
+                        const label = document.createElement('label')
+                        label.className = 'config-field-label'
+                        label.textContent = spec.label || key
+                        if (spec.required) {
+                            const req = document.createElement('span')
+                            req.className = 'config-field-required'
+                            req.textContent = ' *'
+                            label.appendChild(req)
+                        }
+                        fieldDiv.appendChild(label)
+
+                        if (spec.description) {
+                            const desc = document.createElement('div')
+                            desc.className = 'config-field-desc'
+                            desc.textContent = spec.description
+                            fieldDiv.appendChild(desc)
+                        }
+
+                        let input: HTMLInputElement | HTMLTextAreaElement
+                        if (spec.type === 'array') {
+                            input = document.createElement('textarea')
+                            input.className = 'config-field-input config-field-textarea'
+                            input.placeholder = 'One item per line'
+                            input.rows = 3
+                            const val = currentConfig[key]
+                            input.value = Array.isArray(val) ? val.join('\n') : (val || '')
+                        } else {
+                            input = document.createElement('input')
+                            input.className = 'config-field-input'
+                            input.type = spec.secret ? 'password' : 'text'
+                            input.placeholder = spec.label || key
+                            input.value = currentConfig[key] || ''
+                        }
+                        fieldDiv.appendChild(input)
+                        fields.set(key, input)
+                        body.appendChild(fieldDiv)
+                    }
+                } else {
+                    // No schema — raw JSON editor fallback
+                    const fieldDiv = document.createElement('div')
+                    fieldDiv.className = 'config-field'
+                    const label = document.createElement('label')
+                    label.className = 'config-field-label'
+                    label.textContent = 'Configuration (JSON)'
+                    fieldDiv.appendChild(label)
+                    const input = document.createElement('textarea')
+                    input.className = 'config-field-input config-field-textarea'
+                    input.rows = 6
+                    input.value = JSON.stringify(currentConfig, null, 2)
+                    fieldDiv.appendChild(input)
+                    fields.set('__raw__', input)
+                    body.appendChild(fieldDiv)
                 }
+
+                document.body.appendChild(overlay)
+
+                // Close handlers
+                modal.querySelector('.config-modal-close')!.addEventListener('click', () => overlay.remove())
+                modal.querySelector('.config-modal-cancel')!.addEventListener('click', () => overlay.remove())
+
+                // Save handler
+                modal.querySelector('.config-modal-save')!.addEventListener('click', async () => {
+                    let config: Record<string, any>
+
+                    if (fields.has('__raw__')) {
+                        try { config = JSON.parse(fields.get('__raw__')!.value) }
+                        catch { alert('Invalid JSON'); return }
+                    } else {
+                        config = {}
+                        for (const [key, input] of fields) {
+                            const spec = schema[key]
+                            if (spec?.required && !input.value.trim()) {
+                                alert(`${spec.label || key} is required`)
+                                input.focus()
+                                return
+                            }
+                            if (spec?.type === 'array') {
+                                config[key] = input.value.split('\n').map(s => s.trim()).filter(Boolean)
+                            } else {
+                                config[key] = input.value
+                            }
+                        }
+                    }
+
+                    const saveBtn = modal.querySelector('.config-modal-save') as HTMLButtonElement
+                    saveBtn.textContent = 'Saving…'
+                    saveBtn.disabled = true
+
+                    try {
+                        await fetch('/api/plugins', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: pluginId, config })
+                        })
+                        overlay.remove()
+                        window.location.reload()
+                    } catch {
+                        alert('Failed to save')
+                        saveBtn.textContent = 'Save Configuration'
+                        saveBtn.disabled = false
+                    }
+                })
             })
         }
     })
