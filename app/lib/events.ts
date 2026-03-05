@@ -1,4 +1,5 @@
 // app/src/lib/events.ts — SSE event handler for chat stream
+import { renderMarkdown } from './markdown'
 import {
     state, dom, toolCards, getActiveAgent,
     streamingEl, streamingContent, lastThinkingMessage, lastThinkingEl,
@@ -148,19 +149,22 @@ export function handleEvent(type: string, data: any) {
                 setStreamingEl(el)
             }
             const textEl = streamingEl!.querySelector('.stream-text')
-            if (textEl) textEl.textContent = displayText
+            if (textEl) textEl.innerHTML = renderMarkdown(displayText)
             scrollDown()
             break
         }
         case 'thinking':
             if (streamingEl && streamingContent) {
-                // Finalize the streaming bubble — remove cursor, mark as complete
+                // Finalize the streaming bubble — remove cursor, render final markdown
                 const cursor = streamingEl.querySelector('.stream-cursor')
                 if (cursor) cursor.remove()
                 streamingEl.classList.remove('streaming')
+                const finalText = data.message || streamingContent
+                const cleanedFinal = cleanThinkingText(finalText)
+                const bubbleEl = streamingEl.querySelector('.bubble')
+                if (bubbleEl && cleanedFinal) bubbleEl.innerHTML = renderMarkdown(cleanedFinal)
                 // Track as last thinking so 'complete' handler can convert to response bubble
-                // Prefer data.message (server-cleaned, tool JSON stripped) over raw streamingContent
-                setLastThinking(data.message || streamingContent, streamingEl)
+                setLastThinking(finalText, streamingEl)
                 setStreamingEl(null)
                 setStreamingContent('')
             } else {

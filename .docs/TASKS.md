@@ -7,7 +7,7 @@
 - [x] ~~**Skills sidebar page empty**~~ — ✅ FIXED. Rewrote `page.client.tsx` to use `content` field instead of broken `commands` array. Shows name/desc/line count/file badge.
 
 ## 🟡 Priority: Improve
-- [ ] **Plugin config UI** — Plugin configure modal should render form fields from manifest's `config` schema. Currently just shows raw config.
+- [x] ~~**Plugin config UI**~~ — ✅ DONE. Configure button opens modal with schema-driven form fields from `geeksy-plugin.json` manifest. Labels, descriptions, required markers, secret masking, array-as-textarea. Falls back to raw JSON editor.
 - [ ] **Chat streaming improvements** — Chat could show tool calls more clearly (code blocks, results formatting).
 - [ ] **Agent model selection** — Model dropdown dropdown is present but could be more prominent with model descriptions.
 

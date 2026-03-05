@@ -64,14 +64,52 @@ export function ToolCard({ name, params, result }: {
     const badgeClass = !result ? 'running' : result.success ? 'success' : 'failure'
     const badgeText = !result ? 'running' : result.success ? 'success' : 'failed'
     const output = result ? (result.output || result.error || '') : ''
+
+    // Human-readable tool labels with icons
+    const toolLabels: Record<string, string> = {
+        read_file: '📖 Read File',
+        write_file: '✏️ Write File',
+        edit_file: '✏️ Edit File',
+        execute: '🖥️ Execute',
+        run_command: '🖥️ Run Command',
+        search: '🔍 Search',
+        list_files: '📂 List Files',
+        schedule: '⏰ Schedule',
+    }
+    const displayName = toolLabels[name] || name
+
+    // Extract the primary field for compact display
+    const primaryField = params.path || params.file || params.command || params.query || ''
+    const hasExtraParams = Object.keys(params).length > 1 || (!primaryField && Object.keys(params).length > 0)
+
     return (
         <div className="card card-tool">
             <div className="tool-header">
-                <span className="tool-name">{name}</span>
+                <span className="tool-name">{displayName}</span>
                 <span className={`tool-badge ${badgeClass}`}>{badgeText}</span>
             </div>
-            <pre className="tool-params">{JSON.stringify(params, null, 2)}</pre>
-            {output && <pre className="tool-output">{output.substring(0, 500)}</pre>}
+            {primaryField && (
+                <div className="tool-primary-param">{primaryField}</div>
+            )}
+            {hasExtraParams && (
+                <details className="tool-params-details">
+                    <summary className="tool-params-summary">Parameters</summary>
+                    <pre className="tool-params">{JSON.stringify(params, null, 2)}</pre>
+                </details>
+            )}
+            {!hasExtraParams && !primaryField && (
+                <pre className="tool-params">{JSON.stringify(params, null, 2)}</pre>
+            )}
+            {output && output.length > 300 ? (
+                <details className="tool-output-details">
+                    <summary className="tool-output-summary">
+                        Output ({output.length > 1000 ? `${(output.length / 1024).toFixed(1)}KB` : `${output.length} chars`})
+                    </summary>
+                    <pre className="tool-output">{output.substring(0, 2000)}</pre>
+                </details>
+            ) : output ? (
+                <pre className="tool-output">{output}</pre>
+            ) : null}
         </div>
     )
 }
