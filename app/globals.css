@@ -1004,21 +1004,53 @@ body {
     border-color: var(--border);
 }
 
-.model-select {
+.model-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     background: var(--bg-input);
     border: 1px solid var(--border);
-    color: var(--text-1);
-    padding: 5px 10px;
     border-radius: var(--r-sm);
+    padding: 0 2px 0 8px;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.model-select-wrapper:hover {
+    border-color: rgba(99, 102, 241, .4);
+}
+
+.model-select-wrapper:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, .12);
+}
+
+.model-select-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.model-select {
+    background: transparent;
+    border: none;
+    color: var(--text-1);
+    padding: 6px 4px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     outline: none;
     cursor: pointer;
     max-width: 200px;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.model-select option,
+.model-select optgroup {
+    background: var(--bg-1);
+    color: var(--text-1);
 }
 
 .model-select:focus {
-    border-color: var(--border-focus);
+    outline: none;
 }
 
 .skill-toggles {

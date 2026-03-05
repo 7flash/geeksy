@@ -33,10 +33,13 @@ export default function Page() {
                         <button className="header-icon-btn" id="clear-chat-btn" title="Clear chat (Ctrl+L)">🗑</button>
                     </div>
                     <div className="agent-header-right">
-                        <select className="model-select" id="model-select">
-                            {/* Populated dynamically from /api/models — only active providers */}
-                            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                        </select>
+                        <div className="model-select-wrapper">
+                            <span className="model-select-icon">🧠</span>
+                            <select className="model-select" id="model-select">
+                                {/* Populated dynamically from /api/models — only active providers */}
+                                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                            </select>
+                        </div>
                         <div id="skill-toggles" className="skill-toggles" />
                     </div>
                 </header>

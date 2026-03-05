@@ -494,9 +494,24 @@ export async function loadModels() {
         const active = providers.filter(p => p.active)
         const inactive = providers.filter(p => !p.active)
 
+        // Provider icons for visual distinction in dropdown
+        const providerIcons: Record<string, string> = {
+            google: '✦', gemini: '✦',
+            openai: '◆', gpt: '◆',
+            anthropic: '◈', claude: '◈',
+            deepseek: '◇',
+        }
+        function getProviderIcon(name: string): string {
+            const lower = name.toLowerCase()
+            for (const [key, icon] of Object.entries(providerIcons)) {
+                if (lower.includes(key)) return icon
+            }
+            return '›'
+        }
+
         for (const p of active) {
             const group = document.createElement('optgroup')
-            group.label = p.name
+            group.label = `${getProviderIcon(p.name)} ${p.name}`
             for (const m of p.models) {
                 const opt = document.createElement('option')
                 opt.value = m.id
