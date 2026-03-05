@@ -12,8 +12,8 @@
 - [x] ~~**Agent model selection**~~ — ✅ DONE. Model dropdown wrapped in pill-style container with 🧠 icon, accent border glow on hover/focus. Provider-specific icons (✦ Google, ◆ OpenAI, ◈ Anthropic, ◇ DeepSeek) in optgroup labels.
 
 ## 🟢 Priority: Features
-- [ ] **Telegram + Trading composition** — Agent combines skills from multiple plugins in a single script (e.g., listen to Telegram channel → auto-trade tokens).
-- [ ] **Example: "listen to @PumpAlpha and trade all tokens"** — Pre-built listener script template.
+- [x] ~~**Telegram + Trading composition**~~ — ✅ DONE. Skills API enriched with plugin provenance (name, icon, packageName, status, API spec). Skill chips grouped by source plugin with icons. Composition badge (⚡ N plugins) + contextual template prompts (Listen & Trade, Trade Alerts, Channel Scanner) appear when 2+ plugin skills are active. Templates auto-populate chat input.
+- [x] ~~**Example: "listen to @PumpAlpha and trade all tokens"**~~ — ✅ DONE. Pre-built composition template populates chat with: "Listen to the Telegram channel @PumpAlpha for new token mentions. When a Solana token mint address is mentioned, automatically add it to the trading bot via the Pumpfun Trading plugin."
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (file-router, SSR + client mount)
