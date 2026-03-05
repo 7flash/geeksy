@@ -389,7 +389,7 @@ export function renderSkillsPane() {
 
     if (skills.length === 0) {
         render(
-            <div className="overview-empty">No skill files found in <code>skills/</code> directory.<br />Create <code>.yaml</code> files to define new skills.</div>,
+            <div className="overview-empty">No skill files found in <code>skills/</code> directory.<br />Create <code>.md</code> files with YAML frontmatter to define new skills.</div>,
             pane
         )
         return
@@ -401,6 +401,11 @@ export function renderSkillsPane() {
                 const icon = SKILL_ICONS[skill.id] || '🔧'
                 const isActive = state.activeSkills.has(skill.id)
                 const isExpanded = expandedSkillId === skill.id
+                // Count content lines for a rough size indicator
+                const lineCount = skill.content ? skill.content.split('\n').length : 0
+                const preview = skill.content
+                    ? skill.content.split('\n').slice(0, 3).join('\n')
+                    : ''
 
                 return (
                     <div className={`skill-panel-card ${isActive ? 'active' : ''} ${isExpanded ? 'expanded' : ''}`} key={skill.id}>
@@ -413,7 +418,7 @@ export function renderSkillsPane() {
                                 </div>
                             </div>
                             <div className="skill-panel-actions">
-                                <span className="skill-panel-count">{skill.commands.length} cmd{skill.commands.length !== 1 ? 's' : ''}</span>
+                                <span className="skill-panel-count">{lineCount} lines</span>
                                 <button
                                     className={`skill-toggle-btn ${isActive ? 'on' : 'off'}`}
                                     onClick={() => {
@@ -427,25 +432,13 @@ export function renderSkillsPane() {
                             </div>
                         </div>
                         {isExpanded && (
-                            <div className="skill-panel-commands">
-                                {skill.commands.map(cmd => (
-                                    <div className="skill-cmd-row" key={cmd.name}>
-                                        <div className="skill-cmd-header">
-                                            <code className="skill-cmd-name">{cmd.name}</code>
-                                            <span className="skill-cmd-desc">{cmd.description}</span>
-                                        </div>
-                                        <div className="skill-cmd-usage"><code>{cmd.usage}</code></div>
-                                        {cmd.params && Object.keys(cmd.params).length > 0 && (
-                                            <div className="skill-cmd-params">
-                                                {Object.entries(cmd.params).map(([k, v]) => (
-                                                    <div className="skill-param" key={k}>
-                                                        <code>{k}</code> <span>{v}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                            <div className="skill-panel-content">
+                                <pre className="skill-content-preview">{skill.content}</pre>
+                            </div>
+                        )}
+                        {!isExpanded && preview && (
+                            <div className="skill-panel-preview">
+                                <code>{preview.substring(0, 120)}{preview.length > 120 ? '…' : ''}</code>
                             </div>
                         )}
                     </div>
@@ -501,6 +494,11 @@ interface BgrunProcess {
     command?: string
     directory?: string
     startedAt?: string
+    port?: number
+    ports?: number[]
+    memory?: number
+    runtime?: number
+    group?: string
 }
 
 let processPoller: ReturnType<typeof setInterval> | null = null
@@ -535,7 +533,15 @@ function formatUptime(startedAt: string | undefined): string {
     const min = Math.floor(sec / 60)
     if (min < 60) return `${min}m`
     const hrs = Math.floor(min / 60)
-    return `${hrs}h ${min % 60}m`
+    if (hrs < 24) return `${hrs}h ${min % 60}m`
+    const days = Math.floor(hrs / 24)
+    return `${days}d ${hrs % 24}h`
+}
+
+function formatMemory(bytes: number | undefined): string {
+    if (!bytes) return ''
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 function processStatusDot(status: string) {
@@ -573,11 +579,17 @@ function renderProcessesPane(processes: BgrunProcess[]) {
                     <div className="process-left">
                         {processStatusDot(p.status)}
                         <div className="process-info">
-                            <div className="process-name">{p.name}</div>
-                            {p.command && <div className="process-cmd">{p.command}</div>}
+                            <div className="process-name-row">
+                                <span className="process-name">{p.name}</span>
+                                {p.group && <span className="process-group-badge">{p.group}</span>}
+                                {p.port && p.status === 'running' && (
+                                    <a className="process-port-link" href={`http://localhost:${p.port}`} target="_blank" rel="noopener">:{p.port}</a>
+                                )}
+                            </div>
                             <div className="process-meta">
                                 {p.pid && <span>PID {p.pid}</span>}
-                                {p.startedAt && p.status === 'running' && <span> · up {formatUptime(p.startedAt)}</span>}
+                                {p.startedAt && p.status === 'running' && <span> · ↑ {formatUptime(p.startedAt)}</span>}
+                                {p.memory && p.memory > 0 && <span> · {formatMemory(p.memory)}</span>}
                                 {p.directory && <span> · {p.directory.replace(/.*[/\\]/, '')}</span>}
                             </div>
                         </div>

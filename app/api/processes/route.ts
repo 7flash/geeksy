@@ -2,7 +2,7 @@
 // Proxies to bgrun CLI for process listing, stop, restart
 
 // Fields that are safe to expose to the client
-const SAFE_FIELDS = ['name', 'status', 'pid', 'command', 'directory', 'startedAt', 'uptime', 'port']
+const SAFE_FIELDS = ['name', 'status', 'pid', 'command', 'directory', 'startedAt', 'uptime', 'port', 'memory', 'runtime', 'group', 'running', 'timestamp', 'ports']
 
 function sanitizeProcess(p: any) {
     const safe: any = {}
@@ -10,18 +10,48 @@ function sanitizeProcess(p: any) {
         if (p[key] !== undefined) safe[key] = p[key]
     }
     // Normalize status — bgrun uses 'running'/'stopped'/'crashed'
-    if (typeof safe.status === 'string') {
+    // bgr API uses 'running: true/false' boolean
+    if (p.running === true) {
+        safe.status = 'running'
+    } else if (p.running === false) {
+        safe.status = 'stopped'
+    } else if (typeof safe.status === 'string') {
         safe.status = safe.status.toLowerCase()
     }
     // If we have a PID and status is not explicitly set, check if process is alive
     if (safe.pid && !safe.status) {
         safe.status = 'running'
     }
+    // Normalize startedAt from timestamp
+    if (!safe.startedAt && p.timestamp) {
+        safe.startedAt = p.timestamp
+    }
+    // Normalize port from ports array
+    if (!safe.port && Array.isArray(p.ports) && p.ports.length > 0) {
+        safe.port = p.ports[0]
+    }
     return safe
 }
 
 async function getProcessList(): Promise<any[]> {
-    // Try bgrun --json CLI
+    // Try bgr HTTP API first — provides richer data (memory, timestamp, port, group)
+    const ports = [3001, 3002]
+    const bgrPort = process.env.BGR_PORT
+    if (bgrPort && !ports.includes(Number(bgrPort))) ports.unshift(Number(bgrPort))
+
+    for (const port of ports) {
+        try {
+            const res = await fetch(`http://localhost:${port}/api/processes`, {
+                signal: AbortSignal.timeout(1500),
+            })
+            if (res.ok) {
+                const data = await res.json()
+                return (Array.isArray(data) ? data : data.processes || []).map(sanitizeProcess)
+            }
+        } catch { }
+    }
+
+    // Fallback: bgrun --json CLI (less data but always available)
     try {
         const proc = Bun.spawn(['bgrun', '--json'], {
             stdio: ['ignore', 'pipe', 'pipe'],
@@ -30,17 +60,6 @@ async function getProcessList(): Promise<any[]> {
         const stdout = await new Response(proc.stdout).text()
         const parsed = JSON.parse(stdout)
         return (Array.isArray(parsed) ? parsed : []).map(sanitizeProcess)
-    } catch { }
-
-    // Try bgrun HTTP API (port 3001)
-    try {
-        const res = await fetch('http://localhost:3001/api/processes', {
-            signal: AbortSignal.timeout(2000),
-        })
-        if (res.ok) {
-            const data = await res.json()
-            return (Array.isArray(data) ? data : data.processes || []).map(sanitizeProcess)
-        }
     } catch { }
 
     return []

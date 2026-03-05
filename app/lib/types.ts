@@ -81,12 +81,7 @@ export interface SkillInfo {
     id: string
     name: string
     description: string
-    commands: Array<{
-        name: string
-        description: string
-        usage: string
-        params?: Record<string, string>
-    }>
+    content: string  // Full markdown body of the skill file
     filePath: string
 }
 
