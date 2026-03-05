@@ -8,7 +8,7 @@
 
 ## 🟡 Priority: Improve
 - [x] ~~**Plugin config UI**~~ — ✅ DONE. Configure button opens modal with schema-driven form fields from `geeksy-plugin.json` manifest. Labels, descriptions, required markers, secret masking, array-as-textarea. Falls back to raw JSON editor.
-- [ ] **Chat streaming improvements** — Chat could show tool calls more clearly (code blocks, results formatting).
+- [x] ~~**Chat streaming improvements**~~ — ✅ DONE. Streaming bubble renders markdown in real-time. Tool cards show human-readable labels with icons, primary param badges, collapsible extra params and long output.
 - [ ] **Agent model selection** — Model dropdown dropdown is present but could be more prominent with model descriptions.
 
 ## 🟢 Priority: Features
