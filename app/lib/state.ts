@@ -85,4 +85,21 @@ export function saveState() {
             toolCards: [...toolCards],
         })
     }
+    // Persist active skills to localStorage
+    try {
+        localStorage.setItem('geeksy:activeSkills', JSON.stringify([...state.activeSkills]))
+    } catch { /* quota exceeded, ignore */ }
+}
+
+/** Restore skill toggles from localStorage */
+export function restoreActiveSkills() {
+    try {
+        const saved = localStorage.getItem('geeksy:activeSkills')
+        if (saved) {
+            const ids: string[] = JSON.parse(saved)
+            state.activeSkills = new Set(ids)
+            return true // had saved state
+        }
+    } catch { /* corrupt data, ignore */ }
+    return false // no saved state
 }

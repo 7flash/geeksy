@@ -601,6 +601,114 @@ body {
     color: var(--accent);
 }
 
+/* ── Skills Search Bar ── */
+
+.skills-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.skills-search-input {
+    flex: 1;
+    padding: 10px 14px;
+    padding-right: 32px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    color: var(--text-1);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.skills-search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.skills-search-input::placeholder {
+    color: var(--text-3);
+}
+
+.skills-search-clear {
+    position: absolute;
+    right: 60px;
+    background: none;
+    border: none;
+    color: var(--text-3);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color .15s, background .15s;
+}
+
+.skills-search-clear:hover {
+    color: var(--text-1);
+    background: var(--bg-3);
+}
+
+.skills-count {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 500;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Skills Plugin Groups ── */
+
+.skills-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skills-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.skills-group-icon {
+    font-size: 14px;
+}
+
+.skills-group-name {
+    flex: 1;
+}
+
+.skills-group-count {
+    font-size: 10px;
+    color: var(--text-3);
+    background: var(--bg-3);
+    padding: 2px 6px;
+    border-radius: 99px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.skill-plugin-badge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 99px;
+    color: var(--purple);
+    background: rgba(139, 92, 246, .12);
+    border: 1px solid rgba(139, 92, 246, .25);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
 /* ── Coming Soon (Plugins) ── */
 .coming-soon {
     text-align: center;
@@ -1244,12 +1352,14 @@ body {
 
 .msg-user {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
+    align-items: flex-end;
 }
 
 .msg-agent {
     display: flex;
-    justify-content: flex-start;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .msg-user .bubble {
@@ -1272,6 +1382,22 @@ body {
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+.msg-time {
+    font-size: 9px;
+    color: var(--text-3);
+    opacity: 0;
+    margin-top: 2px;
+    padding: 0 4px;
+    transition: opacity .2s;
+    user-select: none;
+}
+
+.msg:hover .msg-time,
+.msg-user:hover .msg-time,
+.msg-agent:hover .msg-time {
+    opacity: 1;
 }
 
 /* ── Cards ── */

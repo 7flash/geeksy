@@ -3,20 +3,29 @@ import { render } from 'melina/client'
 import { renderMarkdown } from './markdown'
 import { dom, toolCards } from './state'
 
+// ── Time Helpers ──
+
+function timeLabel(ts?: number): string {
+    const d = ts ? new Date(ts) : new Date()
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
 // ── Bubble Components ──
 
-function UserBubble({ text }: { text: string }) {
+function UserBubble({ text, ts }: { text: string; ts?: number }) {
     return (
         <div className="msg msg-user">
             <div className="bubble">{text}</div>
+            <span className="msg-time">{timeLabel(ts)}</span>
         </div>
     )
 }
 
-function ResponseBubble({ text }: { text: string }) {
+function ResponseBubble({ text, ts }: { text: string; ts?: number }) {
     return (
         <div className="msg msg-agent">
             <div className="bubble" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
+            <span className="msg-time">{timeLabel(ts)}</span>
         </div>
     )
 }
@@ -124,8 +133,8 @@ function appendJsx(jsx: any): HTMLElement {
     return el
 }
 
-export function appendUserBubble(text: string) { appendJsx(<UserBubble text={text} />) }
-export function appendResponseBubble(text: string) { appendJsx(<ResponseBubble text={text} />) }
+export function appendUserBubble(text: string) { appendJsx(<UserBubble text={text} ts={Date.now()} />) }
+export function appendResponseBubble(text: string) { appendJsx(<ResponseBubble text={text} ts={Date.now()} />) }
 export function appendLoading(): HTMLElement { return appendJsx(<Loading />) }
 export function appendDivider(text: string) { appendJsx(<Divider text={text} />) }
 export function appendCard(type: string, label: string, content: string) { appendJsx(<Card type={type} label={label} content={content} />) }
@@ -159,9 +168,16 @@ export function updateLastTool(result: { success: boolean; output: string; error
 export function scrollDown() {
     requestAnimationFrame(() => {
         const { chatArea } = dom
-        const isNearBottom = chatArea.scrollTop + chatArea.clientHeight >= chatArea.scrollHeight - 150
+        const isNearBottom = chatArea.scrollTop + chatArea.clientHeight >= chatArea.scrollHeight - 300
         if (isNearBottom) {
             chatArea.scrollTop = chatArea.scrollHeight
         }
+    })
+}
+
+/** Always scroll to bottom — use after user-initiated actions (send, new agent, etc.) */
+export function forceScrollDown() {
+    requestAnimationFrame(() => {
+        dom.chatArea.scrollTop = dom.chatArea.scrollHeight
     })
 }

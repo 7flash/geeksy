@@ -1,6 +1,6 @@
 // app/src/lib/panels.tsx — Overview panes: Objectives Timeline, Files, Schedule, Memory
 import { render } from 'melina/client'
-import { state, dom } from './state'
+import { state, dom, saveState } from './state'
 import { appendResponseBubble } from './chat-ui'
 import type { ObjectiveEntry, ObjectiveGroup, ScheduleEntry, StateEntry, SkillInfo } from './types'
 
@@ -50,18 +50,37 @@ function TimelineGroup({ group, isLatest }: { group: ObjectiveGroup; isLatest: b
 
 export function renderObjectivesPane() {
     const pane = document.getElementById('pane-objectives')!
-    if (state.objectiveGroups.length === 0) {
+    if (state.objectiveGroups.length === 0 && state.objectives.length === 0) {
         render(<div className="overview-empty">No objectives yet. Send a message to start planning.</div>, pane)
     } else {
         const reversed = [...state.objectiveGroups].reverse()
+
+        // Calculate stats from all known objectives (including restored ones)
+        const total = state.objectives.length
+        const completed = state.objectives.filter(o => o.met === true).length
+        const failed = state.objectives.filter(o => o.met === false).length
+        const pending = total - completed - failed
+
         render(
-            <div className="tl-timeline">
-                {reversed.map((g, i) => (
-                    <TimelineGroup
-                        group={g}
-                        isLatest={i === 0}
-                    />
-                ))}
+            <div className="objectives-container" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div className="objectives-stats" style={{
+                    padding: '12px', borderBottom: '1px solid var(--border)',
+                    display: 'flex', gap: '16px', fontSize: '12px', background: 'var(--bg-card)'
+                }}>
+                    <span style={{ color: 'var(--text-dim)' }}><strong>Task History:</strong></span>
+                    <span><span style={{ color: 'var(--text)' }}>{total}</span> Total</span>
+                    {completed > 0 && <span style={{ color: 'var(--green)' }}>✓ {completed} Complete</span>}
+                    {failed > 0 && <span style={{ color: 'var(--red)' }}>✗ {failed} Failed</span>}
+                    {pending > 0 && <span style={{ color: 'var(--blue)' }}>⏳ {pending} Pending</span>}
+                </div>
+                <div className="tl-timeline" style={{ flex: 1, overflowY: 'auto' }}>
+                    {reversed.map((g, i) => (
+                        <TimelineGroup
+                            group={g}
+                            isLatest={i === 0}
+                        />
+                    ))}
+                </div>
             </div>,
             pane
         )
@@ -377,9 +396,16 @@ const SKILL_ICONS: Record<string, string> = {
     git: '📦',
     npm: '📋',
     project: '🏗️',
+    measure: '📊',
+    melina: '🦊',
+    bgrun: '🔄',
+    sqlite: '🗄️',
+    telegram: '📱',
+    trading: '📈',
 }
 
 let expandedSkillId: string | null = null
+let skillsFilter = ''
 
 export function renderSkillsPane() {
     const pane = document.getElementById('pane-skills')!
@@ -395,13 +421,40 @@ export function renderSkillsPane() {
         return
     }
 
+    const q = skillsFilter.toLowerCase()
+    const filtered = q
+        ? skills.filter(s =>
+            s.name.toLowerCase().includes(q) ||
+            s.description.toLowerCase().includes(q) ||
+            s.id.toLowerCase().includes(q)
+        )
+        : skills
+
     render(
         <div className="skills-panel-list">
-            {skills.map(skill => {
-                const icon = SKILL_ICONS[skill.id] || '🔧'
+            <div className="skills-search-bar" style={{ marginBottom: '8px' }}>
+                <input
+                    type="text"
+                    className="skills-search-input"
+                    placeholder="🔍 Filter skills..."
+                    value={skillsFilter}
+                    onInput={(e: Event) => {
+                        skillsFilter = (e.target as HTMLInputElement).value
+                        renderSkillsPane()
+                    }}
+                    style={{ padding: '6px 10px', fontSize: '11px' }}
+                />
+                {skillsFilter && (
+                    <button className="skills-search-clear" onClick={() => { skillsFilter = ''; renderSkillsPane() }} style={{ right: '40px' }}>✕</button>
+                )}
+                <span className="skills-count">{filtered.length}/{skills.length}</span>
+            </div>
+            {filtered.length === 0 ? (
+                <div className="overview-empty" style={{ padding: '12px' }}>No skills matching "{skillsFilter}"</div>
+            ) : filtered.map(skill => {
+                const icon = (skill as any).plugin?.icon || SKILL_ICONS[skill.id] || '🔧'
                 const isActive = state.activeSkills.has(skill.id)
                 const isExpanded = expandedSkillId === skill.id
-                // Count content lines for a rough size indicator
                 const lineCount = skill.content ? skill.content.split('\n').length : 0
                 const preview = skill.content
                     ? skill.content.split('\n').slice(0, 3).join('\n')
@@ -425,6 +478,7 @@ export function renderSkillsPane() {
                                         if (isActive) state.activeSkills.delete(skill.id)
                                         else state.activeSkills.add(skill.id)
                                         renderSkillsPane()
+                                        saveState()
                                     }}
                                 >
                                     {isActive ? 'ON' : 'OFF'}

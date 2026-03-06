@@ -3,9 +3,9 @@ import { render } from 'melina/client'
 import { measure, measureSync } from 'measure-fn'
 import {
     state, dom, agentChatStore, toolCards, getActiveAgent, saveState,
-    setActiveLoadingEl,
+    setActiveLoadingEl, restoreActiveSkills,
 } from './state'
-import { appendUserBubble, appendLoading, appendCard, appendResponseBubble } from './chat-ui'
+import { appendUserBubble, appendLoading, appendCard, appendResponseBubble, forceScrollDown } from './chat-ui'
 import { renderObjectivesPane, renderFilesPane, renderSchedulePane, resetMessageCount } from './panels'
 import { handleEvent, clearLoading } from './events'
 import type { AgentEntry, ToolCardEntry } from './types'
@@ -240,6 +240,7 @@ function restoreChatSnapshot(saved: { html: string; objectives: any[]; objective
     toolCards.length = 0
     toolCards.push(...saved.toolCards)
     rebindThinkingToggles()
+    forceScrollDown()
 }
 
 /** Re-bind thinking card collapse toggles after restoring HTML */
@@ -361,6 +362,7 @@ export async function sendMessage() {
 
     appendUserBubble(text)
     setActiveLoadingEl(appendLoading())
+    forceScrollDown()
 
     await measure(`Chat: "${text.substring(0, 40)}"`, async (m) => {
         try {
@@ -467,8 +469,9 @@ export async function loadSkills() {
         try {
             const res = await fetch('/api/skills')
             state.availableSkills = await res.json()
-            // Auto-enable all skills on first load
-            if (state.activeSkills.size === 0) {
+            // Restore saved skill toggles, or auto-enable all on first load
+            const restored = restoreActiveSkills()
+            if (!restored && state.activeSkills.size === 0) {
                 for (const s of state.availableSkills) {
                     state.activeSkills.add(s.id)
                 }
@@ -593,6 +596,7 @@ export function renderSkillChips() {
                                     skills.forEach(s => state.activeSkills.add(s.id))
                                 }
                                 renderSkillChips()
+                                saveState()
                             }}
                             title={`${plugin.name} — ${skills.map(s => s.name).join(', ')}`}
                         >
@@ -610,6 +614,7 @@ export function renderSkillChips() {
                         if (state.activeSkills.has(skill.id)) state.activeSkills.delete(skill.id)
                         else state.activeSkills.add(skill.id)
                         renderSkillChips()
+                        saveState()
                     }}
                     title={skill.description}
                 >
