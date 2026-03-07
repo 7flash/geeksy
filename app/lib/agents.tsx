@@ -714,7 +714,7 @@ function SidebarAgent({ agent, isActive }: { agent: AgentEntry; isActive: boolea
             </div>
             <span
                 className="sidebar-agent-delete"
-                onClick={(e: Event) => { e.stopPropagation(); deleteAgent(agent.id) }}
+                onClick={(e: any) => { e.stopPropagation(); deleteAgent(agent.id) }}
                 title="Delete agent"
             >✕</span>
         </button>

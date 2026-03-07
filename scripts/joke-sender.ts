@@ -21,7 +21,7 @@ async function getUsedJokes() {
   }
 }
 
-async function updateUsedJokes(usedJokeIds) {
+async function updateUsedJokes(usedJokeIds: number[]) {
   try {
     const response = await fetch(`${process.env.STATE_URL}/api/agent-state`, {
       method: 'POST',

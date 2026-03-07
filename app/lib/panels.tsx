@@ -438,7 +438,7 @@ export function renderSkillsPane() {
                     className="skills-search-input"
                     placeholder="🔍 Filter skills..."
                     value={skillsFilter}
-                    onInput={(e: Event) => {
+                    onInput={(e: any) => {
                         skillsFilter = (e.target as HTMLInputElement).value
                         renderSkillsPane()
                     }}

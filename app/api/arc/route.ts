@@ -106,7 +106,7 @@ export async function POST(req: Request) {
             command: parts.join(' '),
             directory: SMART_AGENT_DIR,
             force: true,
-        })
+        } as any)
 
         return Response.json({
             ok: true,

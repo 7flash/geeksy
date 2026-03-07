@@ -105,7 +105,7 @@ function ProviderCard({ p }: { p: ProviderData }) {
                             <span className="model-desc">{m.description}</span>
                         </div>
                         <div className="model-meta">
-                            <span className="model-tier" style={`--tier-color: ${TIER_COLORS[m.tier] || '#888'}`}>
+                            <span className="model-tier" style={{ '--tier-color': TIER_COLORS[m.tier] || '#888' } as any}>
                                 {TIER_LABELS[m.tier] || m.tier.toUpperCase()}
                             </span>
                             <code className="model-id">{m.id}</code>

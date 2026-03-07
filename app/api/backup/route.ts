@@ -120,7 +120,7 @@ export async function GET(req: Request, m: MeasureFn) {
 
     // Download specific backup
     if (id) {
-        return m('download-backup', () => {
+        return m('download-backup', async () => {
             const userDir = ensureUserDir(user.id)
             const backupFile = join(userDir, `${id}.json`)
 
@@ -142,7 +142,7 @@ export async function GET(req: Request, m: MeasureFn) {
     }
 
     // List all backups
-    return m('list-backups', () => {
+    return m('list-backups', async () => {
         const userDir = ensureUserDir(user.id)
         const files = readdirSync(userDir)
             .filter(f => f.endsWith('.json'))

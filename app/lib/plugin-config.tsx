@@ -45,7 +45,7 @@ export async function openPluginConfig(packageName: string) {
     }
 }
 
-function handleOverlayClick(e: Event) {
+function handleOverlayClick(e: any) {
     if ((e.target as HTMLElement).classList.contains('settings-overlay')) closePluginConfig()
 }
 
@@ -106,7 +106,7 @@ function PluginConfigModal({ id, name, config, currentConfig }: { id: number, na
 
         return (
             <div className="settings-group plugin-config-group" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                <label className="settings-label" style={{ width: '100%' }} for={`plg-cfg-${key}`}>
+                <label className="settings-label" style={{ width: '100%' }} htmlFor={`plg-cfg-${key}`}>
                     {fieldDef.label || key}
                     {fieldDef.required && <span style={{ color: 'var(--red)', marginLeft: '4px' }}>*</span>}
                 </label>
@@ -120,7 +120,7 @@ function PluginConfigModal({ id, name, config, currentConfig }: { id: number, na
         )
     }
 
-    const handleSave = async (e: Event) => {
+    const handleSave = async (e: any) => {
         const btn = e.currentTarget as HTMLButtonElement
         btn.textContent = 'Saving...'
         btn.disabled = true
