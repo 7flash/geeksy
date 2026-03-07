@@ -5,12 +5,12 @@
  * POST /api/backup/db → Import JSON snapshot (overwrite)
  */
 
-import { exportDb, importDb, type DbSnapshot } from '../../lib/backup'
+import { exportDb, importDb, type DbSnapshot } from '../../../lib/backup'
 import type { MeasureFn } from 'measure-fn'
 
 /** Export database as JSON */
 export async function GET(_req: Request, m: MeasureFn) {
-    return m('export-db', () => {
+    return m('export-db', async () => {
         const snapshot = exportDb()
         return Response.json(snapshot)
     })

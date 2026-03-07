@@ -105,7 +105,7 @@ function rerender() {
                     className="skills-search-input"
                     placeholder="🔍 Search skills by name, description, or plugin..."
                     value={searchQuery}
-                    onInput={(e: Event) => {
+                    onInput={(e: any) => {
                         searchQuery = (e.target as HTMLInputElement).value
                         rerender()
                     }}

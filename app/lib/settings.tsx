@@ -200,11 +200,11 @@ function CloudBackupSection() {
         return (
             <div className="settings-group">
                 <span className="settings-label">☁️ Cloud Backup</span>
-                <div style="margin-top: 8px;">
+                <div style={{ marginTop: '8px' }}>
                     <button className="backup-btn login" onClick={startGitHubLogin}>
                         🔗 Sign in with GitHub
                     </button>
-                    <div style="font-size: 11px; color: var(--text-muted, #666); margin-top: 6px;">
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted, #666)', marginTop: '6px' }}>
                         Sign in to back up your agents to the cloud
                     </div>
                 </div>
@@ -217,26 +217,26 @@ function CloudBackupSection() {
             <span className="settings-label">☁️ Cloud Backup</span>
 
             {/* User info */}
-            <div className="backup-user" style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
-                <img src={authUser.avatar} alt="" width="24" height="24" style="border-radius: 50%;" />
-                <span style="font-weight: 600;">@{authUser.login}</span>
-                <button className="backup-btn-sm" onClick={logout} style="margin-left: auto;">Sign out</button>
+            <div className="backup-user" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
+                <img src={authUser.avatar} alt="" width="24" height="24" style={{ borderRadius: '50%' }} />
+                <span style={{ fontWeight: 600 }}>@{authUser.login}</span>
+                <button className="backup-btn-sm" onClick={logout} style={{ marginLeft: 'auto' }}>Sign out</button>
             </div>
 
             {/* Passphrase */}
-            <div style="margin: 8px 0;">
-                <label style="font-size: 11px; color: var(--text-muted, #888);">🔑 Backup Passphrase</label>
+            <div style={{ margin: '8px 0' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-muted, #888)' }}>🔑 Backup Passphrase</label>
                 <input
                     id="backup-passphrase"
                     type="password"
                     placeholder="Enter passphrase (min 6 chars)"
                     className="backup-input"
-                    style="width: 100%; margin-top: 4px;"
+                    style={{ width: '100%', marginTop: '4px' }}
                 />
             </div>
 
             {/* Actions */}
-            <div style="display: flex; gap: 8px; margin: 8px 0;">
+            <div style={{ display: 'flex', gap: '8px', margin: '8px 0' }}>
                 <button className="backup-btn primary" onClick={startBackup} disabled={isBackingUp}>
                     {isBackingUp ? '⏳...' : '⬆ Backup Now'}
                 </button>
@@ -244,18 +244,18 @@ function CloudBackupSection() {
 
             {/* Status */}
             {backupStatus && (
-                <div className="backup-status" style="font-size: 12px; padding: 6px 8px; border-radius: 6px; background: var(--bg-elevated, #1a1a2e); margin: 4px 0;">
+                <div className="backup-status" style={{ fontSize: '12px', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-elevated, #1a1a2e)', margin: '4px 0' }}>
                     {backupStatus}
                 </div>
             )}
 
             {/* Backup list */}
             {backupList.length > 0 && (
-                <div style="margin-top: 8px;">
-                    <div style="font-size: 11px; color: var(--text-muted, #888); margin-bottom: 4px;">📋 Previous Backups</div>
+                <div style={{ marginTop: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', marginBottom: '4px' }}>📋 Previous Backups</div>
                     {backupList.map(b => (
-                        <div className="backup-item" style="display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px;">
-                            <span style="flex: 1;">{formatDate(b.timestamp)} — {(b.size / 1024).toFixed(0)} KB</span>
+                        <div className="backup-item" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', fontSize: '12px' }}>
+                            <span style={{ flex: 1 }}>{formatDate(b.timestamp)} — {(b.size / 1024).toFixed(0)} KB</span>
                             <button className="backup-btn-sm" onClick={() => startRestore(b.id)} disabled={isRestoring}>
                                 {isRestoring ? '...' : '⬇'}
                             </button>
@@ -274,7 +274,7 @@ function SettingsModal() {
     const agentCount = state.agents.length
 
     return (
-        <div className="settings-overlay" onClick={(e: Event) => {
+        <div className="settings-overlay" onClick={(e: any) => {
             if ((e.target as HTMLElement).classList.contains('settings-overlay')) closeSettings()
         }}>
             <div className="settings-panel">
@@ -303,7 +303,7 @@ function SettingsModal() {
 
                     <div className="settings-group">
                         <span className="settings-label">Keyboard Shortcuts</span>
-                        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
                             <div className="settings-kbd"><span className="kbd">Ctrl+N</span> New agent</div>
                             <div className="settings-kbd"><span className="kbd">Ctrl+L</span> Clear chat</div>
                             <div className="settings-kbd"><span className="kbd">Enter</span> Send message</div>

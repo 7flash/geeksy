@@ -15,7 +15,7 @@ export default function mount() {
 
     // Nav rail Settings button — navigate to home page (where settings modal lives)
     const settingsBtn = document.getElementById('nav-settings-btn')
-    const handleSettings = (e: Event) => {
+    const handleSettings = (e: any) => {
         e.preventDefault()
         // If on home page, try to open settings modal directly
         const openSettingsEvt = new CustomEvent('smart-agent:open-settings')
