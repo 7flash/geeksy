@@ -22,6 +22,8 @@
 - [x] ~~**Cross-instance P2P Communication**~~ — ✅ DONE. WebRTC data channels with WebSocket signaling server. P2PManager class handles ICE negotiation, peer discovery, and JSON-RPC protocol over data channels. Signaling server relays SDP/ICE only — no data passes through. Default RPC handlers: `skills.list`, `agent.list`, `agent.run`, `state.get`, `health`. ADR-002 documents architecture. Files: `p2p.ts`, `p2p-handlers.ts`, `api/p2p/route.ts`.
 
 ## 🟡 Priority: Improve (New)
+- [ ] **Single Global Chat / Gateway** — Replace individual agent chats with a unified global chat interface in Geeksy. Act as a gateway so users can interact via multiple interfaces, including a Telegram bot (via geeksyclaw).
+- [ ] **Autonomous Heartbeat** — Implement a self-waking heartbeat loop for agents to proactively check on ongoing tasks, evaluate context, and speak/act without waiting for direct user prompts.
 - [x] ~~**Skill search/filter in panel**~~ — ✅ DONE. Search input on both Skills page (`/skills`) and Skills tab in overview panel. Filters by name, description, ID, or plugin name. Shows count (e.g. "1/2"). Clear button. Skills page also groups by plugin source with icons and count badges.
 - [x] ~~**Persistent skill toggle state**~~ — ✅ DONE. Active skill IDs saved to `localStorage` on every toggle. Restored on page load via `restoreActiveSkills()`. Falls back to auto-enable-all if no saved state. Works across page reloads.
 - [x] ~~**Chat message timestamps**~~ — ✅ DONE. Subtle 9px timestamps appear on hover below each user/agent bubble. Format: "06:04 AM". Hidden by default with smooth opacity transition. Non-intrusive but provides conversation context.
