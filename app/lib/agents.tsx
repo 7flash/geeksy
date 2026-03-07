@@ -8,6 +8,7 @@ import {
 import { appendUserBubble, appendLoading, appendCard, appendResponseBubble, forceScrollDown } from './chat-ui'
 import { renderObjectivesPane, renderFilesPane, renderSchedulePane, resetMessageCount } from './panels'
 import { handleEvent, clearLoading } from './events'
+import { openPluginConfig } from './plugin-config'
 import type { AgentEntry, ToolCardEntry } from './types'
 
 // ══════════════════════════════════════
@@ -603,6 +604,26 @@ export function renderSkillChips() {
                             <span className="skill-chip-icon">{plugin.icon}</span>
                             <span>{plugin.name}</span>
                             <span className="skill-chip-count">{skills.length}</span>
+                        </button>
+                        <button
+                            className="skill-plugin-config-btn"
+                            title="Configure Plugin"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                openPluginConfig(plugin.packageName)
+                            }}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--text-dim)',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                marginLeft: '8px',
+                                fontSize: '14px',
+                                borderRadius: '4px',
+                            }}
+                        >
+                            ⚙
                         </button>
                     </div>
                 )

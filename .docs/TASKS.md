@@ -17,6 +17,9 @@
 ## 🟢 Priority: Features
 - [x] ~~**Telegram + Trading composition**~~ — ✅ DONE. Skills API enriched with plugin provenance (name, icon, packageName, status, API spec). Skill chips grouped by source plugin with icons. Composition badge (⚡ N plugins) + contextual template prompts (Listen & Trade, Trade Alerts, Channel Scanner) appear when 2+ plugin skills are active. Templates auto-populate chat input.
 - [x] ~~**Example: "listen to @PumpAlpha and trade all tokens"**~~ — ✅ DONE. Pre-built composition template populates chat with: "Listen to the Telegram channel @PumpAlpha for new token mentions. When a Solana token mint address is mentioned, automatically add it to the trading bot via the Pumpfun Trading plugin."
+- [x] ~~**Data visualization blocks in Chat**~~ — ✅ DONE. Intercepts `chart`, `sparkline` or `data` markdown codeblocks, parses the internal JSON, and renders native inline SVGs directly inside chat bubbles. Supports Line/Bar/Area charts and inline Sparklines with automatic bounds scaling.
+- [ ] **Geeksy Cloud Auth Backup** — Implement persistent user log-ins to securely back up local agent states, objectives, and their config databases to the cloud via AES-encryption.
+- [ ] **Cross-instance P2P Communication** — Allow users running remote instances to tunnel requests natively via WebRTC data channels for remote agent assistance without port-forwarding.
 
 ## 🟡 Priority: Improve (New)
 - [x] ~~**Skill search/filter in panel**~~ — ✅ DONE. Search input on both Skills page (`/skills`) and Skills tab in overview panel. Filters by name, description, ID, or plugin name. Shows count (e.g. "1/2"). Clear button. Skills page also groups by plugin source with icons and count badges.

@@ -4,9 +4,16 @@ import { db } from '../../../lib/db'
 export async function GET(req: Request) {
     const url = new URL(req.url)
     const id = url.searchParams.get('id')
-    if (!id) return Response.json({ error: 'Missing id' }, { status: 400 })
+    const packageName = url.searchParams.get('packageName')
+    if (!id && !packageName) return Response.json({ error: 'Missing id or packageName' }, { status: 400 })
 
-    const plugin = db.plugins.select().where({ id: Number(id) } as any).first()
+    let plugin
+    if (id) {
+        plugin = db.plugins.select().where({ id: Number(id) } as any).first()
+    } else {
+        plugin = db.plugins.select().where({ packageName } as any).first()
+    }
+
     if (!plugin) return Response.json({ error: 'Plugin not found' }, { status: 404 })
 
     // Find and read the manifest
@@ -43,6 +50,8 @@ export async function GET(req: Request) {
                 try {
                     const manifest = JSON.parse(readFileSync(p, 'utf8'))
                     return Response.json({
+                        id: plugin.id,
+                        packageName: plugin.packageName,
                         config: manifest.config || {},
                         name: manifest.name || manifest.displayName || plugin.name,
                         currentConfig: (() => { try { return JSON.parse(plugin.config || '{}') } catch { return {} } })(),
@@ -54,6 +63,8 @@ export async function GET(req: Request) {
 
     // No manifest found — return current config only
     return Response.json({
+        id: plugin.id,
+        packageName: plugin.packageName,
         config: {},
         name: plugin.name,
         currentConfig: (() => { try { return JSON.parse(plugin.config || '{}') } catch { return {} } })(),
