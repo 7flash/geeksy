@@ -12,6 +12,8 @@ export default function Page() {
                     </div>
                     <div className="agent-header-actions">
                         <button className="header-icon-btn" id="heartbeat-toggle-btn" title="Toggle autonomous heartbeat" style={{ color: 'var(--red)', opacity: 1 }}>❤</button>
+                        <button className="header-icon-btn" id="export-agent-btn" title="Export agent as JSON">📤</button>
+                        <button className="header-icon-btn" id="import-agent-btn" title="Import agent from JSON">📥</button>
                         <button className="header-icon-btn" id="export-chat-btn" title="Export chat as Markdown">⬇</button>
                         <button className="header-icon-btn" id="clear-chat-btn" title="Clear chat (Ctrl+L)">🗑</button>
                     </div>
@@ -78,6 +80,9 @@ export default function Page() {
                     </div>
                 </div>
             </div>
+
+            {/* Hidden file input for agent import */}
+            <input type="file" id="import-agent-input" accept=".json" style={{ display: 'none' }} />
 
             {/* Settings modal */}
             <div id="settings-modal" className="settings-modal-container"></div>
