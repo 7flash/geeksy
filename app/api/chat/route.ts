@@ -10,6 +10,8 @@ import { readdirSync } from "fs"
 // Ensure saved API keys are loaded into process.env
 import '../models/route'
 
+import { searchSemanticMemory, addSemanticMemory } from '../../lib/embeddings'
+
 const skillsDir = join(process.cwd(), "skills")
 
 import { sessions } from '../../lib/session-store'
@@ -95,7 +97,19 @@ export async function POST(req: Request) {
     const safeModeRow = body.agentId ? db.agentState.select().where({ agentId: body.agentId, key: 'safe_mode' }).first() : null;
     const safeMode = safeModeRow?.value === 'true';
 
-    const systemPrompt = body.agentId ? db.agents.select().where({ id: body.agentId }).first()?.systemPrompt : undefined;
+    let systemPrompt = body.agentId ? db.agents.select().where({ id: body.agentId }).first()?.systemPrompt : undefined;
+
+    // RAG: Query local vector memory for context injection
+    let augmentedMessage = body.message
+    try {
+        const memories = await searchSemanticMemory(body.message, 3, 0.4)
+        if (memories.length > 0) {
+            const contextText = memories.map(m => `- ${m.text}`).join('\n')
+            systemPrompt = (systemPrompt || '') + `\n\n[System Auto-Context]: Relevant past conversation memories retrieved from Local Vector Database:\n${contextText}\n\nUse this context to answer the user's latest message if applicable.`
+        }
+    } catch {
+        // Fallback gracefully without memory if embeddings fail (e.g. no API key)
+    }
 
     const config: AgentConfig = {
         model,
@@ -179,9 +193,12 @@ export async function POST(req: Request) {
                     }
                 }
 
-                // Persist assistant response
+                // Persist assistant response and semantic vector memory
                 if (body.agentId && assistantText) {
                     db.messages.insert({ agentId: body.agentId, role: 'assistant', content: assistantText })
+                    try {
+                        addSemanticMemory(`User: ${body.message}\nAgent: ${assistantText}`, { agentId: body.agentId })
+                    } catch { }
                 }
 
                 // Save sessionId to agent record
