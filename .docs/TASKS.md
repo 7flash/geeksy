@@ -57,8 +57,14 @@
 
 ## 🟡 Priority: Next Up
 - [x] ~~**Chat History Search**~~ — ✅ DONE. Ctrl+K opens a glassmorphism command-palette overlay that filters chat messages in real-time. Matching text is highlighted with purple marks. Clicking a result closes the modal, scrolls to the message, and highlights it with a purple outline for 2 seconds. Escape or backdrop click closes.
-- [ ] **Plugin Hot-Reload** — When a plugin's npm package is updated, detect and notify the user instead of requiring a full restart.
+- [x] ~~**Plugin Hot-Reload**~~ — ✅ DONE. GET `/api/plugins/updates` checks npm registry for newer versions of all installed plugins (5min cache). POST `/api/plugins/updates` upgrades a specific plugin by running `bun update`, updating the DB version, and auto-restarting if the plugin was running. Basic semver comparison detects updates.
 - [x] ~~**Agent Export/Import**~~ — ✅ DONE. GET `/api/agent-export?id=X` downloads full agent state (messages, objectives, files, schedules, config) as JSON. POST imports it as a new agent. Header buttons: 📤 Export, 📥 Import with file picker. Import creates agent with "(imported)" suffix and navigates to it.
+
+## 🔮 Ideas / Backlog
+- [ ] **Scheduled Task Cron Syntax** — Let users define schedules using cron expressions (e.g. `0 9 * * *`) instead of just interval seconds. Add a cron picker UI in the Schedule tab.
+- [ ] **Multi-Agent Sidebar** — Show a sidebar listing all agents with status indicators, quick-switch, and create/delete. Currently agents are only accessible by URL.
+- [ ] **Skill Marketplace** — Browse and install community-contributed skills from a registry. Currently skills must be manually placed in the skills directory.
+- [ ] **Mobile PWA Install** — Add a manifest.json, service worker caching, and install prompt for running Geeksy as a standalone mobile app.
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (file-router, SSR + client mount)
