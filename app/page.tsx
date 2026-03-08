@@ -2,11 +2,23 @@ export default function Page() {
     return (
         <div className="agents-page">
 
+            {/* ── Agent Sidebar ── */}
+            <div id="agent-sidebar" className="agent-sidebar">
+                <div className="sidebar-header">
+                    <span className="sidebar-title">🤖 Agents</span>
+                    <button id="sidebar-close" className="sidebar-close">×</button>
+                </div>
+                <div id="sidebar-agents-list" className="sidebar-agents-list"></div>
+                <button id="sidebar-new-agent" className="sidebar-new-btn">+ New Agent</button>
+            </div>
+            <div id="sidebar-backdrop" className="sidebar-backdrop"></div>
+
             {/* ── Main Area ── */}
             <div className="main-area">
                 {/* Agent Header */}
                 <header className="agent-header" id="agent-header">
                     <div className="agent-header-left">
+                        <button className="header-icon-btn sidebar-toggle" id="sidebar-toggle" title="Switch agents">☰</button>
                         <span className="agent-status-dot active" id="agent-status-dot" />
                         <span className="agent-header-name" id="agent-header-name" style={{ pointerEvents: 'none' }}>Geeksy Global Gateway</span>
                     </div>
