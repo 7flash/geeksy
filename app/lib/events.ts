@@ -222,6 +222,23 @@ export function handleEvent(type: string, data: any) {
                 const iters = (data.iteration || 0) + 1
                 const elapsed = ((data.elapsed || 0) / 1000).toFixed(1)
                 appendCard('complete', '✓ Complete', `${iters} iteration${iters > 1 ? 's' : ''} · ${elapsed}s`)
+
+                // Fire native OS notification if running inside Tauri
+                if ((window as any).__TAURI_INTERNALS__) {
+                    import('@tauri-apps/plugin-notification').then(async (notif) => {
+                        let granted = await notif.isPermissionGranted()
+                        if (!granted) {
+                            const permission = await notif.requestPermission()
+                            granted = permission === 'granted'
+                        }
+                        if (granted) {
+                            notif.sendNotification({
+                                title: 'Geeksy Agent Complete',
+                                body: `Task finished in ${elapsed}s (${iters} iterations).`
+                            })
+                        }
+                    }).catch(() => { })
+                }
             }
 
             setLastThinking('', null)
