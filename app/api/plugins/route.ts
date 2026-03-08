@@ -65,6 +65,27 @@ export async function POST(req: Request) {
             }
         }
     } catch { }
+
+    // If no manifest found locally, auto-install via bun add
+    let didNpmInstall = false
+    if (manifestPaths.every(p => !require('fs').existsSync(p)) && !body.packageName.startsWith('.')) {
+        try {
+            console.log(`[geeksy] Auto-installing registry plugin: ${body.packageName}...`)
+            const proc = Bun.spawn(['bun', 'add', body.packageName], {
+                cwd: process.cwd(),
+                stdout: 'pipe',
+                stderr: 'pipe',
+            })
+            await proc.exited
+            didNpmInstall = true
+            // Re-add to manifestPaths now that it's downloaded
+            manifestPaths.unshift(join(process.cwd(), 'node_modules', body.packageName, 'geeksy-plugin.json'))
+            manifestPaths.unshift(join(process.cwd(), 'node_modules', body.packageName, 'plugin.json'))
+        } catch (e: any) {
+            console.error(`[geeksy] Failed to bun add ${body.packageName}:`, e.message)
+        }
+    }
+
     for (const p of manifestPaths) {
         try {
             const f = Bun.file(p)

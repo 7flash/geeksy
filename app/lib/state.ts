@@ -11,6 +11,7 @@ export const state: WorkspaceState = {
     objectiveGroups: [],
     files: [],
     schedules: [],
+    scheduleStats: null,
     stateEntries: [],
     isRunning: false,
     activeSkills: new Set(),

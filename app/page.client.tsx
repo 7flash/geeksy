@@ -177,6 +177,41 @@ export default function mount() {
         })
     }
 
+    // ── Metrics Bar ──
+    const updateMetricsBar = (data: any) => {
+        const el = (id: string) => document.getElementById(id)
+        const set = (id: string, v: string) => { const e = el(id); if (e) e.textContent = v }
+
+        set('metric-val-messages', String(data.messages?.total ?? '—'))
+        set('metric-val-objectives', `${data.objectives?.completed ?? 0}/${data.objectives?.total ?? 0}`)
+        set('metric-val-schedules', `${data.schedules?.totalSuccess ?? 0}✓ ${data.schedules?.totalFail ?? 0}✗`)
+        set('metric-val-plugins', `${data.plugins?.running ?? 0}/${data.plugins?.total ?? 0}`)
+        set('metric-val-files', String(data.files ?? '—'))
+
+        // Format uptime
+        const mins = data.uptimeMin ?? 0
+        if (mins < 60) set('metric-val-uptime', `${mins}m`)
+        else if (mins < 1440) set('metric-val-uptime', `${Math.floor(mins / 60)}h ${mins % 60}m`)
+        else set('metric-val-uptime', `${Math.floor(mins / 1440)}d ${Math.floor((mins % 1440) / 60)}h`)
+
+        // Color the objectives metric based on success rate
+        const objsEl = el('metric-val-objectives')
+        if (objsEl && data.objectives) {
+            const rate = data.objectives.total > 0 ? data.objectives.completed / data.objectives.total : 0
+            objsEl.style.color = rate >= 0.8 ? 'var(--green)' : rate >= 0.5 ? 'var(--amber)' : 'var(--text-1)'
+        }
+
+        // Color schedule failures
+        const schedEl = el('metric-val-schedules')
+        if (schedEl && data.schedules?.totalFail > 0) {
+            schedEl.style.color = 'var(--amber)'
+        }
+    }
+
+    const fetchMetrics = () => fetch('/api/metrics').then(r => r.json()).then(updateMetricsBar).catch(() => { })
+    fetchMetrics()
+    setInterval(fetchMetrics, 20_000)
+
     // Auto-resize textarea
     dom.inputEl.addEventListener('input', () => {
         dom.inputEl.style.height = 'auto'

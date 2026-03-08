@@ -95,12 +95,15 @@ export async function POST(req: Request) {
     const safeModeRow = body.agentId ? db.agentState.select().where({ agentId: body.agentId, key: 'safe_mode' }).first() : null;
     const safeMode = safeModeRow?.value === 'true';
 
+    const systemPrompt = body.agentId ? db.agents.select().where({ id: body.agentId }).first()?.systemPrompt : undefined;
+
     const config: AgentConfig = {
         model,
         cwd,
         skills: skillPaths.length > 0 ? skillPaths : undefined,
         maxIterations: 10,
         safeMode,
+        systemPrompt,
         tools: [createScheduleTool(body.agentId)],
     }
 
