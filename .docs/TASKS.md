@@ -69,8 +69,15 @@
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (file-router, SSR + client mount)
 - **Port**: 3737 (default)
+- **Database**: `geeksy.db` — agents, messages, objectives, files, schedules, agentState, plugins (sqlite-zod-orm)
 - **Tabs**: Objectives, Files, Schedule, Processes, Memory, Skills
 - **Skills**: Parsed from `skills/*.md` via YAML frontmatter
 - **Plugins**: Loaded from sibling directories with `geeksy-plugin.json`
 - **Processes**: Proxied from bgr dashboard API (multi-port fallback)
 - **Chat UI**: `app/lib/chat-ui.tsx` (bubbles, cards, scroll helpers), `app/lib/events.ts` (SSE handler), `app/lib/agents.tsx` (CRUD, send, sidebar)
+- **Agent Sidebar**: `app/page.tsx` + `app/page.client.tsx` — ☰ hamburger opens slide-out panel with agent list, create, delete, switch
+- **Scheduler**: `app/api/schedule/scheduler.ts` — supports `once`, `interval`, `sequential`, and `cron` task types. Built-in cron parser (5-field, zero deps).
+- **PWA**: `/api/manifest.json` + `/api/sw.js` — standalone install, cache-first assets, network-first API
+- **API Routes**: `/api/agents` (CRUD), `/api/chat` (streaming), `/api/schedule` (task management), `/api/agent-state`, `/api/heartbeat`, `/api/plugins` (registry), `/api/plugins/updates` (version check + upgrade), `/api/agent-export` (export/import), `/api/manifest.json`, `/api/sw.js`
+- **Deploy**: `scp` to server + `systemctl restart geeksy` (systemd managed)
+- **DNS**: `genius.geeksy.xyz` — pending NS records at registrar
