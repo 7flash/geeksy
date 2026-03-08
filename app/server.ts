@@ -4,6 +4,7 @@ import { start } from 'melina';
 import path from 'path';
 
 import { startHeartbeat } from './lib/heartbeat';
+import { startTgBot } from './lib/tg-bot';
 
 const appDir = import.meta.dir;
 
@@ -14,3 +15,4 @@ await measure('Melina server start', () => start({
 }));
 
 startHeartbeat();
+startTgBot();

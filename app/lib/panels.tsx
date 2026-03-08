@@ -231,26 +231,66 @@ function progressBar(completed: number, total: number) {
 export function renderSchedulePane() {
     const pane = document.getElementById('pane-schedule')!
     if (state.schedules.length === 0) {
-        render(<div className="overview-empty">No scheduled tasks for this agent.</div>, pane)
+        render(
+            <div className="overview-empty">
+                <div className="memory-empty-icon">⏰</div>
+                <div>No scheduled tasks yet.</div>
+                <div className="memory-empty-hint">Agents can schedule future tasks or recurring intervals using the <code>schedule</code> tool.</div>
+            </div>,
+            pane
+        )
     } else {
-        const sorted = [...state.schedules].reverse()
+        const sorted = [...state.schedules].sort((a, b) => {
+            // Pending tasks first, sorted by nextRun
+            if (a.status === 'pending' && b.status === 'pending') {
+                return (a.nextRun || 0) - (b.nextRun || 0)
+            }
+            if (a.status === 'pending') return -1
+            if (b.status === 'pending') return 1
+            // Running tasks
+            if (a.status === 'running') return -1
+            if (b.status === 'running') return 1
+            // Then sort reverse chronologically by lastRun for completed/failed
+            return (b.lastRun || 0) - (a.lastRun || 0)
+        })
+
         render(
             <div className="schedule-list">
                 {sorted.map(s => (
                     <div className={`schedule-item schedule-${s.status || 'pending'}`} key={s.id}>
                         <div className="schedule-left">
+                            <div className="schedule-icon">
+                                {s.status === 'running' ? '⏳' : s.status === 'failed' ? '❌' : s.type === 'interval' ? '🔄' : '⏰'}
+                            </div>
                             <div className="schedule-info">
                                 <div className="schedule-name">{s.name}</div>
-                                {s.scriptPath && <div className="schedule-script">📄 {s.scriptPath}</div>}
+                                {s.scriptPath && <div className="schedule-script">📄 {s.scriptPath.replace(/.*[/\\]/, '')}</div>}
+                                {s.message && <div className="schedule-script">💬 {s.message.substring(0, 40)}{s.message.length > 40 ? '...' : ''}</div>}
                                 {s.progress && progressBar(s.progress.completed, s.progress.total)}
+                                {s.tasks && s.tasks.length > 0 && (
+                                    <div className="schedule-subtasks" style={{ marginTop: '8px', marginBottom: '6px', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                        {s.tasks.map((t: any) => (
+                                            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: t.status === 'pending' ? 0.6 : 1 }}>
+                                                <span style={{ minWidth: '16px', textAlign: 'center' }}>
+                                                    {t.status === 'completed' ? '✅' : t.status === 'failed' ? '❌' : t.status === 'running' ? '🔹' : '·'}
+                                                </span>
+                                                <span style={{ color: t.status === 'completed' ? 'var(--green)' : t.status === 'failed' ? 'var(--red)' : t.status === 'running' ? 'var(--text)' : 'inherit' }}>
+                                                    {t.name}
+                                                </span>
+                                                {t.status === 'running' && <span className="running-dot-pulse" style={{ width: '6px', height: '6px', background: 'var(--amber)', borderRadius: '50%', marginLeft: 'auto', animation: 'blink 1s infinite' }}></span>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                                 <div className="schedule-meta">
                                     {s.type === 'sequential' && <span className="schedule-type">sequential · </span>}
                                     {s.type === 'interval' && <span className="schedule-type">every {s.intervalSec}s · </span>}
-                                    {s.nextRun && s.status === 'pending' && <span>next in {formatTimeUntil(s.nextRun)}</span>}
+                                    {s.nextRun && s.status === 'pending' && s.nextRun > Date.now() && <span>next in {formatTimeUntil(s.nextRun)}</span>}
+                                    {s.nextRun && s.status === 'pending' && s.nextRun <= Date.now() && <span style={{ color: 'var(--amber)' }}>starting now</span>}
                                     {s.lastRun && <span>last run {new Date(s.lastRun).toLocaleTimeString()}</span>}
                                     {s.progress && s.progress.completed > 0 && <span> · ran {s.progress.completed}×</span>}
                                 </div>
-                                {s.lastOutput && <div className="schedule-output">{s.lastOutput.substring(0, 200)}</div>}
+                                {s.lastOutput && <div className="schedule-output">{s.lastOutput.substring(0, 100)}{s.lastOutput.length > 100 ? '...' : ''}</div>}
                                 {s.lastError && <div className="schedule-error">{s.lastError}</div>}
                             </div>
                         </div>

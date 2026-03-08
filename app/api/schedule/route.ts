@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         scriptPath: body.scriptPath,
         tasks: tasksJson,
         intervalSec: body.intervalSec,
-        nextRun: body.type === 'interval' ? Date.now() + (body.intervalSec || 60) * 1000 : undefined,
+        nextRun: body.type === 'interval' ? Date.now() : undefined,
         totalCount,
         completedCount: 0,
     })
