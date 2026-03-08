@@ -1,24 +1,6 @@
-// app/src/page.tsx — Agents workspace (home page)
 export default function Page() {
     return (
         <div className="agents-page">
-            {/* ── Sidebar ── */}
-            <aside className="sidebar" id="sidebar">
-                <button className="sidebar-new-btn" id="new-agent-btn">
-                    <span>New Agent</span>
-                    <span className="sidebar-new-icon">+</span>
-                </button>
-
-                <div className="sidebar-agents" id="agent-list">
-                    {/* Dynamically populated by client */}
-                </div>
-
-                <div className="sidebar-bottom">
-                    <div className="sidebar-bottom-icons">
-                        <button className="sidebar-icon-btn" id="settings-btn" title="Settings">⚙</button>
-                    </div>
-                </div>
-            </aside>
 
             {/* ── Main Area ── */}
             <div className="main-area">
@@ -26,7 +8,7 @@ export default function Page() {
                 <header className="agent-header" id="agent-header">
                     <div className="agent-header-left">
                         <span className="agent-status-dot active" id="agent-status-dot" />
-                        <span className="agent-header-name" id="agent-header-name">Select or create an agent</span>
+                        <span className="agent-header-name" id="agent-header-name" style={{ pointerEvents: 'none' }}>Geeksy Global Gateway</span>
                     </div>
                     <div className="agent-header-actions">
                         <button className="header-icon-btn" id="export-chat-btn" title="Export chat as Markdown">⬇</button>

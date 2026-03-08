@@ -3,6 +3,8 @@ import { measure } from 'measure-fn';
 import { start } from 'melina';
 import path from 'path';
 
+import { startHeartbeat } from './lib/heartbeat';
+
 const appDir = import.meta.dir;
 
 await measure('Melina server start', () => start({
@@ -10,3 +12,5 @@ await measure('Melina server start', () => start({
     appDir,
     defaultTitle: 'Geeksy',
 }));
+
+startHeartbeat();

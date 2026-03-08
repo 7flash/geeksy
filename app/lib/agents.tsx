@@ -18,25 +18,27 @@ import type { AgentEntry, ToolCardEntry } from './types'
 export async function restoreState() {
     try {
         const agents: any[] = await fetch('/api/agents').then(r => r.json())
-        if (!agents?.length) return
+        let globalAgent = agents.find((a: any) => a.id === 1 || a.name === 'Geeksy Global') || agents[0]
 
-        state.agents = agents.map((a: any) => ({
-            id: a.id,
-            name: a.name || `Agent ${a.id}`,
-            sessionId: a.sessionId || null,
-            status: 'idle' as const,
-            model: a.model,
-        }))
-        renderSidebar()
-
-        // Select agent: URL path > first in list
-        const urlAgentId = getAgentIdFromUrl()
-        const targetId = urlAgentId ?? state.agents[0].id
-        const target = state.agents.find(a => a.id === targetId)
-        if (target) {
-            await selectAgent(target.id)
+        if (!globalAgent) {
+            const res = await fetch('/api/agents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'Geeksy Global' }),
+            })
+            globalAgent = await res.json()
         }
-    } catch { /* first load, no agents yet */ }
+
+        state.agents = [{
+            id: globalAgent.id,
+            name: globalAgent.name,
+            sessionId: globalAgent.sessionId || null,
+            status: 'idle' as const,
+            model: globalAgent.model,
+        }]
+
+        await selectAgent(globalAgent.id)
+    } catch { /* first load, DB error */ }
 }
 
 /** Extract agent ID from URL path like /agent/123 */
@@ -67,12 +69,11 @@ function showEmptyState() {
     el.innerHTML = `
         <div class="empty-icon">🤖</div>
         <h2>Geeksy</h2>
-        <p>Create a new agent or select one from the sidebar, then describe what you want it to do.</p>
+        <p>I am your global intelligent gateway. Start typing to begin.</p>
         <div class="example-chips">
-            <button class="example-chip" data-prompt="tell me a short joke">🎭 tell me a joke</button>
-            <button class="example-chip" data-prompt="list all files in the current directory">📂 list files here</button>
-            <button class="example-chip" data-prompt="create a hello.txt file that says Hello World">📝 create hello.txt</button>
-            <button class="example-chip" data-prompt="solve ARC puzzle 0d3d703e">🧩 solve ARC puzzle</button>
+            <button class="example-chip" data-prompt="what's the current system status?">📊 system status</button>
+            <button class="example-chip" data-prompt="list all running plugins">🔌 list plugins</button>
+            <button class="example-chip" data-prompt="help me configure the telegram plugin">⚙️ configure telegram</button>
         </div>
     `
     dom.chatArea.prepend(el)
@@ -88,59 +89,11 @@ export function hideEmptyState() {
 // ══════════════════════════════════════
 
 export async function createAgent() {
-    try {
-        const num = state.agents.length + 1
-        const res = await fetch('/api/agents', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: `Agent ${num}` }),
-        })
-        const created = await res.json()
-        const agent: AgentEntry = {
-            id: created.id,
-            name: created.name || `Agent ${num}`,
-            sessionId: null,
-            status: 'idle',
-            model: created.model,
-        }
-        state.agents.push(agent)
-        await selectAgent(agent.id)
-        renderSidebar()
-        saveState()
-    } catch (e) {
-        console.error('Failed to create agent:', e)
-    }
+    // No-op in Global Chat mode
 }
 
 export async function deleteAgent(id: number) {
-    if (state.isRunning && state.activeAgentId === id) return
-
-    try {
-        await fetch(`/api/agents?id=${id}`, { method: 'DELETE' })
-    } catch { }
-
-    state.agents = state.agents.filter(a => a.id !== id)
-    agentChatStore.delete(id)
-
-    if (state.activeAgentId === id) {
-        if (state.agents.length > 0) {
-            selectAgent(state.agents[0].id)
-        } else {
-            state.activeAgentId = null
-            dom.chatArea.innerHTML = ''
-            dom.agentHeaderName.textContent = ''
-            state.objectives = []
-            state.objectiveGroups = []
-            state.files = []
-            toolCards.length = 0
-            pushAgentUrl(null)
-            showEmptyState()
-            renderObjectivesPane()
-            renderFilesPane()
-        }
-    }
-    renderSidebar()
-    saveState()
+    // No-op in Global Chat mode
 }
 
 export async function selectAgent(id: number) {
@@ -722,14 +675,7 @@ function SidebarAgent({ agent, isActive }: { agent: AgentEntry; isActive: boolea
 }
 
 export function renderSidebar() {
-    render(
-        <div>
-            {state.agents.map(a => (
-                <SidebarAgent agent={a} isActive={a.id === state.activeAgentId} />
-            ))}
-        </div>,
-        dom.agentList
-    )
+    // No-op for global chat mode
 }
 
 // ══════════════════════════════════════

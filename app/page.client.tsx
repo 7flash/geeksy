@@ -40,11 +40,6 @@ export default function mount() {
         if (tabName) switchTab(tabName)
     })
 
-    // New agent button
-    document.getElementById('new-agent-btn')!.addEventListener('click', createAgent)
-
-    // Settings button (sidebar only — nav rail settings is handled by layout.client.tsx)
-    document.getElementById('settings-btn')!.addEventListener('click', openSettings)
     // Listen for settings event from nav rail (via layout.client.tsx)
     window.addEventListener('smart-agent:open-settings', openSettings)
 
@@ -73,11 +68,6 @@ export default function mount() {
 
     // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-            e.preventDefault()
-            createAgent()
-            dom.inputEl.focus()
-        }
         if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
             e.preventDefault()
             clearCurrentChat()
@@ -112,37 +102,6 @@ export default function mount() {
         btn.textContent = '✓ Copied'
         btn.classList.add('copied')
         setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied') }, 1500)
-    })
-
-    // Double-click agent header name to rename
-    dom.agentHeaderName.addEventListener('dblclick', () => {
-        const agent = getActiveAgent()
-        if (!agent) return
-
-        const currentName = agent.name
-        const input = document.createElement('input')
-        input.type = 'text'
-        input.value = currentName
-        input.className = 'agent-rename-input'
-
-        const commitRename = () => {
-            const newName = input.value.trim() || currentName
-            agent.name = newName
-            dom.agentHeaderName.textContent = newName
-            renderSidebar()
-            saveState()
-        }
-
-        input.addEventListener('blur', commitRename)
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); input.blur() }
-            if (e.key === 'Escape') { input.value = currentName; input.blur() }
-        })
-
-        dom.agentHeaderName.textContent = ''
-        dom.agentHeaderName.appendChild(input)
-        input.focus()
-        input.select()
     })
 
     // File drag-and-drop on chat area
