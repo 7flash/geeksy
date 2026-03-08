@@ -4,10 +4,16 @@ export default function RootLayout({ children }: { children: any }) {
         <html lang="en">
             <head>
                 <meta charSet="utf-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+                <meta name="theme-color" content="#6366f1" />
+                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+                <meta name="apple-mobile-web-app-title" content="Geeksy" />
                 <title>Geeksy — Personal OS</title>
                 <meta name="description" content="Personal OS for autonomous AI agents — chat, skills, plugins, schedules" />
+                <link rel="manifest" href="/api/manifest.json" />
                 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c3aed'/><stop offset='100%25' stop-color='%23a855f7'/></linearGradient></defs><circle cx='50' cy='50' r='45' fill='url(%23g)'/><text x='50' y='62' text-anchor='middle' font-size='42' fill='white'>🤖</text></svg>" type="image/svg+xml" />
+                <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator) navigator.serviceWorker.register('/api/sw.js')` }} />
             </head>
             <body>
                 <div id="app" className="app-shell">
