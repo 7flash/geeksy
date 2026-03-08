@@ -1,6 +1,53 @@
 // app/api/schedule/scheduler.ts — Background task scheduler engine
-// Supports both script execution (bun run <path>) and chat-based tasks
+// Supports script execution, chat-based tasks, interval, and cron schedules
 import { db } from '../../lib/db'
+
+// ─── Lightweight Cron Parser ───────────────────────────────
+
+function matchesCronField(field: string, value: number, max: number): boolean {
+    if (field === '*') return true
+    for (const part of field.split(',')) {
+        if (part.includes('/')) {
+            const [range, step] = part.split('/')
+            const s = parseInt(step)
+            const start = range === '*' ? 0 : parseInt(range)
+            if ((value - start) % s === 0 && value >= start) return true
+        } else if (part.includes('-')) {
+            const [lo, hi] = part.split('-').map(Number)
+            if (value >= lo && value <= hi) return true
+        } else {
+            if (parseInt(part) === value) return true
+        }
+    }
+    return false
+}
+
+/** Check if a cron expression matches the current time */
+export function matchesCron(expr: string, date = new Date()): boolean {
+    const fields = expr.trim().split(/\s+/)
+    if (fields.length < 5) return false
+    const [min, hour, dom, mon, dow] = fields
+    return (
+        matchesCronField(min, date.getMinutes(), 59) &&
+        matchesCronField(hour, date.getHours(), 23) &&
+        matchesCronField(dom, date.getDate(), 31) &&
+        matchesCronField(mon, date.getMonth() + 1, 12) &&
+        matchesCronField(dow, date.getDay(), 6)
+    )
+}
+
+/** Get next run time for a cron expression (brute-force, max 1 year ahead) */
+export function getNextCronRun(expr: string, from = new Date()): number {
+    const d = new Date(from)
+    d.setSeconds(0, 0)
+    d.setMinutes(d.getMinutes() + 1) // start from next minute
+    const limit = from.getTime() + 365 * 24 * 60 * 60 * 1000
+    while (d.getTime() < limit) {
+        if (matchesCron(expr, d)) return d.getTime()
+        d.setMinutes(d.getMinutes() + 1)
+    }
+    return from.getTime() + 60_000 // fallback: 1 minute
+}
 
 function getBaseUrl() {
     const port = _serverPort || process.env.BUN_PORT || 3737
@@ -52,6 +99,8 @@ class Scheduler {
                 await this.runSequential(task)
             } else if (task.type === 'interval') {
                 await this.runInterval(task)
+            } else if (task.type === 'cron') {
+                await this.runCron(task)
             } else {
                 await this.runOnce(task)
             }
@@ -239,6 +288,37 @@ class Scheduler {
 
         const status = result.success ? '✓' : '✗'
         console.log(`[scheduler] Interval task "${schedule.name}" ${status}: ${result.output.substring(0, 100)}`)
+    }
+
+    /** Run a cron-scheduled task — execute when cron matches, reschedule for next match */
+    private async runCron(schedule: any) {
+        if (!schedule.cron) return
+        if (schedule.nextRun && schedule.nextRun > Date.now()) return
+
+        db.schedules.update(schedule.id, { status: 'running' })
+
+        const result = await this.executeTask(schedule)
+
+        const current = db.schedules.select().where({ id: schedule.id }).first()
+        if (!current || current.status === 'cancelled') return
+
+        const nextRun = getNextCronRun(schedule.cron)
+        db.schedules.update(schedule.id, {
+            status: 'pending',
+            lastRun: Date.now(),
+            nextRun,
+            completedCount: (schedule.completedCount || 0) + 1,
+            lastOutput: result.output.substring(0, 2000),
+            lastError: result.error,
+        })
+
+        if (result.success && result.output.trim()) {
+            this.pushOutputToChat(schedule, result.output)
+        }
+
+        const status = result.success ? '✓' : '✗'
+        const nextDate = new Date(nextRun).toLocaleTimeString()
+        console.log(`[scheduler] Cron task "${schedule.name}" ${status} (next: ${nextDate}): ${result.output.substring(0, 80)}`)
     }
 
     /** Insert script output as a chat message so the user sees it */

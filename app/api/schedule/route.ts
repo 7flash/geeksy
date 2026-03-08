@@ -29,6 +29,7 @@ export async function GET(req: Request) {
         message: r.message,
         scriptPath: r.scriptPath,
         intervalSec: r.intervalSec,
+        cron: (r as any).cron,
         nextRun: r.nextRun,
         lastRun: r.lastRun,
         lastError: r.lastError,
@@ -48,15 +49,17 @@ export async function POST(req: Request) {
     detectPort(req)
     const body = await req.json() as {
         name: string
-        type: 'sequential' | 'interval' | 'once'
+        type: 'sequential' | 'interval' | 'once' | 'cron'
         agentId?: number
         message?: string
         scriptPath?: string
         tasks?: Array<{ name: string; message: string }>
         intervalSec?: number
+        cron?: string
     }
 
     if (!body.name) return Response.json({ error: 'Missing name' }, { status: 400 })
+    if (body.type === 'cron' && !body.cron) return Response.json({ error: 'Missing cron expression' }, { status: 400 })
 
     const totalCount = body.tasks?.length || 1
     const tasksJson = body.tasks
@@ -68,6 +71,14 @@ export async function POST(req: Request) {
         })))
         : undefined
 
+    // Calculate initial nextRun
+    let nextRun: number | undefined
+    if (body.type === 'interval') nextRun = Date.now()
+    else if (body.type === 'cron' && body.cron) {
+        const { getNextCronRun } = await import('./scheduler')
+        nextRun = getNextCronRun(body.cron)
+    }
+
     const row = db.schedules.insert({
         name: body.name,
         type: body.type || 'once',
@@ -77,7 +88,8 @@ export async function POST(req: Request) {
         scriptPath: body.scriptPath,
         tasks: tasksJson,
         intervalSec: body.intervalSec,
-        nextRun: body.type === 'interval' ? Date.now() : undefined,
+        cron: body.cron,
+        nextRun,
         totalCount,
         completedCount: 0,
     })
@@ -85,7 +97,7 @@ export async function POST(req: Request) {
     // Start the scheduler if it's not already running
     scheduler.start()
 
-    return Response.json({ id: String(row.id), status: 'pending' })
+    return Response.json({ id: String(row.id), status: 'pending', nextRun })
 }
 
 /** DELETE /api/schedule?id=xxx — cancel a scheduled task */
