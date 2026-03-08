@@ -43,6 +43,9 @@ export default function mount() {
     // Listen for settings event from nav rail (via layout.client.tsx)
     window.addEventListener('smart-agent:open-settings', openSettings)
 
+    // Agent Sidebar
+    initAgentSidebar()
+
     // Header action buttons
     document.getElementById('export-chat-btn')!.addEventListener('click', exportChatAsMarkdown)
     document.getElementById('clear-chat-btn')!.addEventListener('click', clearCurrentChat)
@@ -391,4 +394,92 @@ export default function mount() {
     restoreState()
 
     return () => { }
+}
+
+// ─── Agent Sidebar ──────────────────────────────────────
+
+function initAgentSidebar() {
+    const sidebar = document.getElementById('agent-sidebar')
+    const backdrop = document.getElementById('sidebar-backdrop')
+    const toggleBtn = document.getElementById('sidebar-toggle')
+    const closeBtn = document.getElementById('sidebar-close')
+    const newBtn = document.getElementById('sidebar-new-agent')
+    const list = document.getElementById('sidebar-agents-list')
+
+    if (!sidebar || !backdrop || !toggleBtn || !list) return
+
+    const currentAgentId = parseInt(window.location.pathname.split('/').pop() || '1')
+
+    function openSidebar() {
+        sidebar!.classList.add('open')
+        backdrop!.classList.add('open')
+        loadAgents()
+    }
+
+    function closeSidebar() {
+        sidebar!.classList.remove('open')
+        backdrop!.classList.remove('open')
+    }
+
+    toggleBtn.addEventListener('click', openSidebar)
+    closeBtn?.addEventListener('click', closeSidebar)
+    backdrop.addEventListener('click', closeSidebar)
+
+    async function loadAgents() {
+        try {
+            const res = await fetch('/api/agents')
+            const agents = await res.json() as any[]
+            list!.innerHTML = ''
+
+            for (const agent of agents) {
+                const card = document.createElement('div')
+                card.className = `sidebar-agent-card${agent.id === currentAgentId ? ' active' : ''}`
+
+                const isActive = agent.id === currentAgentId
+                card.innerHTML = `
+                    <span class="sidebar-agent-dot${isActive ? ' active' : ''}"></span>
+                    <div class="sidebar-agent-info">
+                        <div class="sidebar-agent-name">${agent.name}</div>
+                        <div class="sidebar-agent-model">${agent.model || 'gemini-2.5-flash'}</div>
+                    </div>
+                    <button class="sidebar-agent-delete" title="Delete agent">🗑</button>
+                `
+
+                // Click card to switch agent
+                card.addEventListener('click', (e) => {
+                    if ((e.target as HTMLElement).closest('.sidebar-agent-delete')) return
+                    window.location.href = `/agent/${agent.id}`
+                })
+
+                // Delete button
+                card.querySelector('.sidebar-agent-delete')?.addEventListener('click', async (e) => {
+                    e.stopPropagation()
+                    if (!confirm(`Delete "${agent.name}"? This cannot be undone.`)) return
+                    await fetch(`/api/agents?id=${agent.id}`, { method: 'DELETE' })
+                    if (agent.id === currentAgentId) {
+                        window.location.href = '/agent/1'
+                    } else {
+                        loadAgents()
+                    }
+                })
+
+                list!.appendChild(card)
+            }
+        } catch { }
+    }
+
+    // New agent
+    newBtn?.addEventListener('click', async () => {
+        const name = prompt('Agent name:')
+        if (!name?.trim()) return
+        try {
+            const res = await fetch('/api/agents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name.trim() }),
+            })
+            const agent = await res.json()
+            window.location.href = `/agent/${agent.id}`
+        } catch { }
+    })
 }

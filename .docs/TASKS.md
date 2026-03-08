@@ -62,7 +62,7 @@
 
 ## 🔮 Ideas / Backlog
 - [ ] **Scheduled Task Cron Syntax** — Let users define schedules using cron expressions (e.g. `0 9 * * *`) instead of just interval seconds. Add a cron picker UI in the Schedule tab.
-- [ ] **Multi-Agent Sidebar** — Show a sidebar listing all agents with status indicators, quick-switch, and create/delete. Currently agents are only accessible by URL.
+- [x] ~~**Multi-Agent Sidebar**~~ — ✅ DONE. ☰ hamburger button opens a slide-out sidebar listing all agents with status dots, model labels, and truncated names. Click to switch, hover to reveal delete. "+ New Agent" button creates via API and navigates. Glassmorphism dark theme with smooth CSS transitions.
 - [ ] **Skill Marketplace** — Browse and install community-contributed skills from a registry. Currently skills must be manually placed in the skills directory.
 - [ ] **Mobile PWA Install** — Add a manifest.json, service worker caching, and install prompt for running Geeksy as a standalone mobile app.
 
