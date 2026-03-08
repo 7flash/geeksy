@@ -61,7 +61,7 @@
 - [x] ~~**Agent Export/Import**~~ — ✅ DONE. GET `/api/agent-export?id=X` downloads full agent state (messages, objectives, files, schedules, config) as JSON. POST imports it as a new agent. Header buttons: 📤 Export, 📥 Import with file picker. Import creates agent with "(imported)" suffix and navigates to it.
 
 ## 🔮 Ideas / Backlog
-- [ ] **Scheduled Task Cron Syntax** — Let users define schedules using cron expressions (e.g. `0 9 * * *`) instead of just interval seconds. Add a cron picker UI in the Schedule tab.
+- [x] ~~**Scheduled Task Cron Syntax**~~ — ✅ DONE. Lightweight zero-dependency cron parser supports standard 5-field expressions (min hour dom mon dow) with `*`, specific values, ranges (`1-5`), steps (`*/5`), and lists (`1,3,5`). New `cron` task type in scheduler executes when expression matches and reschedules via brute-force next-match calculation. API accepts `type: 'cron'` + `cron: '0 9 * * *'`.
 - [x] ~~**Multi-Agent Sidebar**~~ — ✅ DONE. ☰ hamburger button opens a slide-out sidebar listing all agents with status dots, model labels, and truncated names. Click to switch, hover to reveal delete. "+ New Agent" button creates via API and navigates. Glassmorphism dark theme with smooth CSS transitions.
 - [ ] **Skill Marketplace** — Browse and install community-contributed skills from a registry. Currently skills must be manually placed in the skills directory.
 - [x] ~~**Mobile PWA Install**~~ — ✅ DONE. Added `/api/manifest.json` (standalone display, purple theme, SVG icon), `/api/sw.js` (cache-first assets, network-first API), viewport-fit=cover, apple-mobile-web-app meta tags, and auto SW registration. App can be installed as standalone from mobile browsers.
@@ -69,8 +69,15 @@
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (file-router, SSR + client mount)
 - **Port**: 3737 (default)
+- **Database**: `geeksy.db` — agents, messages, objectives, files, schedules, agentState, plugins (sqlite-zod-orm)
 - **Tabs**: Objectives, Files, Schedule, Processes, Memory, Skills
 - **Skills**: Parsed from `skills/*.md` via YAML frontmatter
 - **Plugins**: Loaded from sibling directories with `geeksy-plugin.json`
 - **Processes**: Proxied from bgr dashboard API (multi-port fallback)
 - **Chat UI**: `app/lib/chat-ui.tsx` (bubbles, cards, scroll helpers), `app/lib/events.ts` (SSE handler), `app/lib/agents.tsx` (CRUD, send, sidebar)
+- **Agent Sidebar**: `app/page.tsx` + `app/page.client.tsx` — ☰ hamburger opens slide-out panel with agent list, create, delete, switch
+- **Scheduler**: `app/api/schedule/scheduler.ts` — supports `once`, `interval`, `sequential`, and `cron` task types. Built-in cron parser (5-field, zero deps).
+- **PWA**: `/api/manifest.json` + `/api/sw.js` — standalone install, cache-first assets, network-first API
+- **API Routes**: `/api/agents` (CRUD), `/api/chat` (streaming), `/api/schedule` (task management), `/api/agent-state`, `/api/heartbeat`, `/api/plugins` (registry), `/api/plugins/updates` (version check + upgrade), `/api/agent-export` (export/import), `/api/manifest.json`, `/api/sw.js`
+- **Deploy**: `scp` to server + `systemctl restart geeksy` (systemd managed)
+- **DNS**: `genius.geeksy.xyz` — pending NS records at registrar

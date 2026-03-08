@@ -30,13 +30,14 @@ export const db = new Database(dbPath, {
     }),
     schedules: z.object({
         name: z.string(),
-        type: z.string().default('once'),         // sequential | interval | once
+        type: z.string().default('once'),         // sequential | interval | once | cron
         status: z.string().default('pending'),     // pending | running | completed | failed | cancelled
         agentId: z.number().optional(),
         message: z.string().optional(),            // single prompt (for chat-based tasks)
         scriptPath: z.string().optional(),         // path to script file (for script-based tasks)
         tasks: z.string().optional(),              // JSON array of { id, name, message, status }
         intervalSec: z.number().optional(),
+        cron: z.string().optional(),               // cron expression e.g. "0 9 * * *"
         nextRun: z.number().optional(),
         lastRun: z.number().optional(),
         lastError: z.string().optional(),
