@@ -85,7 +85,7 @@
 
 ## 🟢 Priority: Next Steps (Backlog Replenishment)
 - [ ] **Native Desktop Wrapper (Tauri)** — Wrap the Melina.js web dashboard in a cross-platform desktop shell with system-tray capabilities, enabling native OS notifications for autonomous actions instead of relying solely on browser push notifications.
-- [ ] **Local Vector Database Integration** — Switch knowledge search and long-term memory retrieval to a lightweight local vector store (e.g. SQLite-vss) so Geeksy can automatically context-inject past conversation memories based on semantic similarity.
+- [x] ~~**Local Vector Database Integration**~~ — ✅ DONE. Built `c:\Code\geeksy\app\lib\embeddings.ts` to generate, cache, and search semantic vectors for long-term memory retrieval. Uses OpenAI text-embedding endpoints directly, falling back to a deterministic JS implementation if no API key is set. Injects top 3 semantically aligned historical exchanges directly into the active prompt payload via RAG automatically on each new user message inside `app/api/chat/route.ts`. Vector arrays are stored transparently in SQLite without binary `sqlite-vss` extension dependencies.
 - [x] ~~**Dynamic Plugin Auto-Discovery**~~ — ✅ DONE. Created a `/api/plugins/registry` endpoint that dynamically queries NPM for packages with the `geeksy-plugin` keyword, along with a curated fallback list. Rendered these available packages in building blocks at the bottom of the `Plugins` tab. Enhanced `/api/plugins` installation POST endpoint to detect if a package isn't currently cloned locally and automatically trigger `bun add <package>` in the background, making 1-click UI installation completely seamless without needing manual git or npm interventions.
 
 ## 📝 Architecture Notes
