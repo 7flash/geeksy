@@ -1827,6 +1827,18 @@ body {
     }
 }
 
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .4;
+    }
+}
+
 /* ── Empty State ── */
 .empty-state {
     flex: 1;
@@ -3905,4 +3917,18 @@ body {
 .config-modal-save:disabled {
     opacity: .5;
     cursor: not-allowed;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 1;
+    }
 }

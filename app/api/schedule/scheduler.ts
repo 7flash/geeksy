@@ -34,16 +34,18 @@ class Scheduler {
         this.running = true
 
         try {
+            const now = Date.now()
             const pending = db.schedules.select()
                 .where({ status: 'pending' })
                 .all()
+                .filter((r: any) => !r.nextRun || r.nextRun <= now)
 
             if (pending.length === 0) {
                 this.running = false
                 return
             }
 
-            // Process the oldest pending task first
+            // Process the oldest pending task first that is ready to run
             const task = pending[0]
 
             if (task.type === 'sequential' && task.tasks) {
@@ -172,6 +174,8 @@ class Scheduler {
                 lastRun: Date.now(),
                 lastError: subTask.status === 'failed' ? subTask.result : undefined,
             })
+
+            if (subTask.status === 'failed') break
         }
 
         const allPassed = tasks.every((t: any) => t.status === 'completed')
@@ -182,7 +186,7 @@ class Scheduler {
             currentTask: undefined,
         })
 
-        console.log(`[scheduler] Sequential batch complete: ${completedCount}/${tasks.length} tasks`)
+        console.log(`[scheduler] Sequential batch complete: ${completedCount}/${tasks.length} tasks (Status: ${allPassed ? 'Passed' : 'Failed'})`)
     }
 
     /** Run a single one-off task */
@@ -190,6 +194,9 @@ class Scheduler {
         db.schedules.update(schedule.id, { status: 'running' })
 
         const result = await this.executeTask(schedule)
+
+        const current = db.schedules.select().where({ id: schedule.id }).first()
+        if (!current || current.status === 'cancelled') return
 
         db.schedules.update(schedule.id, {
             status: result.success ? 'completed' : 'failed',
@@ -210,6 +217,10 @@ class Scheduler {
         db.schedules.update(schedule.id, { status: 'running' })
 
         const result = await this.executeTask(schedule)
+
+        // Prevent resurrecting a task that was cancelled while running
+        const current = db.schedules.select().where({ id: schedule.id }).first()
+        if (!current || current.status === 'cancelled') return
 
         // Reschedule for next interval regardless of success
         db.schedules.update(schedule.id, {

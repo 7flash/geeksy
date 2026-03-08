@@ -13,9 +13,43 @@ function timeLabel(ts?: number): string {
 // ── Bubble Components ──
 
 function UserBubble({ text, ts }: { text: string; ts?: number }) {
+    const isTelegram = text.startsWith('[Telegram Message from ')
+    let tgUser = ''
+    let displayText = text
+
+    if (isTelegram) {
+        const match = text.match(/\[Telegram Message from (.*?)\]:\s+([\s\S]*)/)
+        if (match) {
+            tgUser = match[1]
+            displayText = match[2]
+        }
+    }
+
+    const handleReply = () => {
+        const input = document.getElementById('input') as HTMLTextAreaElement
+        if (input) {
+            input.value = `Reply via Telegram to ${tgUser}: `
+            input.focus()
+            // auto resize
+            input.style.height = 'auto'
+            input.style.height = Math.min(input.scrollHeight, 100) + 'px'
+        }
+    }
+
     return (
-        <div className="msg msg-user">
-            <div className="bubble">{text}</div>
+        <div className={`msg msg-user ${isTelegram ? 'msg-telegram' : ''}`}>
+            {isTelegram && (
+                <div className="tg-msg-header" style={{ fontSize: '11px', color: 'var(--blue)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📱 Telegram • <strong>{tgUser}</strong></span>
+                    <button
+                        onClick={handleReply}
+                        style={{ background: 'none', border: '1px solid var(--blue)', color: 'var(--blue)', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}
+                    >↵ Reply</button>
+                </div>
+            )}
+            <div className="bubble" style={isTelegram ? { background: 'var(--bg-elevated)' } : {}}>
+                {isTelegram ? <div dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }} /> : text}
+            </div>
             <span className="msg-time">{timeLabel(ts)}</span>
         </div>
     )

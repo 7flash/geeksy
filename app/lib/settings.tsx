@@ -268,6 +268,114 @@ function CloudBackupSection() {
     )
 }
 
+function TelegramBotSection() {
+    const [token, setToken] = (window as any)._preact.useState('')
+    const [status, setStatus] = (window as any)._preact.useState('Loading...')
+
+        ; (window as any)._preact.useEffect(() => {
+            fetch('/api/tg-bot').then(res => res.json()).then(data => {
+                setToken(data.token)
+                setStatus('Current Token')
+            }).catch(() => setStatus('Failed to load token'))
+        }, [])
+
+    const saveToken = async () => {
+        setStatus('Saving...')
+        try {
+            await fetch('/api/tg-bot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            })
+            setStatus('Saved successfully!')
+            setTimeout(() => setStatus('Current Token'), 2000)
+        } catch {
+            setStatus('Error saving')
+        }
+    }
+
+    return (
+        <div className="settings-group">
+            <span className="settings-label">🤖 Telegram Bot Gateway</span>
+            <div style={{ marginTop: '8px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-muted, #888)' }}>BotFather Token</label>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <input
+                        type="password"
+                        placeholder="123456789:ABCdefGHIjklmNOPqrstUVWxyz"
+                        className="backup-input"
+                        style={{ flex: 1 }}
+                        value={token}
+                        onChange={e => setToken((e.target as HTMLInputElement).value)}
+                    />
+                    <button className="backup-btn primary" onClick={saveToken}>Save</button>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted, #666)', marginTop: '6px' }}>
+                    {status}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function AgentSafetySection() {
+    const [safeMode, setSafeMode] = (window as any)._preact.useState(false)
+    const [status, setStatus] = (window as any)._preact.useState('Loading...')
+
+        ; (window as any)._preact.useEffect(() => {
+            fetch('/api/agent-state?agentId=1').then(res => res.json()).then(entries => {
+                const entry = entries.find((e: any) => e.key === 'safe_mode')
+                setSafeMode(entry?.value === 'true')
+                setStatus('')
+            }).catch(() => setStatus('Failed to load safety state'))
+        }, [])
+
+    const toggleSafeMode = async () => {
+        const newState = !safeMode
+        setSafeMode(newState)
+        setStatus('Saving...')
+        try {
+            await fetch('/api/agent-state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ agentId: 1, key: 'safe_mode', value: String(newState) })
+            })
+            setStatus('Saved!')
+            setTimeout(() => setStatus(''), 2000)
+        } catch {
+            setStatus('Error saving')
+            setSafeMode(!newState) // revert
+        }
+    }
+
+    return (
+        <div className="settings-group">
+            <span className="settings-label">🛡️ Agent Safety (Safe Mode)</span>
+            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                    onClick={toggleSafeMode}
+                    style={{
+                        background: safeMode ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-3)',
+                        border: `1px solid ${safeMode ? 'var(--green)' : 'var(--border)'}`,
+                        color: safeMode ? 'var(--green)' : 'var(--text-2)',
+                        padding: '6px 16px',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    {safeMode ? '✅ Safe Mode ON' : '❌ Safe Mode OFF'}
+                </button>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)' }}>
+                    {status || (safeMode ? 'Agent will ask confirmation before terminal commands.' : 'Agent can run terminal commands autonomously.')}
+                </div>
+            </div>
+        </div>
+    )
+}
+
 function SettingsModal() {
     const cwd = location.origin
     const model = dom.modelSelect.value
@@ -297,6 +405,12 @@ function SettingsModal() {
                         <span className="settings-label">Agents</span>
                         <div className="settings-value">{agentCount} active</div>
                     </div>
+
+                    {/* Agent Safety */}
+                    <AgentSafetySection />
+
+                    {/* Telegram Bot */}
+                    <TelegramBotSection />
 
                     {/* Cloud Backup */}
                     <CloudBackupSection />
