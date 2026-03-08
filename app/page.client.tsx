@@ -47,6 +47,40 @@ export default function mount() {
     document.getElementById('export-chat-btn')!.addEventListener('click', exportChatAsMarkdown)
     document.getElementById('clear-chat-btn')!.addEventListener('click', clearCurrentChat)
 
+    // Agent Export/Import
+    document.getElementById('export-agent-btn')!.addEventListener('click', () => {
+        const agentId = window.location.pathname.split('/').pop() || '1'
+        window.open(`/api/agent-export?id=${agentId}`, '_blank')
+    })
+    document.getElementById('import-agent-btn')!.addEventListener('click', () => {
+        (document.getElementById('import-agent-input') as HTMLInputElement)?.click()
+    })
+    document.getElementById('import-agent-input')?.addEventListener('change', (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = async (ev) => {
+            try {
+                const data = JSON.parse(ev.target?.result as string)
+                const res = await fetch('/api/agent-export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                })
+                const result = await res.json()
+                if (result.success) {
+                    alert(`✅ Agent imported! ${result.imported.messages} messages, ${result.imported.objectives} objectives, ${result.imported.files} files`)
+                    window.location.href = `/agent/${result.agentId}`
+                } else {
+                    alert(`❌ Import failed: ${result.error}`)
+                }
+            } catch (err) {
+                alert('❌ Failed to parse JSON file')
+            }
+        }
+        reader.readAsText(file)
+    })
+
     // Heartbeat Toggle + Status Widget
     const heartbeatBtn = document.getElementById('heartbeat-toggle-btn')
     if (heartbeatBtn) {

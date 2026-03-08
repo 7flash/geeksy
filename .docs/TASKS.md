@@ -58,7 +58,7 @@
 ## 🟡 Priority: Next Up
 - [x] ~~**Chat History Search**~~ — ✅ DONE. Ctrl+K opens a glassmorphism command-palette overlay that filters chat messages in real-time. Matching text is highlighted with purple marks. Clicking a result closes the modal, scrolls to the message, and highlights it with a purple outline for 2 seconds. Escape or backdrop click closes.
 - [ ] **Plugin Hot-Reload** — When a plugin's npm package is updated, detect and notify the user instead of requiring a full restart.
-- [ ] **Agent Export/Import** — Export an agent's full state (memory, schedules, config) as JSON for backup or migration between instances.
+- [x] ~~**Agent Export/Import**~~ — ✅ DONE. GET `/api/agent-export?id=X` downloads full agent state (messages, objectives, files, schedules, config) as JSON. POST imports it as a new agent. Header buttons: 📤 Export, 📥 Import with file picker. Import creates agent with "(imported)" suffix and navigates to it.
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (file-router, SSR + client mount)
