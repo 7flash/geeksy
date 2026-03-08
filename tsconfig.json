@@ -26,6 +26,8 @@
         "skills/**/*"
     ],
     "exclude": [
-        "node_modules"
+        "node_modules",
+        "**/node_modules/jsx-ai/**",
+        "../smart-agent/node_modules/**"
     ]
 }
