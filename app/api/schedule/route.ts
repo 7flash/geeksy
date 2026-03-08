@@ -39,9 +39,26 @@ export async function GET(req: Request) {
             total: r.totalCount || 1,
             currentTask: r.currentTask,
         },
+        retry: {
+            count: r.retryCount || 0,
+            max: r.maxRetries || 0,
+        },
+        metrics: {
+            lastDurationMs: r.lastDurationMs || 0,
+            successCount: r.successCount || 0,
+            failCount: r.failCount || 0,
+        },
         tasks: r.tasks ? JSON.parse(r.tasks) : undefined,
     }))
-    return Response.json(tasks)
+
+    // Aggregate stats
+    const totalSuccess = rows.reduce((s, r) => s + (r.successCount || 0), 0)
+    const totalFail = rows.reduce((s, r) => s + (r.failCount || 0), 0)
+    const avgDuration = rows.filter(r => r.lastDurationMs).length > 0
+        ? Math.round(rows.reduce((s, r) => s + (r.lastDurationMs || 0), 0) / rows.filter(r => r.lastDurationMs).length)
+        : 0
+
+    return Response.json({ tasks, stats: { totalSuccess, totalFail, avgDurationMs: avgDuration } })
 }
 
 /** POST /api/schedule — create a scheduled task */
@@ -56,6 +73,8 @@ export async function POST(req: Request) {
         tasks?: Array<{ name: string; message: string }>
         intervalSec?: number
         cron?: string
+        maxRetries?: number
+        retryDelayMs?: number
     }
 
     if (!body.name) return Response.json({ error: 'Missing name' }, { status: 400 })
@@ -92,6 +111,8 @@ export async function POST(req: Request) {
         nextRun,
         totalCount,
         completedCount: 0,
+        maxRetries: body.maxRetries || 0,
+        retryDelayMs: body.retryDelayMs || 2000,
     })
 
     // Start the scheduler if it's not already running

@@ -15,8 +15,24 @@ function parseConfig(configStr: string): Record<string, any> {
     try { return JSON.parse(configStr) } catch { return {} }
 }
 
-export default function PluginsPage() {
+export default async function PluginsPage() {
     const plugins = db.plugins.select().all()
+    const installedPkgs = new Set(plugins.map((p: any) => p.packageName))
+
+    // Fetch dynamic registry
+    let registry: any[] = []
+    try {
+        const url = `http://localhost:${process.env.PORT || 3737}/api/plugins/registry`
+        const res = await fetch(url)
+        if (res.ok) {
+            const result = await res.json()
+            registry = Array.isArray(result) ? result : []
+        }
+    } catch {
+        // Fallback or empty if server API is unavailable during build/init
+    }
+
+    const availablePkgs = registry.filter(p => !installedPkgs.has(p.packageName))
 
     return (
         <div className="page-container">
@@ -46,40 +62,16 @@ export default function PluginsPage() {
             </div>
 
             {/* Installed plugins */}
-            {plugins.length === 0 ? (
-                <div className="plugin-empty">
+            {plugins.length === 0 && (
+                <div className="plugin-empty" style={{ marginBottom: '24px' }}>
                     <div className="plugin-empty-icon">🧩</div>
                     <h2>No plugins installed</h2>
                     <p>Install a plugin package to extend agent capabilities.</p>
-                    <div className="plugin-suggestions">
-                        <div className="plugin-suggestion" data-pkg="geeksy-telegram-plugin">
-                            <span className="plugin-suggestion-icon">📱</span>
-                            <div>
-                                <div className="plugin-suggestion-name">Telegram</div>
-                                <div className="plugin-suggestion-desc">Connect your Telegram account. Agents read &amp; send messages via MTProto.</div>
-                            </div>
-                            <button className="plugin-suggestion-btn" data-pkg="geeksy-telegram-plugin">Install</button>
-                        </div>
-                        <div className="plugin-suggestion" data-pkg="geeksy-discord-plugin">
-                            <span className="plugin-suggestion-icon">💬</span>
-                            <div>
-                                <div className="plugin-suggestion-name">Discord</div>
-                                <div className="plugin-suggestion-desc">Bot &amp; user account integration for Discord servers.</div>
-                            </div>
-                            <span className="plugin-suggestion-soon">Coming soon</span>
-                        </div>
-                        <div className="plugin-suggestion" data-pkg="geeksy-github-plugin">
-                            <span className="plugin-suggestion-icon">🐙</span>
-                            <div>
-                                <div className="plugin-suggestion-name">GitHub</div>
-                                <div className="plugin-suggestion-desc">PR reviews, issue management, and CI/CD monitoring.</div>
-                            </div>
-                            <span className="plugin-suggestion-soon">Coming soon</span>
-                        </div>
-                    </div>
                 </div>
-            ) : (
-                <div className="plugin-grid">
+            )}
+
+            {plugins.length > 0 && (
+                <div className="plugin-grid" style={{ marginBottom: '32px' }}>
                     {plugins.map(p => {
                         const config = parseConfig(p.config)
                         const configKeys = Object.keys(config)
@@ -132,6 +124,39 @@ export default function PluginsPage() {
                     })}
                 </div>
             )}
+
+            {/* Plugin Registry / Discover */}
+            <div className="plugin-registry-section" style={{ marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
+                <h2 style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text)' }}>Discover Plugins</h2>
+                <p style={{ color: 'var(--text-dim)', fontSize: '13px', marginBottom: '20px' }}>
+                    Browse and install community plugins from the Geeksy registry.
+                </p>
+                <div className="plugin-grid">
+                    {availablePkgs.length === 0 ? (
+                        <div className="overview-empty" style={{ gridColumn: '1 / -1' }}>No new plugins available or registry unreachable.</div>
+                    ) : (
+                        availablePkgs.map((pkg, idx) => (
+                            <div className="plugin-card registry-card" key={idx} style={{ borderColor: 'transparent', background: 'var(--bg-card)' }}>
+                                <div className="plugin-card-header">
+                                    <span className="plugin-card-icon">{pkg.icon || '🧩'}</span>
+                                    <div className="plugin-card-info">
+                                        <div className="plugin-card-name" style={{ color: '#fff' }}>{pkg.name}</div>
+                                        <div className="plugin-card-pkg" style={{ opacity: 0.7 }}>{pkg.packageName} • {pkg.version || '1.0.0'}</div>
+                                    </div>
+                                    <button className="plugin-suggestion-btn" data-pkg={pkg.packageName} style={{
+                                        background: 'var(--green-bg)', color: 'var(--green)', border: 'none',
+                                        padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 600, cursor: 'pointer'
+                                    }}>
+                                        Install
+                                    </button>
+                                </div>
+                                {pkg.description && <div className="plugin-card-desc">{pkg.description}</div>}
+                                {pkg.author && <div className="plugin-card-port" style={{ marginTop: '8px', opacity: 0.5 }}>By {pkg.author}</div>}
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
         </div>
     )
 }

@@ -8,6 +8,7 @@ export const db = new Database(dbPath, {
     agents: z.object({
         name: z.string().default('New Agent'),
         model: z.string().default('gemini-2.5-flash'),
+        systemPrompt: z.string().optional(),
         sessionId: z.string().optional(),
     }),
     messages: z.object({
@@ -45,6 +46,12 @@ export const db = new Database(dbPath, {
         completedCount: z.number().default(0),
         totalCount: z.number().default(1),
         currentTask: z.string().optional(),
+        maxRetries: z.number().default(0),         // 0 = no retry, N = retry N times before failing
+        retryCount: z.number().default(0),         // current retry attempt
+        retryDelayMs: z.number().default(2000),    // base delay for exponential backoff (2^attempt * base)
+        lastDurationMs: z.number().optional(),     // execution time of last run in ms
+        successCount: z.number().default(0),       // lifetime successful executions
+        failCount: z.number().default(0),          // lifetime failed executions
     }),
     agentState: z.object({
         agentId: z.number(),

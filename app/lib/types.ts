@@ -19,17 +19,19 @@ export interface AgentEntry {
     sessionId: string | null
     status: 'idle' | 'running'
     model?: string
+    systemPrompt?: string
 }
 
 export interface ScheduleEntry {
     id: string
     name: string
-    type: 'sequential' | 'interval' | 'once'
+    type: 'sequential' | 'interval' | 'once' | 'cron'
     status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
     agentId?: number
     message?: string
     scriptPath?: string
     intervalSec?: number
+    cron?: string
     nextRun?: number
     lastRun?: number
     lastError?: string
@@ -38,6 +40,15 @@ export interface ScheduleEntry {
         completed: number
         total: number
         currentTask?: string
+    }
+    retry?: {
+        count: number
+        max: number
+    }
+    metrics?: {
+        lastDurationMs: number
+        successCount: number
+        failCount: number
     }
     tasks?: ScheduleTask[]
 }
@@ -48,6 +59,12 @@ export interface ScheduleTask {
     message: string
     status: 'pending' | 'running' | 'completed' | 'failed'
     result?: string
+}
+
+export interface ScheduleStats {
+    totalSuccess: number
+    totalFail: number
+    avgDurationMs: number
 }
 
 export interface ObjectiveEntry {
@@ -106,9 +123,10 @@ export interface WorkspaceState {
     objectiveGroups: ObjectiveGroup[]
     files: FileEntry[]
     schedules: ScheduleEntry[]
+    scheduleStats: ScheduleStats | null
     stateEntries: StateEntry[]
     isRunning: boolean
     activeSkills: Set<string>
     availableSkills: SkillInfo[]
-    activeTab: 'objectives' | 'files' | 'schedule' | 'processes' | 'memory' | 'skills'
+    activeTab: 'objectives' | 'files' | 'schedule' | 'processes' | 'memory' | 'skills' | 'timeline' | 'prompt'
 }

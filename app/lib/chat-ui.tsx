@@ -3,6 +3,27 @@ import { render } from 'melina/client'
 import { renderMarkdown } from './markdown'
 import { dom, toolCards } from './state'
 
+// ── Reaction State ──
+const REACTIONS = ['👍', '👎', '⭐'] as const
+type ReactionEmoji = typeof REACTIONS[number]
+const reactionStore = new Map<number, Set<ReactionEmoji>>()
+let reactionCounter = 0
+
+function getReactions(): Record<number, string[]> {
+    try { return JSON.parse(localStorage.getItem('geeksy-reactions') || '{}') } catch { return {} }
+}
+
+function saveReactions() {
+    const data: Record<number, string[]> = {}
+    reactionStore.forEach((set, id) => { if (set.size > 0) data[id] = [...set] })
+    try { localStorage.setItem('geeksy-reactions', JSON.stringify(data)) } catch { }
+}
+
+function restoreReactions(id: number): Set<ReactionEmoji> {
+    const stored = getReactions()
+    return new Set((stored[id] || []) as ReactionEmoji[])
+}
+
 // ── Time Helpers ──
 
 function timeLabel(ts?: number): string {
@@ -55,13 +76,70 @@ function UserBubble({ text, ts }: { text: string; ts?: number }) {
     )
 }
 
-function ResponseBubble({ text, ts }: { text: string; ts?: number }) {
+function ResponseBubble({ text, ts, msgId }: { text: string; ts?: number; msgId: number }) {
+    // Restore existing reactions
+    if (!reactionStore.has(msgId)) {
+        reactionStore.set(msgId, restoreReactions(msgId))
+    }
+    const activeReactions = reactionStore.get(msgId)!
+
+    const toggleReaction = (emoji: ReactionEmoji, el: HTMLElement) => {
+        if (activeReactions.has(emoji)) {
+            activeReactions.delete(emoji)
+        } else {
+            activeReactions.add(emoji)
+        }
+        saveReactions()
+        // Update button visuals
+        updateReactionButtons(el.closest('.msg-agent')!, msgId)
+    }
+
     return (
         <div className="msg msg-agent">
             <div className="bubble" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
-            <span className="msg-time">{timeLabel(ts)}</span>
+            <div className="msg-footer">
+                <span className="msg-time">{timeLabel(ts)}</span>
+                <div className="msg-active-reactions" data-msg-id={msgId}>
+                    {[...activeReactions].map(emoji => (
+                        <span className="reaction-badge active">{emoji}</span>
+                    ))}
+                </div>
+            </div>
+            <div className="reaction-bar">
+                {REACTIONS.map(emoji => (
+                    <button
+                        className={`reaction-btn ${activeReactions.has(emoji) ? 'active' : ''}`}
+                        onClick={(e: any) => toggleReaction(emoji, e.currentTarget)}
+                        title={`React with ${emoji}`}
+                    >{emoji}</button>
+                ))}
+            </div>
         </div>
     )
+}
+
+function updateReactionButtons(msgEl: Element, msgId: number) {
+    const reactions = reactionStore.get(msgId)
+    if (!reactions) return
+
+    // Update active badges
+    const badgeContainer = msgEl.querySelector('.msg-active-reactions')
+    if (badgeContainer) {
+        badgeContainer.innerHTML = ''
+        reactions.forEach(emoji => {
+            const badge = document.createElement('span')
+            badge.className = 'reaction-badge active'
+            badge.textContent = emoji
+            badgeContainer.appendChild(badge)
+        })
+    }
+
+    // Update button states
+    const buttons = msgEl.querySelectorAll('.reaction-btn')
+    buttons.forEach((btn) => {
+        const emoji = btn.textContent?.trim() as ReactionEmoji
+        btn.classList.toggle('active', reactions.has(emoji))
+    })
 }
 
 function ThinkingCard({ text }: { text: string }) {
@@ -168,7 +246,10 @@ function appendJsx(jsx: any): HTMLElement {
 }
 
 export function appendUserBubble(text: string) { appendJsx(<UserBubble text={text} ts={Date.now()} />) }
-export function appendResponseBubble(text: string) { appendJsx(<ResponseBubble text={text} ts={Date.now()} />) }
+export function appendResponseBubble(text: string) {
+    const msgId = reactionCounter++
+    appendJsx(<ResponseBubble text={text} ts={Date.now()} msgId={msgId} />)
+}
 export function appendLoading(): HTMLElement { return appendJsx(<Loading />) }
 export function appendDivider(text: string) { appendJsx(<Divider text={text} />) }
 export function appendCard(type: string, label: string, content: string) { appendJsx(<Card type={type} label={label} content={content} />) }

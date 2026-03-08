@@ -126,10 +126,19 @@ class Scheduler {
         return { success: false, output: '', error: 'No scriptPath or message configured' }
     }
 
+    /** Execute a task and measure wall-clock duration */
+    private async executeTaskTimed(schedule: any): Promise<{ success: boolean; output: string; error?: string; durationMs: number }> {
+        const start = performance.now()
+        const result = await this.executeTask(schedule)
+        const durationMs = Math.round(performance.now() - start)
+        return { ...result, durationMs }
+    }
+
     /** Run a script file via bun */
     private async runScript(schedule: any): Promise<{ success: boolean; output: string; error?: string }> {
         const scriptPath = schedule.scriptPath
-        console.log(`[scheduler] Running script: ${scriptPath}`)
+        const timeoutMs = (schedule.timeoutSec || 60) * 1000
+        console.log(`[scheduler] Running script: ${scriptPath} (timeout: ${timeoutMs / 1000}s)`)
 
         try {
             const proc = Bun.spawn(['bun', 'run', scriptPath], {
@@ -144,9 +153,22 @@ class Scheduler {
                 },
             })
 
-            const stdout = await new Response(proc.stdout).text()
-            const stderr = await new Response(proc.stderr).text()
-            const exitCode = await proc.exited
+            // Race between process completion and timeout
+            const timeout = new Promise<never>((_, reject) =>
+                setTimeout(() => {
+                    proc.kill()
+                    reject(new Error(`Script timed out after ${timeoutMs / 1000}s`))
+                }, timeoutMs)
+            )
+
+            const completion = (async () => {
+                const stdout = await new Response(proc.stdout).text()
+                const stderr = await new Response(proc.stderr).text()
+                const exitCode = await proc.exited
+                return { stdout, stderr, exitCode }
+            })()
+
+            const { stdout, stderr, exitCode } = await Promise.race([completion, timeout])
 
             if (exitCode === 0) {
                 return { success: true, output: stdout.trim() || '(no output)' }
@@ -160,7 +182,11 @@ class Scheduler {
 
     /** Send a message to the chat API */
     private async runChat(schedule: any): Promise<{ success: boolean; output: string; error?: string }> {
+        const timeoutMs = (schedule.timeoutSec || 30) * 1000
         try {
+            const controller = new AbortController()
+            const timer = setTimeout(() => controller.abort(), timeoutMs)
+
             const res = await fetch(`${getBaseUrl()}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -169,7 +195,10 @@ class Scheduler {
                     model: 'gemini-2.5-flash',
                     agentId: schedule.agentId,
                 }),
+                signal: controller.signal,
             })
+
+            clearTimeout(timer)
 
             if (res.ok && res.body) {
                 const reader = res.body.getReader()
@@ -184,6 +213,9 @@ class Scheduler {
             }
             return { success: false, output: '', error: `HTTP ${res.status}` }
         } catch (err: any) {
+            if (err.name === 'AbortError') {
+                return { success: false, output: '', error: `Chat request timed out after ${timeoutMs / 1000}s` }
+            }
             return { success: false, output: '', error: err.message || String(err) }
         }
     }
@@ -238,24 +270,69 @@ class Scheduler {
         console.log(`[scheduler] Sequential batch complete: ${completedCount}/${tasks.length} tasks (Status: ${allPassed ? 'Passed' : 'Failed'})`)
     }
 
-    /** Run a single one-off task */
+    /** Run a single one-off task (with optional retry on failure) */
     private async runOnce(schedule: any) {
         db.schedules.update(schedule.id, { status: 'running' })
 
-        const result = await this.executeTask(schedule)
+        const result = await this.executeTaskTimed(schedule)
 
         const current = db.schedules.select().where({ id: schedule.id }).first()
         if (!current || current.status === 'cancelled') return
 
+        if (result.success) {
+            db.schedules.update(schedule.id, {
+                status: 'completed',
+                lastRun: Date.now(),
+                lastOutput: result.output.substring(0, 2000),
+                lastError: undefined,
+                retryCount: 0,
+                lastDurationMs: result.durationMs,
+                successCount: (schedule.successCount || 0) + 1,
+            })
+            if (result.output.trim()) {
+                this.pushOutputToChat(schedule, result.output)
+            }
+            return
+        }
+
+        // Failed — check if retries are available
+        const maxRetries = schedule.maxRetries || 0
+        const retryCount = (schedule.retryCount || 0) + 1
+
+        if (maxRetries > 0 && retryCount <= maxRetries) {
+            const baseDelay = schedule.retryDelayMs || 2000
+            const delay = Math.min(Math.pow(2, retryCount - 1) * baseDelay, 5 * 60 * 1000)
+            const nextRun = Date.now() + delay
+
+            db.schedules.update(schedule.id, {
+                status: 'pending',
+                lastRun: Date.now(),
+                lastError: result.error,
+                lastOutput: result.output.substring(0, 2000),
+                retryCount,
+                nextRun,
+                lastDurationMs: result.durationMs,
+                failCount: (schedule.failCount || 0) + 1,
+            })
+
+            console.log(`[scheduler] Task "${schedule.name}" failed (attempt ${retryCount}/${maxRetries}), retrying in ${(delay / 1000).toFixed(1)}s: ${result.error}`)
+            return
+        }
+
+        // All retries exhausted — mark as permanently failed
         db.schedules.update(schedule.id, {
-            status: result.success ? 'completed' : 'failed',
+            status: 'failed',
             lastRun: Date.now(),
             lastOutput: result.output.substring(0, 2000),
-            lastError: result.error,
+            lastError: maxRetries > 0
+                ? `Failed after ${retryCount - 1} retries: ${result.error}`
+                : result.error,
+            lastDurationMs: result.durationMs,
+            failCount: (schedule.failCount || 0) + 1,
         })
 
-        if (result.success && result.output.trim()) {
-            this.pushOutputToChat(schedule, result.output)
+        if (maxRetries > 0) {
+            console.log(`[scheduler] Task "${schedule.name}" permanently failed after ${retryCount - 1} retries`)
         }
     }
 
@@ -265,7 +342,7 @@ class Scheduler {
 
         db.schedules.update(schedule.id, { status: 'running' })
 
-        const result = await this.executeTask(schedule)
+        const result = await this.executeTaskTimed(schedule)
 
         // Prevent resurrecting a task that was cancelled while running
         const current = db.schedules.select().where({ id: schedule.id }).first()
@@ -279,6 +356,9 @@ class Scheduler {
             completedCount: (schedule.completedCount || 0) + 1,
             lastOutput: result.output.substring(0, 2000),
             lastError: result.error,
+            lastDurationMs: result.durationMs,
+            successCount: result.success ? (schedule.successCount || 0) + 1 : schedule.successCount || 0,
+            failCount: result.success ? schedule.failCount || 0 : (schedule.failCount || 0) + 1,
         })
 
         // Push successful output to chat
@@ -287,7 +367,7 @@ class Scheduler {
         }
 
         const status = result.success ? '✓' : '✗'
-        console.log(`[scheduler] Interval task "${schedule.name}" ${status}: ${result.output.substring(0, 100)}`)
+        console.log(`[scheduler] Interval task "${schedule.name}" ${status} (${result.durationMs}ms): ${result.output.substring(0, 100)}`)
     }
 
     /** Run a cron-scheduled task — execute when cron matches, reschedule for next match */
@@ -297,7 +377,7 @@ class Scheduler {
 
         db.schedules.update(schedule.id, { status: 'running' })
 
-        const result = await this.executeTask(schedule)
+        const result = await this.executeTaskTimed(schedule)
 
         const current = db.schedules.select().where({ id: schedule.id }).first()
         if (!current || current.status === 'cancelled') return
@@ -310,6 +390,9 @@ class Scheduler {
             completedCount: (schedule.completedCount || 0) + 1,
             lastOutput: result.output.substring(0, 2000),
             lastError: result.error,
+            lastDurationMs: result.durationMs,
+            successCount: result.success ? (schedule.successCount || 0) + 1 : schedule.successCount || 0,
+            failCount: result.success ? schedule.failCount || 0 : (schedule.failCount || 0) + 1,
         })
 
         if (result.success && result.output.trim()) {
@@ -318,7 +401,7 @@ class Scheduler {
 
         const status = result.success ? '✓' : '✗'
         const nextDate = new Date(nextRun).toLocaleTimeString()
-        console.log(`[scheduler] Cron task "${schedule.name}" ${status} (next: ${nextDate}): ${result.output.substring(0, 80)}`)
+        console.log(`[scheduler] Cron task "${schedule.name}" ${status} (${result.durationMs}ms, next: ${nextDate}): ${result.output.substring(0, 80)}`)
     }
 
     /** Insert script output as a chat message so the user sees it */
