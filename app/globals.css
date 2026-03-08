@@ -1007,6 +1007,7 @@ body {
     flex-direction: column;
     overflow: hidden;
     background: var(--bg-0);
+    grid-column: 2 / -1;
 }
 
 /* ── Agent Header ── */

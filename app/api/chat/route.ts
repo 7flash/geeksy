@@ -12,8 +12,7 @@ import '../models/route'
 
 const skillsDir = join(process.cwd(), "skills")
 
-// In-memory session store (keyed by session ID)
-const sessions = new Map<string, Session>()
+import { sessions } from '../../lib/session-store'
 
 /** DELETE /api/chat?sessionId=x — abort a running session */
 export async function DELETE(req: Request) {
