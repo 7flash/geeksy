@@ -3,7 +3,7 @@ export async function GET() {
     const sw = `
 // Geeksy Service Worker — Cache-first for assets, network-first for API
 const CACHE = 'geeksy-v1';
-const PRECACHE = ['/agent/1'];
+const PRECACHE = ['/', '/skills', '/models', '/plugins'];
 
 self.addEventListener('install', (e) => {
     e.waitUntil(
