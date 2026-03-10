@@ -18,7 +18,7 @@
 
 ## 🟢 Priority: Features
 - [ ] **Agent conversation search improvements** — Ctrl+K search only searches visible messages. Extend to search SQLite message history.
-- [ ] **Plugin health monitoring** — Show real-time plugin status (response time, error rate) in the dashboard metrics bar.
+- [x] ~~**Plugin health monitoring**~~ — ✅ DONE. Metrics API probes `/health` on each running plugin (3s timeout), auto-marks unreachable as error. Dashboard shows color-coded status (green/amber) with hover tooltip for per-plugin response times.
 - [x] ~~**Responsive mobile layout**~~ — ✅ DONE. Nav rail → bottom tab bar, session sidebar → slide-over drawer with overlay, hamburger menu, single-column layout, iPhone safe area, tablet breakpoint (≤1024px).
 
 ## 📝 Architecture Notes
