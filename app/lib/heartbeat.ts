@@ -71,6 +71,17 @@ export async function runHeartbeat() {
             return;
         }
 
+        // Circuit breaker: auto-pause after 5 consecutive failures
+        if (heartbeatStats.consecutiveFailures >= 5) {
+            console.error(`[heartbeat] Circuit breaker tripped — ${heartbeatStats.consecutiveFailures} consecutive failures. Auto-pausing.`);
+            db.agentState.upsert(
+                { agentId: 1, key: 'heartbeat_paused' },
+                { agentId: 1, key: 'heartbeat_paused', value: 'true' },
+            );
+            heartbeatStats.lastTickResult = 'paused';
+            return;
+        }
+
         // Check if there's actual work to do: pending objectives, active plugins, or scheduled tasks
         const pendingObjectives = db.objectives.select().where({ agentId: agent.id, status: 'pending' }).all();
         let activePlugins: any[] = [];
@@ -218,7 +229,8 @@ export async function runHeartbeat() {
         }
         heartbeatStats.consecutiveFailures = 0;
     } catch (err) {
-        console.error("[heartbeat] Error:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[heartbeat] Error (failure #${heartbeatStats.consecutiveFailures + 1}):`, msg);
         heartbeatStats.consecutiveFailures++;
         heartbeatStats.lastTickResult = 'error';
     } finally {
