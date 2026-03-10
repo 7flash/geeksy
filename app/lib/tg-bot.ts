@@ -9,9 +9,90 @@ import '../api/models/route'
 const skillsDir = join(process.cwd(), "skills");
 let isTgPollingActive = false;
 let lastUpdateId = 0;
+let consecutiveErrors = 0;
+
+// ── Outbound Message Queue ──
+// Messages are queued and sent with retry + exponential backoff.
+// This prevents message loss during network hiccups or Telegram rate limits.
+interface QueuedMessage {
+    token: string;
+    chatId: number;
+    text: string;
+    parseMode?: 'Markdown' | undefined;
+    retries: number;
+    maxRetries: number;
+}
+
+const outboundQueue: QueuedMessage[] = [];
+let isProcessingQueue = false;
+
+async function enqueueMessage(token: string, chatId: number, text: string, parseMode?: 'Markdown') {
+    outboundQueue.push({ token, chatId, text, parseMode, retries: 0, maxRetries: 3 });
+    processQueue();
+}
+
+async function processQueue() {
+    if (isProcessingQueue || outboundQueue.length === 0) return;
+    isProcessingQueue = true;
+
+    while (outboundQueue.length > 0) {
+        const msg = outboundQueue[0];
+        try {
+            const res = await fetch(`https://api.telegram.org/bot${msg.token}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: msg.chatId,
+                    text: msg.text,
+                    ...(msg.parseMode ? { parse_mode: msg.parseMode } : {}),
+                })
+            });
+            const json = await res.json() as any;
+
+            if (!json.ok) {
+                if (msg.parseMode === 'Markdown') {
+                    // Markdown parse failed — retry as plain text (not a network error)
+                    console.warn(`[tg-bot] Markdown send failed (${json.description}), retrying as plain text`);
+                    msg.parseMode = undefined;
+                    continue; // retry same message without shifting
+                }
+
+                if (json.error_code === 429) {
+                    // Rate limited — wait the retry_after duration
+                    const waitSec = json.parameters?.retry_after || 5;
+                    console.warn(`[tg-bot] Rate limited, waiting ${waitSec}s`);
+                    await sleep(waitSec * 1000);
+                    continue;
+                }
+
+                // Other API error — drop the message after logging
+                console.error(`[tg-bot] Send failed: ${json.description}`);
+            }
+
+            // Success or non-retryable error — remove from queue
+            outboundQueue.shift();
+        } catch (err: any) {
+            // Network error — retry with backoff
+            msg.retries++;
+            if (msg.retries >= msg.maxRetries) {
+                console.error(`[tg-bot] Message dropped after ${msg.maxRetries} retries:`, err.message);
+                outboundQueue.shift();
+            } else {
+                const delay = Math.min(1000 * Math.pow(2, msg.retries), 15000);
+                console.warn(`[tg-bot] Send retry ${msg.retries}/${msg.maxRetries} in ${delay}ms`);
+                await sleep(delay);
+            }
+        }
+    }
+
+    isProcessingQueue = false;
+}
+
+function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Telegram Bot ──
 
 export function startTgBot() {
-    // Run the polling tight loop without overlapping
     setTimeout(pollTelegram, 5000);
 }
 
@@ -28,7 +109,7 @@ async function pollTelegram() {
         const token = getBotToken();
         if (!token) {
             isTgPollingActive = false;
-            setTimeout(pollTelegram, 10000); // Check again later
+            setTimeout(pollTelegram, 30000); // No token — check every 30s instead of 10s
             return;
         }
 
@@ -36,6 +117,8 @@ async function pollTelegram() {
         const json = await res.json() as any;
 
         if (json.ok && Array.isArray(json.result)) {
+            consecutiveErrors = 0; // Reset backoff on success
+
             for (const update of json.result) {
                 lastUpdateId = Math.max(lastUpdateId, update.update_id);
 
@@ -48,7 +131,6 @@ async function pollTelegram() {
                         const cmd = data.substring(5);
                         console.log(`[tg-bot] User approved command: ${cmd}`);
 
-                        // Acknowledge the callback
                         await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -58,7 +140,6 @@ async function pollTelegram() {
                             })
                         });
 
-                        // Act as if the user typed "Execute: <cmd>"
                         await handleUserMessage(chatId, `I approve the execution of the command: ${cmd}. Please run it using the exec tool, you now have my confirmation.`, username, token, true);
                     }
                     continue;
@@ -70,18 +151,22 @@ async function pollTelegram() {
                     const username = update.message.from?.username || update.message.from?.first_name || 'User';
 
                     console.log(`[tg-bot] Received from ${username}: ${text}`);
-
                     await handleUserMessage(chatId, text, username, token, false);
                 }
             }
         }
     } catch (err: any) {
-        console.error("[tg-bot] Polling error:", err.message);
+        consecutiveErrors++;
+        const backoff = Math.min(1000 * Math.pow(2, consecutiveErrors), 60000);
+        console.error(`[tg-bot] Polling error (attempt ${consecutiveErrors}, backoff ${backoff}ms):`, err.message);
+        isTgPollingActive = false;
+        setTimeout(pollTelegram, backoff);
+        return;
     } finally {
         isTgPollingActive = false;
-        // Immediate re-poll
-        setTimeout(pollTelegram, 1000);
     }
+    // Immediate re-poll on success
+    setTimeout(pollTelegram, 1000);
 }
 
 async function handleUserMessage(chatId: number, text: string, username: string, token: string, bypassSafeMode = false) {
@@ -124,7 +209,6 @@ async function handleUserMessage(chatId: number, text: string, username: string,
         sessions.set(sessionKey, session);
         console.log(`[tg-bot] New session for chat ${chatId} (${username}): ${session.id}`);
     } else {
-        // Apply bypass if needed to the existing session
         (session as any).config.safeMode = safeMode;
     }
 
@@ -148,6 +232,11 @@ async function handleUserMessage(chatId: number, text: string, username: string,
                 const tr = event as any;
                 if (tr.tool === 'exec' && !tr.result.success && tr.result.error?.includes('Safe mode is enabled')) {
                     const cmd = tr.params.command;
+                    await enqueueMessage(token, chatId,
+                        `⚠️ *Safe Mode blocked execution*\n\nCommand:\n\`${cmd}\`\n\nApprove this execution?`,
+                        'Markdown'
+                    );
+                    // Also send inline keyboard separately (can't go through generic queue easily)
                     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -190,7 +279,6 @@ async function handleUserMessage(chatId: number, text: string, username: string,
         }
 
         const trimmed = fullText.trim();
-        // Strip <thinking> tags, tool-call JSON blocks, and clean up whitespace
         const cleaned = trimmed
             .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
             .replace(/```json\s*[\s\S]*?```/g, '')
@@ -203,36 +291,16 @@ async function handleUserMessage(chatId: number, text: string, username: string,
         if (cleaned) {
             db.messages.insert({ agentId: agent.id, role: 'assistant', content: fullText });
 
-            // Send reply back to Telegram — chunk if over 4096 chars
+            // Send reply via message queue with retry
             const chunks = splitTelegramMessage(cleaned);
             for (const chunk of chunks) {
-                await sendTelegramMessage(token, chatId, chunk);
+                await enqueueMessage(token, chatId, chunk, 'Markdown');
             }
         }
     } catch (err: any) {
         clearInterval(typingInterval);
         console.error("[tg-bot] Error processing message:", err);
-        await sendTelegramMessage(token, chatId, `Error processing request: ${err.message}`);
-    }
-}
-
-/** Send a message to Telegram with Markdown fallback to plain text */
-async function sendTelegramMessage(token: string, chatId: number, text: string) {
-    // Try Markdown first
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
-    });
-    const json = await res.json() as any;
-    if (!json.ok) {
-        // Markdown parse failed — fall back to plain text
-        console.warn(`[tg-bot] Markdown send failed (${json.description}), retrying as plain text`);
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text })
-        });
+        await enqueueMessage(token, chatId, `Error processing request: ${err.message}`);
     }
 }
 
@@ -246,9 +314,8 @@ function splitTelegramMessage(text: string, maxLen = 4096): string[] {
             chunks.push(remaining);
             break;
         }
-        // Try to split at a newline boundary
         let splitAt = remaining.lastIndexOf('\n', maxLen);
-        if (splitAt < maxLen * 0.5) splitAt = maxLen; // no good newline, hard split
+        if (splitAt < maxLen * 0.5) splitAt = maxLen;
         chunks.push(remaining.substring(0, splitAt));
         remaining = remaining.substring(splitAt).trimStart();
     }
