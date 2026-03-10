@@ -76,9 +76,12 @@ export async function GET(req: Request) {
         heartbeat: {
             paused: heartbeatPaused?.value === 'true',
             totalTicks: heartbeat.totalTicks || 0,
+            totalSkips: heartbeat.totalSkips || 0,
             lastTickResult: heartbeat.lastTickResult || 'pending',
             consecutiveFailures: heartbeat.consecutiveFailures || 0,
             isRunning: heartbeat.isRunning || false,
+            intervalMs: heartbeat.currentIntervalMs || 60000,
+            lastToolCalls: heartbeat.lastToolCalls || [],
         },
         messages: {
             total: messages.length,
