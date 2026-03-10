@@ -1,0 +1,66 @@
+/* smart-agent workspace — globals v2 */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-0: #0a0a0f;
+    --bg-1: #12121a;
+    --bg-2: #1a1a25;
+    --bg-3: #22222f;
+    --bg-input: #16161f;
+    --border: #2a2a3a;
+    --border-focus: #6366f1;
+    --text-1: #e8e8f0;
+    --text-2: #8888a0;
+    --text-3: #55556a;
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, .15);
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --blue: #3b82f6;
+    --purple: #a78bfa;
+    --purple-light: #c4b5fd;
+    --r: 12px;
+    --r-sm: 8px;
+    --sidebar-w: 240px;
+    --nav-rail-w: 60px;
+    --overview-h: 35vh;
+}
+
+html,
+body {
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-0);
+    color: var(--text-1);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+}
+
+/* ══════════════════════════════════════
+   APP SHELL GRID (nav-rail in layout, page content wrapped by Melina)
+   ══════════════════════════════════════ */
+.app-shell {
+    display: grid;
+    grid-template-columns: var(--nav-rail-w) var(--sidebar-w) 1fr;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Melina wraps {children} in #melina-page-content — make it transparent to grid */
+#melina-page-content {
+    display: contents;
+}
+
+/* The agents page wrapper also needs to be transparent to the grid */
+.agents-page {
+    display: contents;
+}
+

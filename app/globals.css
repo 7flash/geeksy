@@ -1,3 +1,9 @@
+/* Geeksy Personal OS — globals.css
+ * AUTO-GENERATED from app/css/*.css — do not edit directly.
+ * Run: bun run build:css
+ */
+
+/* ═══ base.css ═══ */
 /* smart-agent workspace — globals v2 */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -64,6 +70,7 @@ body {
     display: contents;
 }
 
+/* ═══ pages.css ═══ */
 /* Sub-pages (models, skills, plugins) don't have a sidebar — span full width */
 .page-container {
     grid-column: 2 / -1;
@@ -766,6 +773,7 @@ body {
     display: contents;
 }
 
+/* ═══ nav.css ═══ */
 /* ── Nav Rail ── */
 .nav-rail {
     display: flex;
@@ -838,6 +846,7 @@ body {
     border-radius: 0 3px 3px 0;
 }
 
+/* ═══ sidebar.css ═══ */
 /* ══════════════════════════════════════
    SIDEBAR
    ══════════════════════════════════════ */
@@ -999,6 +1008,7 @@ body {
     color: var(--text-2);
 }
 
+/* ═══ chat.css ═══ */
 /* ══════════════════════════════════════
    MAIN AREA
    ══════════════════════════════════════ */
@@ -2086,6 +2096,8 @@ body {
 /* ══════════════════════════════════════
    OVERVIEW PANEL (bottom tabs)
    ══════════════════════════════════════ */
+
+/* ═══ panels.css ═══ */
 .overview {
     height: var(--overview-h);
     min-height: 120px;
@@ -3576,6 +3588,7 @@ body {
    PLUGINS PAGE
    ══════════════════════════════════════ */
 
+/* ═══ plugins.css ═══ */
 .plugin-install-card {
     background: var(--bg-2);
     border: 1px solid var(--border);
@@ -4298,6 +4311,8 @@ body {
 .sidebar-new-btn:hover {
     background: rgba(99, 102, 241, 0.2);
     border-color: var(--accent);
+
+/* ═══ sessions.css ═══ */
 }
 
 /* ══════════════════════════════════════
@@ -4701,3 +4716,4 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
