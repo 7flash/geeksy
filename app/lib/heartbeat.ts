@@ -27,14 +27,39 @@ export function getHeartbeatStats() {
         ...heartbeatStats,
         isRunning: isHeartbeatRunning,
         uptimeMs: Date.now() - heartbeatStats.startedAt,
+        currentIntervalMs: currentInterval,
     };
 }
 
+// ── Adaptive interval ──
+const MIN_INTERVAL = 30_000;   // 30s when active
+const MAX_INTERVAL = 300_000;  // 5min when idle
+let currentInterval = 60_000;  // start at 60s
+
+function scheduleNext() {
+    setTimeout(async () => {
+        await runHeartbeat();
+        // Adapt interval based on result
+        if (heartbeatStats.lastTickResult === 'acted') {
+            currentInterval = MIN_INTERVAL; // work happened, check sooner
+        } else if (heartbeatStats.lastTickResult === 'idle' || heartbeatStats.lastTickResult === 'skipped') {
+            currentInterval = Math.min(currentInterval * 1.5, MAX_INTERVAL); // slow down
+        } else if (heartbeatStats.lastTickResult === 'error') {
+            currentInterval = 120_000; // 2min backoff on error
+        }
+        // Don't reschedule if paused — will resume when unpaused
+        if (heartbeatStats.lastTickResult !== 'paused') {
+            scheduleNext();
+        }
+    }, currentInterval);
+}
+
 export function startHeartbeat() {
-    // Run every 60 seconds
-    setInterval(runHeartbeat, 60000);
-    // Also run once on startup after a small delay
-    setTimeout(runHeartbeat, 5000);
+    // Run once on startup after a small delay, then adaptively
+    setTimeout(async () => {
+        await runHeartbeat();
+        scheduleNext();
+    }, 5000);
 }
 
 /** Check if any LLM API key is configured */
