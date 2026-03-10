@@ -75,7 +75,7 @@ export async function runHeartbeat() {
         const pendingObjectives = db.objectives.select().where({ agentId: agent.id, status: 'pending' }).all();
         let activePlugins: any[] = [];
         let pendingSchedules: any[] = [];
-        try { activePlugins = db.plugins?.select().where({ enabled: true }).all() || []; } catch { }
+        try { activePlugins = db.plugins?.select().where({ status: 'running' }).all() || []; } catch { }
         try { pendingSchedules = db.schedules?.select().where({ status: 'active' }).all() || []; } catch { }
         const hasWork = pendingObjectives.length > 0 || activePlugins.length > 0 || pendingSchedules.length > 0;
 
