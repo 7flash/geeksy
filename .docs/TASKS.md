@@ -4,7 +4,7 @@
 - [x] **joke-sender.ts double-path URL bug** — Fixed: `STATE_URL` used directly instead of appending duplicate path.
 - [x] **Scheduler stale test tasks** — Cancelled `random-joke-task` (ID 16) and `fun-fact-task` (ID 17) in DB.
 - [x] ~~**Sidebar overlapping chat header**~~ — ✅ DONE. `.gateway-page > .main-area` now uses `grid-column: 3 / -1` instead of inheriting `2 / -1` from generic `.main-area`. Session sidebar correctly occupies column 2, main area column 3.
-- [ ] **TypeScript compilation errors** — `npx tsc --noEmit` shows duplicate identifier errors from `jsx-ai` JSX runtime conflicting with other React/JSX type declarations. Need to fix tsconfig or type resolution.
+- [x] ~~**TypeScript compilation errors**~~ — ✅ DONE. Only 1 error: `el.dataset` on `Element` instead of `HTMLElement` in `page.client.tsx:91`. Cast fix applied. `npx tsc --noEmit` now passes cleanly.
 - [x] ~~**CSS file is 87KB monolith**~~ — ✅ DONE. Split into 8 modular files under `app/css/`: base (1.7KB), pages (13.6KB), nav (1.4KB), sidebar (3.2KB), chat (21.6KB), panels (30.1KB), plugins (14.1KB), sessions (7.9KB). `globals.css` auto-generated via `bun run build:css`.
 - [x] ~~**API key not persisting across restarts**~~ — ✅ Already implemented. Keys saved to `.geeksy-keys.json` via `loadKeys()`/`saveKeys()`. Applied to `process.env` on module load via `applyKeys()`. File is gitignored, so production keys don't leak. User needs to configure keys via `/models` page after fresh deploy.
 - [x] ~~**Plugins page 500 error**~~ — ✅ DONE. `Object.entries(vnode.props)` in Melina SSR `head.ts` crashed when props was null. Fixed with `|| {}` guard. Published `melina@2.5.2`, deployed to server.
@@ -13,7 +13,7 @@
 ## 🟡 Priority: Improve
 - [x] ~~**Heartbeat reliability**~~ — ✅ DONE. Added 3 guards: (1) API key check — silently skips if no LLM keys configured, (2) work check — only makes LLM calls when pending objectives/plugins/schedules exist, (3) dynamic prompt instead of hardcoded PumpFun/Telegram instructions. Telemetry now tracks `totalSkips` and `skipped` state.
 - [ ] **Telegram bot error handling** — `tg-bot.ts` has basic error recovery but messages can be lost during reconnection. Add message queue with retry.
-- [ ] **Client code modularization** — `page.client.tsx` (22KB) and `page.tsx` (10KB) mix concerns. Extract chat rendering, panel management, and event handling into focused modules.
+- [x] ~~**Client code modularization**~~ — ✅ DONE. `page.client.tsx` split from 474→105 lines. Extracted `sessions-ui.ts`, `heartbeat-ui.ts`, `metrics-ui.ts`.
 - [x] **Remove stale scheduled tasks from DB** — Done: cancelled in DB directly.
 
 ## 🟢 Priority: Features
