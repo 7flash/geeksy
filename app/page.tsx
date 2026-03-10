@@ -116,6 +116,11 @@ export default function Page() {
                         <span className="metric-value" id="metric-val-uptime">—</span>
                         <span className="metric-label">uptime</span>
                     </div>
+                    <div className="metric-item" id="metric-heartbeat" title="Heartbeat status">
+                        <span className="metric-icon">💓</span>
+                        <span className="metric-value" id="metric-val-heartbeat">—</span>
+                        <span className="metric-label">beat</span>
+                    </div>
                 </div>
 
                 {/* Chat + Input */}

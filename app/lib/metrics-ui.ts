@@ -44,6 +44,36 @@ export function initMetricsUI() {
             if (mins < 1440) return `${Math.floor(mins / 60)}h ${mins % 60}m`
             return `${Math.floor(mins / 1440)}d ${Math.floor((mins % 1440) / 60)}h`
         })())
+
+        // Heartbeat metric
+        const hbEl = document.getElementById('metric-val-heartbeat')
+        if (hbEl) {
+            const hb = data.heartbeat || {}
+            const ticks = hb.totalTicks || 0
+            const intervalSec = Math.round((hb.intervalMs || 60000) / 1000)
+            hbEl.textContent = `${ticks}×${intervalSec}s`
+
+            // Color by status
+            const colors: Record<string, string> = {
+                acted: 'var(--green)', idle: '', error: 'var(--red)',
+                paused: 'var(--text-tertiary)', skipped: 'var(--text-tertiary)',
+            }
+            hbEl.style.color = colors[hb.lastTickResult] || ''
+
+            // Tooltip
+            const lines = [
+                `Status: ${hb.lastTickResult || 'pending'}`,
+                `Interval: ${intervalSec}s (adaptive 30s–300s)`,
+                `Ticks: ${ticks}, Skips: ${hb.totalSkips || 0}`,
+                hb.consecutiveFailures > 0 ? `⚠️ Failures: ${hb.consecutiveFailures}` : '',
+            ]
+            const tools = hb.lastToolCalls || []
+            if (tools.length > 0) {
+                lines.push('', 'Last tools:')
+                tools.forEach((t: any) => lines.push(`  └ ${t.name}${t.result ? ': ' + t.result.substring(0, 40) : ''}`))
+            }
+            hbEl.title = lines.filter(Boolean).join('\n')
+        }
     }
 
     const fetchMetrics = () => fetch('/api/metrics').then(r => r.json()).then(updateMetricsBar).catch(() => { })
