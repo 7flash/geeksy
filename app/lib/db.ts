@@ -11,8 +11,20 @@ export const db = new Database(dbPath, {
         systemPrompt: z.string().optional(),
         sessionId: z.string().optional(),
     }),
+    sessions: z.object({
+        name: z.string().default('New Session'),
+        type: z.string().default('web'),              // 'web' | 'telegram_bot'
+        status: z.string().default('active'),         // 'active' | 'paused' | 'archived'
+        model: z.string().default('gemini-2.5-flash'),
+        systemPrompt: z.string().optional(),
+        config: z.string().default('{}'),             // JSON: { botToken, chatId, ... }
+        memory: z.string().default('{}'),             // JSON key-value memory store
+        messageCount: z.number().default(0),
+        lastActiveAt: z.number().optional(),
+    }),
     messages: z.object({
         agentId: z.number(),
+        sessionId: z.number().optional(),
         role: z.enum(['user', 'assistant', 'system', 'tool']),
         content: z.string(),
     }),
@@ -77,14 +89,16 @@ export const db = new Database(dbPath, {
         files: { agentId: 'agents' },
     },
     indexes: {
-        messages: ['agentId'],
+        messages: ['agentId', 'sessionId'],
         objectives: ['agentId'],
         files: ['agentId'],
         schedules: ['status', 'agentId'],
         agentState: ['agentId'],
         plugins: ['packageName'],
+        sessions: ['type', 'status'],
     },
     cascade: {
         agents: ['messages', 'objectives', 'files', 'agentState'],
     },
 })
+

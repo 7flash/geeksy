@@ -20,9 +20,9 @@ export default function RootLayout({ children }: { children: any }) {
                     {/* ── Nav Rail (persistent across pages) ── */}
                     <nav className="nav-rail" id="nav-rail">
                         <div className="nav-rail-top">
-                            <a className="nav-rail-btn" href="/" data-page="agents" title="Agents">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M5 20v-1a7 7 0 0 1 14 0v1" /><circle cx="12" cy="12" r="10" /></svg>
-                                <span>Agents</span>
+                            <a className="nav-rail-btn" href="/" data-page="gateway" title="Gateway">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" /><circle cx="12" cy="12" r="3" /></svg>
+                                <span>Gateway</span>
                             </a>
                             <a className="nav-rail-btn" href="/models" data-page="models" title="Models">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>

@@ -1,4 +1,4 @@
-// app/src/page.client.tsx — Workspace mount: event wiring only
+// app/page.client.tsx — Gateway mount: session management + chat wiring
 import { configure } from 'measure-fn'
 import { state, dom, initDom, getActiveAgent, saveState } from './lib/state'
 import { openSettings, closeSettings } from './lib/settings'
@@ -11,6 +11,245 @@ import {
 
 configure({ timestamps: true })
 
+// ── Active session tracking ──
+let activeSessionId: number | null = null
+
+async function loadSessions() {
+    try {
+        const res = await fetch('/api/sessions')
+        return await res.json()
+    } catch { return [] }
+}
+
+function renderSessionList(sessions: any[]) {
+    const list = document.getElementById('session-list')
+    if (!list) return
+
+    if (sessions.length === 0) {
+        list.innerHTML = `
+            <div class="session-empty">
+                <div class="session-empty-icon">🌐</div>
+                <p>No sessions yet</p>
+                <p class="session-empty-hint">Create a session to start chatting</p>
+            </div>
+        `
+        return
+    }
+
+    list.innerHTML = ''
+    for (const s of sessions) {
+        const item = document.createElement('div')
+        item.className = `session-item${s.id === activeSessionId ? ' active' : ''}`
+        item.dataset.id = String(s.id)
+        item.dataset.type = s.type
+        item.innerHTML = `
+            <div class="session-item-icon">
+                ${s.type === 'telegram_bot' ? '📱' : '🌐'}
+            </div>
+            <div class="session-item-info">
+                <div class="session-item-name">${s.name}</div>
+                <div class="session-item-meta">
+                    <span class="session-type-badge session-type-${s.type}">
+                        ${s.type === 'telegram_bot' ? 'Telegram' : 'Web'}
+                    </span>
+                    <span class="session-item-msgs">${s.messageCount || 0} msgs</span>
+                </div>
+            </div>
+            <div class="session-item-actions">
+                <button class="session-delete-btn" data-id="${s.id}" title="Delete session">×</button>
+            </div>
+        `
+
+        // Click to select session
+        item.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement).closest('.session-delete-btn')) return
+            selectSession(s.id, s)
+        })
+
+        // Delete button
+        item.querySelector('.session-delete-btn')?.addEventListener('click', async (e) => {
+            e.stopPropagation()
+            if (!confirm(`Delete session "${s.name}"?`)) return
+            await fetch(`/api/sessions?id=${s.id}`, { method: 'DELETE' })
+            if (activeSessionId === s.id) {
+                activeSessionId = null
+                updateHeaderForSession(null)
+            }
+            refreshSessions()
+        })
+
+        list.appendChild(item)
+    }
+}
+
+async function selectSession(id: number, session?: any) {
+    activeSessionId = id
+    localStorage.setItem('geeksy:activeSessionId', String(id))
+
+    // Highlight in sidebar
+    document.querySelectorAll('.session-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.id === String(id))
+    })
+
+    // Update header
+    if (!session) {
+        try {
+            const res = await fetch(`/api/sessions?id=${id}`)
+            session = await res.json()
+        } catch { }
+    }
+    updateHeaderForSession(session)
+
+    // Load chat history for this session
+    loadSessionChat(id)
+}
+
+function updateHeaderForSession(session: any | null) {
+    const nameEl = document.getElementById('agent-header-name')
+    const modelEl = document.getElementById('model-select') as HTMLSelectElement
+    if (nameEl) {
+        nameEl.textContent = session ? session.name : 'Gateway'
+    }
+    if (modelEl && session?.model) {
+        modelEl.value = session.model
+    }
+}
+
+async function loadSessionChat(sessionId: number) {
+    try {
+        const res = await fetch(`/api/chat?sessionId=${sessionId}`)
+        const messages = await res.json()
+        const chatArea = document.getElementById('chat-area')
+        if (!chatArea) return
+
+        if (!Array.isArray(messages) || messages.length === 0) {
+            chatArea.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <h3>Ready to chat</h3>
+                    <p>Send a message to start this session</p>
+                </div>
+            `
+            return
+        }
+
+        // The existing chat rendering in agents.tsx handles this
+        // For now just trigger a standard restore
+    } catch { }
+}
+
+async function refreshSessions() {
+    const sessions = await loadSessions()
+    renderSessionList(sessions)
+}
+
+// ── Modal handlers ──
+
+function openNewSessionModal() {
+    const modal = document.getElementById('new-session-modal')
+    if (modal) modal.style.display = 'flex'
+}
+
+function closeNewSessionModal() {
+    const modal = document.getElementById('new-session-modal')
+    if (modal) modal.style.display = 'none'
+}
+
+function openTelegramSetupModal() {
+    closeNewSessionModal()
+    const modal = document.getElementById('telegram-setup-modal')
+    if (modal) modal.style.display = 'flex'
+}
+
+function closeTelegramSetupModal() {
+    const modal = document.getElementById('telegram-setup-modal')
+    if (modal) modal.style.display = 'none'
+}
+
+async function createWebSession() {
+    closeNewSessionModal()
+    try {
+        const res = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'Web Session', type: 'web' })
+        })
+        const data = await res.json()
+        await refreshSessions()
+        if (data.session?.id) selectSession(data.session.id, data.session)
+    } catch (err) {
+        console.error('Failed to create web session:', err)
+    }
+}
+
+async function createTelegramSession() {
+    const tokenInput = document.getElementById('tg-bot-token-input') as HTMLInputElement
+    const nameInput = document.getElementById('tg-session-name-input') as HTMLInputElement
+    const token = tokenInput?.value.trim()
+    const name = nameInput?.value.trim() || 'Telegram Bot'
+
+    if (!token) {
+        tokenInput?.focus()
+        tokenInput?.style.setProperty('border-color', 'var(--red)')
+        setTimeout(() => tokenInput?.style.removeProperty('border-color'), 2000)
+        return
+    }
+
+    const connectBtn = document.getElementById('tg-setup-connect') as HTMLButtonElement
+    if (connectBtn) {
+        connectBtn.textContent = 'Connecting...'
+        connectBtn.disabled = true
+    }
+
+    try {
+        // Validate token with Telegram API
+        const testRes = await fetch(`https://api.telegram.org/bot${token}/getMe`)
+        const testData = await testRes.json() as any
+
+        if (!testData.ok) {
+            alert('Invalid bot token. Check the token from BotFather.')
+            if (connectBtn) { connectBtn.textContent = 'Connect Bot'; connectBtn.disabled = false }
+            return
+        }
+
+        const botName = testData.result.first_name || 'Bot'
+
+        // Create session
+        const res = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name || botName,
+                type: 'telegram_bot',
+                config: { botToken: token, botUsername: testData.result.username }
+            })
+        })
+        const data = await res.json()
+
+        // Also save the bot token to agentState for the tg-bot polling
+        await fetch('/api/state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentId: 1, key: 'tg_bot_token', value: token })
+        })
+
+        closeTelegramSetupModal()
+        await refreshSessions()
+        if (data.session?.id) selectSession(data.session.id, data.session)
+
+        // Clear inputs
+        if (tokenInput) tokenInput.value = ''
+        if (nameInput) nameInput.value = ''
+    } catch (err) {
+        alert('Failed to connect. Check your internet connection.')
+        console.error(err)
+    } finally {
+        if (connectBtn) { connectBtn.textContent = 'Connect Bot'; connectBtn.disabled = false }
+    }
+}
+
+// ── Main mount ──
+
 export default function mount() {
     initDom()
 
@@ -18,18 +257,15 @@ export default function mount() {
     loadSkills()
     loadModels()
 
-    // Model change → instantly persist to agent
+    // Model change → persist
     dom.modelSelect.addEventListener('change', () => {
-        const agent = getActiveAgent()
-        if (!agent) return
-        const model = dom.modelSelect.value
-        agent.model = model
-        renderSidebar()
-        fetch(`/api/agents?id=${agent.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model }),
-        }).catch(() => { })
+        if (activeSessionId) {
+            fetch('/api/sessions', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: activeSessionId, model: dom.modelSelect.value }),
+            }).catch(() => { })
+        }
     })
 
     // Tab switching
@@ -40,54 +276,38 @@ export default function mount() {
         if (tabName) switchTab(tabName)
     })
 
-    // Listen for settings event from nav rail (via layout.client.tsx)
+    // Settings event
     window.addEventListener('smart-agent:open-settings', openSettings)
 
-    // Agent Sidebar
-    initAgentSidebar()
+    // ── Session Management ──
+    document.getElementById('new-session-btn')?.addEventListener('click', openNewSessionModal)
+    document.getElementById('close-session-modal')?.addEventListener('click', closeNewSessionModal)
+    document.getElementById('create-web-session')?.addEventListener('click', createWebSession)
+    document.getElementById('create-telegram-session')?.addEventListener('click', openTelegramSetupModal)
+
+    // Telegram setup modal
+    document.getElementById('close-telegram-modal')?.addEventListener('click', closeTelegramSetupModal)
+    document.getElementById('tg-setup-back')?.addEventListener('click', () => {
+        closeTelegramSetupModal()
+        openNewSessionModal()
+    })
+    document.getElementById('tg-setup-connect')?.addEventListener('click', createTelegramSession)
+
+    // Close modals on overlay click
+    document.getElementById('new-session-modal')?.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).classList.contains('session-modal-overlay')) closeNewSessionModal()
+    })
+    document.getElementById('telegram-setup-modal')?.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).classList.contains('session-modal-overlay')) closeTelegramSetupModal()
+    })
 
     // Header action buttons
-    document.getElementById('export-chat-btn')!.addEventListener('click', exportChatAsMarkdown)
-    document.getElementById('clear-chat-btn')!.addEventListener('click', clearCurrentChat)
-
-    // Agent Export/Import
-    document.getElementById('export-agent-btn')!.addEventListener('click', () => {
-        const agentId = window.location.pathname.split('/').pop() || '1'
-        window.open(`/api/agent-export?id=${agentId}`, '_blank')
-    })
-    document.getElementById('import-agent-btn')!.addEventListener('click', () => {
-        (document.getElementById('import-agent-input') as HTMLInputElement)?.click()
-    })
-    document.getElementById('import-agent-input')?.addEventListener('change', (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0]
-        if (!file) return
-        const reader = new FileReader()
-        reader.onload = async (ev) => {
-            try {
-                const data = JSON.parse(ev.target?.result as string)
-                const res = await fetch('/api/agent-export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                })
-                const result = await res.json()
-                if (result.success) {
-                    alert(`✅ Agent imported! ${result.imported.messages} messages, ${result.imported.objectives} objectives, ${result.imported.files} files`)
-                    window.location.href = `/agent/${result.agentId}`
-                } else {
-                    alert(`❌ Import failed: ${result.error}`)
-                }
-            } catch (err) {
-                alert('❌ Failed to parse JSON file')
-            }
-        }
-        reader.readAsText(file)
-    })
+    document.getElementById('export-chat-btn')?.addEventListener('click', exportChatAsMarkdown)
+    document.getElementById('clear-chat-btn')?.addEventListener('click', clearCurrentChat)
 
     // Heartbeat Toggle + Status Widget
     const heartbeatBtn = document.getElementById('heartbeat-toggle-btn')
     if (heartbeatBtn) {
-        // Create tooltip element for stats
         const tooltip = document.createElement('div')
         tooltip.className = 'heartbeat-tooltip'
         tooltip.style.cssText = `
@@ -101,7 +321,6 @@ export default function mount() {
         heartbeatBtn.style.position = 'relative'
         heartbeatBtn.appendChild(tooltip)
 
-        // Status dot indicator
         const dot = document.createElement('span')
         dot.style.cssText = `
             position: absolute; top: 2px; right: 2px; width: 7px; height: 7px;
@@ -123,7 +342,6 @@ export default function mount() {
             heartbeatBtn.style.opacity = paused ? '0.3' : '1'
             heartbeatBtn.style.filter = paused ? 'grayscale(1)' : 'none'
 
-            // Dot color: green=healthy, amber=paused, red=errors
             if (data.consecutiveFailures > 0) {
                 dot.style.background = '#ef4444'
                 dot.style.animation = 'none'
@@ -135,7 +353,6 @@ export default function mount() {
                 dot.style.animation = 'pulse-dot 2s infinite'
             }
 
-            // Tooltip content
             const status = paused ? '⏸ Paused' : data.isRunning ? '🔄 Running' : '✓ Idle'
             const lastResult = data.lastTickResult || 'pending'
             const resultIcons: Record<string, string> = { idle: '😴', acted: '⚡', pruned: '🧹', paused: '⏸', error: '❌', pending: '⏳' }
@@ -152,26 +369,21 @@ export default function mount() {
             `
         }
 
-        // Fetch on load + poll every 15s
         const fetchStats = () => fetch('/api/heartbeat').then(r => r.json()).then(updateUI).catch(() => { })
         fetchStats()
         setInterval(fetchStats, 15000)
 
-        // Show tooltip on hover
         heartbeatBtn.addEventListener('mouseenter', () => { fetchStats(); tooltip.style.opacity = '1' })
         heartbeatBtn.addEventListener('mouseleave', () => { tooltip.style.opacity = '0' })
 
         heartbeatBtn.addEventListener('click', async () => {
             const isCurrentlyPaused = heartbeatBtn.classList.contains('paused')
-            const newState = !isCurrentlyPaused
-
             try {
-                const res = await fetch('/api/heartbeat', {
+                await fetch('/api/heartbeat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paused: newState })
+                    body: JSON.stringify({ paused: !isCurrentlyPaused })
                 })
-                const data = await res.json()
                 fetchStats()
             } catch { }
         })
@@ -179,33 +391,17 @@ export default function mount() {
 
     // ── Metrics Bar ──
     const updateMetricsBar = (data: any) => {
-        const el = (id: string) => document.getElementById(id)
-        const set = (id: string, v: string) => { const e = el(id); if (e) e.textContent = v }
-
+        const set = (id: string, v: string) => { const e = document.getElementById(id); if (e) e.textContent = v }
         set('metric-val-messages', String(data.messages?.total ?? '—'))
         set('metric-val-objectives', `${data.objectives?.completed ?? 0}/${data.objectives?.total ?? 0}`)
         set('metric-val-schedules', `${data.schedules?.totalSuccess ?? 0}✓ ${data.schedules?.totalFail ?? 0}✗`)
         set('metric-val-plugins', `${data.plugins?.running ?? 0}/${data.plugins?.total ?? 0}`)
-        set('metric-val-files', String(data.files ?? '—'))
-
-        // Format uptime
-        const mins = data.uptimeMin ?? 0
-        if (mins < 60) set('metric-val-uptime', `${mins}m`)
-        else if (mins < 1440) set('metric-val-uptime', `${Math.floor(mins / 60)}h ${mins % 60}m`)
-        else set('metric-val-uptime', `${Math.floor(mins / 1440)}d ${Math.floor((mins % 1440) / 60)}h`)
-
-        // Color the objectives metric based on success rate
-        const objsEl = el('metric-val-objectives')
-        if (objsEl && data.objectives) {
-            const rate = data.objectives.total > 0 ? data.objectives.completed / data.objectives.total : 0
-            objsEl.style.color = rate >= 0.8 ? 'var(--green)' : rate >= 0.5 ? 'var(--amber)' : 'var(--text-1)'
-        }
-
-        // Color schedule failures
-        const schedEl = el('metric-val-schedules')
-        if (schedEl && data.schedules?.totalFail > 0) {
-            schedEl.style.color = 'var(--amber)'
-        }
+        set('metric-val-uptime', (() => {
+            const mins = data.uptimeMin ?? 0
+            if (mins < 60) return `${mins}m`
+            if (mins < 1440) return `${Math.floor(mins / 60)}h ${mins % 60}m`
+            return `${Math.floor(mins / 1440)}d ${Math.floor((mins % 1440) / 60)}h`
+        })())
     }
 
     const fetchMetrics = () => fetch('/api/metrics').then(r => r.json()).then(updateMetricsBar).catch(() => { })
@@ -231,147 +427,17 @@ export default function mount() {
         else sendMessage()
     })
 
-    // ── Chat Search (Ctrl+K) ──
-    let searchOverlay: HTMLElement | null = null
-
-    function openSearch() {
-        if (searchOverlay) return
-        searchOverlay = document.createElement('div')
-        searchOverlay.id = 'search-overlay'
-        searchOverlay.style.cssText = `
-            position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-            display: flex; align-items: flex-start; justify-content: center;
-            padding-top: 20vh; animation: fadeIn 0.15s ease;
-        `
-        const modal = document.createElement('div')
-        modal.style.cssText = `
-            width: 520px; max-width: 90vw; background: rgba(22,22,32,0.98);
-            border: 1px solid rgba(128,90,255,0.3); border-radius: 14px;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.5); overflow: hidden;
-        `
-        const input = document.createElement('input')
-        input.type = 'text'
-        input.placeholder = 'Search messages...'
-        input.style.cssText = `
-            width: 100%; padding: 16px 20px; background: transparent;
-            border: none; border-bottom: 1px solid rgba(128,90,255,0.2);
-            color: #fff; font-size: 15px; font-family: 'Inter', sans-serif;
-            outline: none;
-        `
-        const results = document.createElement('div')
-        results.style.cssText = `
-            max-height: 320px; overflow-y: auto; padding: 8px;
-        `
-        results.innerHTML = '<div style="padding:16px;color:#666;text-align:center;font-size:13px">Type to search chat history</div>'
-
-        modal.appendChild(input)
-        modal.appendChild(results)
-        searchOverlay.appendChild(modal)
-        document.body.appendChild(searchOverlay)
-        input.focus()
-
-        // Close on backdrop click
-        searchOverlay.addEventListener('click', (e) => {
-            if (e.target === searchOverlay) closeSearch()
-        })
-
-        // Search logic
-        input.addEventListener('input', () => {
-            const query = input.value.trim().toLowerCase()
-            if (!query) {
-                results.innerHTML = '<div style="padding:16px;color:#666;text-align:center;font-size:13px">Type to search chat history</div>'
-                return
-            }
-
-            const msgs = dom.chatArea.querySelectorAll('.msg')
-            const matches: { el: HTMLElement; text: string }[] = []
-
-            msgs.forEach((msg: Element) => {
-                const bubble = msg.querySelector('.bubble, .stream-text')
-                if (!bubble) return
-                const text = bubble.textContent || ''
-                if (text.toLowerCase().includes(query)) {
-                    matches.push({ el: msg as HTMLElement, text })
-                }
-            })
-
-            if (matches.length === 0) {
-                results.innerHTML = '<div style="padding:16px;color:#666;text-align:center;font-size:13px">No matches found</div>'
-                return
-            }
-
-            results.innerHTML = ''
-            matches.forEach(({ el, text }, i) => {
-                const item = document.createElement('div')
-                item.style.cssText = `
-                    padding: 10px 14px; border-radius: 8px; cursor: pointer;
-                    font-size: 13px; color: #ccc; line-height: 1.5;
-                    transition: background 0.1s;
-                `
-                // Highlight match
-                const idx = text.toLowerCase().indexOf(query)
-                const start = Math.max(0, idx - 40)
-                const end = Math.min(text.length, idx + query.length + 40)
-                const snippet = (start > 0 ? '...' : '') +
-                    text.substring(start, idx) +
-                    `<mark style="background:rgba(128,90,255,0.4);color:#fff;border-radius:2px;padding:0 2px">${text.substring(idx, idx + query.length)}</mark>` +
-                    text.substring(idx + query.length, end) +
-                    (end < text.length ? '...' : '')
-
-                const isUser = el.classList.contains('msg-user')
-                item.innerHTML = `<span style="color:${isUser ? '#a78bfa' : '#888'};font-size:11px;font-weight:500">${isUser ? 'You' : 'Agent'}</span><br>${snippet}`
-
-                item.addEventListener('mouseenter', () => { item.style.background = 'rgba(128,90,255,0.1)' })
-                item.addEventListener('mouseleave', () => { item.style.background = 'none' })
-                item.addEventListener('click', () => {
-                    closeSearch()
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    el.style.outline = '2px solid rgba(128,90,255,0.6)'
-                    el.style.borderRadius = '12px'
-                    setTimeout(() => { el.style.outline = 'none' }, 2000)
-                })
-                results.appendChild(item)
-            })
-        })
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeSearch()
-        })
-    }
-
-    function closeSearch() {
-        if (searchOverlay) {
-            searchOverlay.remove()
-            searchOverlay = null
-        }
-    }
-
     // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault()
-            openSearch()
-        }
         if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
             e.preventDefault()
             clearCurrentChat()
         }
         if (e.key === 'Escape') {
-            if (searchOverlay) closeSearch()
-            else if (state.isRunning) stopAgent()
+            closeNewSessionModal()
+            closeTelegramSetupModal()
+            if (state.isRunning) stopAgent()
             else closeSettings()
-        }
-    })
-
-    // Example chip delegation
-    document.addEventListener('click', (e) => {
-        const chip = (e.target as HTMLElement).closest('[data-prompt]') as HTMLElement | null
-        if (chip) {
-            if (!state.activeAgentId) createAgent()
-            dom.inputEl.value = chip.dataset.prompt || ''
-            dom.inputEl.dispatchEvent(new Event('input'))
-            sendMessage()
         }
     })
 
@@ -390,131 +456,18 @@ export default function mount() {
         setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied') }, 1500)
     })
 
-    // File drag-and-drop on chat area
-    dom.chatArea.addEventListener('dragover', (e) => {
-        e.preventDefault()
-        dom.chatArea.classList.add('drag-over')
-    })
-    dom.chatArea.addEventListener('dragleave', () => {
-        dom.chatArea.classList.remove('drag-over')
-    })
-    dom.chatArea.addEventListener('drop', async (e) => {
-        e.preventDefault()
-        dom.chatArea.classList.remove('drag-over')
-        const files = e.dataTransfer?.files
-        if (!files?.length) return
+    // ── Restore last active session ──
+    const savedSessionId = localStorage.getItem('geeksy:activeSessionId')
+    if (savedSessionId) {
+        activeSessionId = Number(savedSessionId)
+        selectSession(activeSessionId)
+    }
 
-        if (!state.activeAgentId) createAgent()
+    // Refresh session list
+    refreshSessions()
 
-        for (const file of Array.from(files)) {
-            const text = await file.text()
-            const truncated = text.length > 10000 ? text.substring(0, 10000) + '\n...(truncated)' : text
-            const contextMsg = `[Attached file: ${file.name} (${(file.size / 1024).toFixed(1)}KB)]\n\n\`\`\`\n${truncated}\n\`\`\``
-            dom.inputEl.value = (dom.inputEl.value ? dom.inputEl.value + '\n\n' : '') + contextMsg
-            dom.inputEl.style.height = 'auto'
-            dom.inputEl.style.height = Math.min(dom.inputEl.scrollHeight, 100) + 'px'
-        }
-        dom.inputEl.focus()
-    })
-
-    // Browser back/forward navigation
-    window.addEventListener('popstate', (e) => {
-        const agentId = e.state?.agentId
-        if (agentId && state.agents.find(a => a.id === agentId)) {
-            selectAgent(agentId)
-        }
-    })
-
-    // Restore persisted state from server
+    // Restore agent state (existing logic for chat)
     restoreState()
 
     return () => { }
-}
-
-// ─── Agent Sidebar ──────────────────────────────────────
-
-function initAgentSidebar() {
-    const sidebar = document.getElementById('agent-sidebar')
-    const backdrop = document.getElementById('sidebar-backdrop')
-    const toggleBtn = document.getElementById('sidebar-toggle')
-    const closeBtn = document.getElementById('sidebar-close')
-    const newBtn = document.getElementById('sidebar-new-agent')
-    const list = document.getElementById('sidebar-agents-list')
-
-    if (!sidebar || !backdrop || !toggleBtn || !list) return
-
-    const currentAgentId = parseInt(window.location.pathname.split('/').pop() || '1')
-
-    function openSidebar() {
-        sidebar!.classList.add('open')
-        backdrop!.classList.add('open')
-        loadAgents()
-    }
-
-    function closeSidebar() {
-        sidebar!.classList.remove('open')
-        backdrop!.classList.remove('open')
-    }
-
-    toggleBtn.addEventListener('click', openSidebar)
-    closeBtn?.addEventListener('click', closeSidebar)
-    backdrop.addEventListener('click', closeSidebar)
-
-    async function loadAgents() {
-        try {
-            const res = await fetch('/api/agents')
-            const agents = await res.json() as any[]
-            list!.innerHTML = ''
-
-            for (const agent of agents) {
-                const card = document.createElement('div')
-                card.className = `sidebar-agent-card${agent.id === currentAgentId ? ' active' : ''}`
-
-                const isActive = agent.id === currentAgentId
-                card.innerHTML = `
-                    <span class="sidebar-agent-dot${isActive ? ' active' : ''}"></span>
-                    <div class="sidebar-agent-info">
-                        <div class="sidebar-agent-name">${agent.name}</div>
-                        <div class="sidebar-agent-model">${agent.model || 'gemini-2.5-flash'}</div>
-                    </div>
-                    <button class="sidebar-agent-delete" title="Delete agent">🗑</button>
-                `
-
-                // Click card to switch agent
-                card.addEventListener('click', (e) => {
-                    if ((e.target as HTMLElement).closest('.sidebar-agent-delete')) return
-                    window.location.href = `/agent/${agent.id}`
-                })
-
-                // Delete button
-                card.querySelector('.sidebar-agent-delete')?.addEventListener('click', async (e) => {
-                    e.stopPropagation()
-                    if (!confirm(`Delete "${agent.name}"? This cannot be undone.`)) return
-                    await fetch(`/api/agents?id=${agent.id}`, { method: 'DELETE' })
-                    if (agent.id === currentAgentId) {
-                        window.location.href = '/agent/1'
-                    } else {
-                        loadAgents()
-                    }
-                })
-
-                list!.appendChild(card)
-            }
-        } catch { }
-    }
-
-    // New agent
-    newBtn?.addEventListener('click', async () => {
-        const name = prompt('Agent name:')
-        if (!name?.trim()) return
-        try {
-            const res = await fetch('/api/agents', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim() }),
-            })
-            const agent = await res.json()
-            window.location.href = `/agent/${agent.id}`
-        } catch { }
-    })
 }
