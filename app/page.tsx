@@ -61,6 +61,7 @@ export default function Page() {
                     <div className="agent-header-accent" />
                     <div className="agent-header-content">
                         <div className="agent-header-left">
+                            <button className="mobile-menu-btn" id="mobile-menu-btn" title="Open sidebar">☰</button>
                             <div className="agent-identity">
                                 <span className="agent-status-dot active" id="agent-status-dot" />
                                 <span className="agent-header-name" id="agent-header-name">Gateway</span>
