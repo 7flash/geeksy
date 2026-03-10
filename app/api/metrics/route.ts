@@ -24,9 +24,44 @@ export async function GET(req: Request) {
     const totalSuccess = schedules.reduce((sum, s) => sum + (s.successCount || 0), 0)
     const totalFail = schedules.reduce((sum, s) => sum + (s.failCount || 0), 0)
 
-    // Plugins
+    // Plugins — with health probing
     const plugins = db.plugins.select().all()
     const runningPlugins = plugins.filter(p => p.status === 'running')
+
+    // Probe running plugins for health
+    const pluginHealth: Array<{
+        id: number; name: string; status: string; port?: number;
+        healthy?: boolean; responseMs?: number; error?: string;
+    }> = []
+
+    for (const p of plugins) {
+        const entry: typeof pluginHealth[0] = {
+            id: p.id, name: p.name, status: p.status, port: p.port || undefined,
+        }
+
+        if (p.status === 'running' && p.port) {
+            const start = performance.now()
+            try {
+                const healthRes = await fetch(`http://localhost:${p.port}/health`, {
+                    signal: AbortSignal.timeout(3000),
+                })
+                entry.responseMs = Math.round(performance.now() - start)
+                entry.healthy = healthRes.ok
+                if (!healthRes.ok) entry.error = `HTTP ${healthRes.status}`
+            } catch (err: any) {
+                entry.responseMs = Math.round(performance.now() - start)
+                entry.healthy = false
+                entry.error = err.message?.includes('timeout') ? 'timeout (3s)' : (err.message || 'unreachable')
+
+                // Auto-update plugin status if unreachable
+                try {
+                    db.plugins.update(p.id, { status: 'error', error: entry.error })
+                } catch { }
+            }
+        }
+
+        pluginHealth.push(entry)
+    }
 
     // Agent count
     const agents = db.agents.select().all()
@@ -66,6 +101,8 @@ export async function GET(req: Request) {
         plugins: {
             total: plugins.length,
             running: runningPlugins.length,
+            healthy: pluginHealth.filter(p => p.healthy).length,
+            items: pluginHealth,
         },
         agents: agents.length,
         files: files.length,
