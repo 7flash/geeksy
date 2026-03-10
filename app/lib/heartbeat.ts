@@ -12,9 +12,10 @@ const skillsDir = join(process.cwd(), "skills");
 // ── Heartbeat telemetry ──
 const heartbeatStats = {
     lastTickAt: 0,
-    lastTickResult: 'pending' as 'idle' | 'acted' | 'pruned' | 'paused' | 'error' | 'pending',
+    lastTickResult: 'pending' as 'idle' | 'acted' | 'pruned' | 'paused' | 'error' | 'pending' | 'skipped',
     consecutiveFailures: 0,
     totalTicks: 0,
+    totalSkips: 0,
     startedAt: Date.now(),
 };
 
@@ -33,6 +34,17 @@ export function startHeartbeat() {
     setTimeout(runHeartbeat, 5000);
 }
 
+/** Check if any LLM API key is configured */
+function hasApiKey(): boolean {
+    return !!(
+        process.env.GEMINI_API_KEY ||
+        process.env.GOOGLE_API_KEY ||
+        process.env.ANTHROPIC_API_KEY ||
+        process.env.OPENAI_API_KEY ||
+        process.env.DEEPSEEK_API_KEY
+    );
+}
+
 export async function runHeartbeat() {
     if (isHeartbeatRunning) return;
     isHeartbeatRunning = true;
@@ -48,6 +60,29 @@ export async function runHeartbeat() {
         if (pausedState && pausedState.value === 'true') {
             heartbeatStats.lastTickAt = Date.now();
             heartbeatStats.lastTickResult = 'paused';
+            return;
+        }
+
+        // Guard: skip if no API key is configured (prevents error spam)
+        if (!hasApiKey()) {
+            heartbeatStats.lastTickAt = Date.now();
+            heartbeatStats.lastTickResult = 'skipped';
+            heartbeatStats.totalSkips++;
+            return;
+        }
+
+        // Check if there's actual work to do: pending objectives, active plugins, or scheduled tasks
+        const pendingObjectives = db.objectives.select().where({ agentId: agent.id, status: 'pending' }).all();
+        let activePlugins: any[] = [];
+        let pendingSchedules: any[] = [];
+        try { activePlugins = db.plugins?.select().where({ enabled: true }).all() || []; } catch { }
+        try { pendingSchedules = db.schedules?.select().where({ status: 'active' }).all() || []; } catch { }
+        const hasWork = pendingObjectives.length > 0 || activePlugins.length > 0 || pendingSchedules.length > 0;
+
+        if (!hasWork) {
+            heartbeatStats.lastTickAt = Date.now();
+            heartbeatStats.lastTickResult = 'idle';
+            heartbeatStats.totalSkips++;
             return;
         }
 
@@ -97,17 +132,29 @@ export async function runHeartbeat() {
             db.objectives.select().where({ agentId: agent.id }).all().forEach((o: any) => { if (o.delete) o.delete() });
             db.files.select().where({ agentId: agent.id }).all().forEach((f: any) => { if (f.delete) f.delete() });
 
-            // Ensure the tool execution is recorded or just rely on the new state
             // Re-initialize session to clear its internal short-term memory
             session = new Session(config);
             sessions.set(session.id, session);
             db.agents.update(agent.id, { sessionId: session.id });
 
             console.log(`[heartbeat] Agent ${agent.id} legacy memory wiped.`);
-            return; // Skip normal tick this round
+            heartbeatStats.lastTickResult = 'pruned';
+            return;
         }
 
-        const prompt = "SYSTEM INSTINCT TICK: Wake up and check any recent events. You MUST explicitly fetch recent messages from tracked Telegram channels via the Telegram plugin's API to look for new Solana tokens (Pump.fun mint addresses). If a new token mint is mentioned, you MUST automatically add it to the trading bot via the Pumpfun Trading plugin and notify the user. Check your active Schedules as well. If absolutely no new tokens or events need your attention, reply EXACTLY with 'IDLE'. DO NOT write conversational filler. ONLY reply if action or a user notification is required.";
+        // Build dynamic prompt based on actual state
+        const objectiveList = pendingObjectives.map((o: any) => `- ${o.name}: ${o.description || '(no description)'}`).join('\n');
+        const pluginList = activePlugins.map((p: any) => p.name || p.packageName).join(', ');
+        const scheduleList = pendingSchedules.map((s: any) => `- ${s.name}: ${s.type} (${s.status})`).join('\n');
+
+        const prompt = [
+            "SYSTEM HEARTBEAT TICK: Check the current state and take action if needed.",
+            objectiveList ? `\nPending Objectives:\n${objectiveList}` : '',
+            pluginList ? `\nActive Plugins: ${pluginList}` : '',
+            scheduleList ? `\nActive Schedules:\n${scheduleList}` : '',
+            "\nCheck for pending objectives and complete them. Check active plugins for new data or events.",
+            "If absolutely nothing needs attention, reply EXACTLY with 'IDLE'. DO NOT write conversational filler.",
+        ].filter(Boolean).join('\n');
 
         let fullText = "";
         heartbeatStats.totalTicks++;
