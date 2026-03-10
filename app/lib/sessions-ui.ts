@@ -246,6 +246,36 @@ export function initSessionUI() {
         if ((e.target as HTMLElement).classList.contains('session-modal-overlay')) closeTelegramSetupModal()
     })
 
+    // ── Mobile sidebar drawer ──
+    const menuBtn = document.getElementById('mobile-menu-btn')
+    const sidebar = document.querySelector('.session-sidebar') as HTMLElement
+    if (menuBtn && sidebar) {
+        // Create overlay
+        const overlay = document.createElement('div')
+        overlay.className = 'mobile-sidebar-overlay'
+        document.body.appendChild(overlay)
+
+        const toggleSidebar = (open: boolean) => {
+            sidebar.classList.toggle('mobile-open', open)
+            overlay.classList.toggle('visible', open)
+        }
+
+        menuBtn.addEventListener('click', () => {
+            toggleSidebar(!sidebar.classList.contains('mobile-open'))
+        })
+
+        overlay.addEventListener('click', () => toggleSidebar(false))
+
+        // Auto-close on session select (mobile)
+        const origSelect = selectSession
+        const wrappedSelect = async (id: number, session?: any) => {
+            await origSelect(id, session)
+            if (window.innerWidth <= 768) toggleSidebar(false)
+        }
+        // Re-render session list with wrapped handler
+        refreshSessions(wrappedSelect)
+    }
+
     // Restore last session
     const savedSessionId = localStorage.getItem('geeksy:activeSessionId')
     if (savedSessionId) {

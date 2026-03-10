@@ -20,6 +20,7 @@ const ORDER = [
     'panels.css',
     'plugins.css',
     'sessions.css',
+    'mobile.css',
 ];
 
 const header = `/* Geeksy Personal OS — globals.css

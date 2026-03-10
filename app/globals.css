@@ -4717,3 +4717,349 @@ body {
     cursor: not-allowed;
 }
 
+/* ═══ mobile.css ═══ */
+/* ═══ Responsive Mobile Layout ═══
+ * Breakpoints:
+ *   ≤768px  — Mobile: single-column, bottom nav, no sidebar
+ *   ≤1024px — Tablet: collapsed nav rail, narrower sidebar
+ */
+
+/* ── Tablet (≤1024px) ── */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-w: 200px;
+        --nav-rail-w: 48px;
+    }
+
+    .page-container {
+        padding: 24px 28px;
+    }
+
+    .page-header h1 {
+        font-size: 22px;
+    }
+
+    .nav-rail-btn span {
+        font-size: 9px;
+    }
+}
+
+/* ── Mobile (≤768px) ── */
+@media (max-width: 768px) {
+    :root {
+        --sidebar-w: 0px;
+        --nav-rail-w: 0px;
+    }
+
+    /* Single column layout — hide grid columns */
+    .app-shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+    }
+
+    /* ── Nav Rail → Bottom Tab Bar ── */
+    .nav-rail {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 56px;
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        z-index: 100;
+        padding: 0;
+        background: var(--bg-1);
+    }
+
+    .nav-rail-top,
+    .nav-rail-bottom {
+        flex-direction: row;
+        gap: 0;
+        padding: 0;
+    }
+
+    .nav-rail-bottom {
+        display: none;
+        /* Hide settings on mobile — accessible from menu */
+    }
+
+    .nav-rail-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+    }
+
+    .nav-rail-btn.active::before {
+        display: none;
+    }
+
+    .nav-rail-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .nav-rail-btn span {
+        font-size: 9px;
+    }
+
+    /* ── Session Sidebar → Slide-over Drawer ── */
+    .sidebar,
+    .session-sidebar {
+        position: fixed;
+        top: 0;
+        left: -280px;
+        width: 280px;
+        height: 100%;
+        z-index: 200;
+        transition: left 0.25s ease;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar.mobile-open,
+    .session-sidebar.mobile-open {
+        left: 0;
+    }
+
+    /* Overlay when sidebar is open */
+    .mobile-sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 199;
+        backdrop-filter: blur(2px);
+    }
+
+    .mobile-sidebar-overlay.visible {
+        display: block;
+    }
+
+    /* ── Main Area ── */
+    .main-area {
+        grid-column: 1 / -1;
+        padding-bottom: 56px;
+        /* Space for bottom nav */
+    }
+
+    .gateway-page>.main-area {
+        grid-column: 1 / -1;
+    }
+
+    /* ── Page Container (models, skills, plugins) ── */
+    .page-container {
+        grid-column: 1 / -1;
+        padding: 16px;
+        padding-bottom: 72px;
+        /* Space for bottom nav */
+    }
+
+    .page-header {
+        margin-bottom: 16px;
+    }
+
+    .page-header h1 {
+        font-size: 20px;
+    }
+
+    .page-subtitle {
+        font-size: 13px;
+    }
+
+    /* ── Agent Header — compact ── */
+    .agent-header {
+        padding: 8px 12px;
+        min-height: 44px;
+    }
+
+    .agent-header-name {
+        font-size: 14px;
+    }
+
+    .agent-header-right {
+        gap: 4px;
+    }
+
+    .model-select-wrapper {
+        max-width: 120px;
+    }
+
+    /* Hamburger button (visible on mobile) */
+    .mobile-menu-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: none;
+        color: var(--text-2);
+        font-size: 20px;
+        cursor: pointer;
+        border-radius: var(--r-sm);
+        transition: background 0.15s;
+    }
+
+    .mobile-menu-btn:hover {
+        background: var(--bg-3);
+        color: var(--text-1);
+    }
+
+    /* ── Chat Area ── */
+    .chat-section {
+        padding: 0;
+    }
+
+    .chat-area {
+        padding: 8px 12px;
+    }
+
+    /* ── Input Area ── */
+    .input-area {
+        padding: 8px 12px 12px;
+    }
+
+    .input-row {
+        gap: 8px;
+    }
+
+    .chat-input {
+        font-size: 15px;
+        /* Prevent iOS zoom */
+        padding: 10px 14px;
+    }
+
+    /* ── Overview — collapsed by default on mobile ── */
+    .overview {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+
+    .overview.mobile-expanded {
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+
+    .overview-resize {
+        display: none;
+    }
+
+    /* ── Metrics Bar ── */
+    .metrics-bar {
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 6px 8px;
+    }
+
+    .metric-item {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+
+    /* ── Skill Chips ── */
+    .skill-toggles {
+        display: none;
+        /* Too many chips on mobile — hide */
+    }
+
+    /* ── Composition ── */
+    .composition-templates {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Models Page ── */
+    .providers-grid,
+    .providers-list {
+        max-width: 100%;
+    }
+
+    .provider-card {
+        padding: 12px;
+    }
+
+    .key-input-row {
+        flex-direction: column;
+    }
+
+    .key-actions {
+        flex-wrap: wrap;
+    }
+
+    /* ── Skills Page ── */
+    .skills-list {
+        gap: 8px;
+    }
+
+    .skill-card {
+        padding: 12px;
+    }
+
+    /* ── Plugins Page ── */
+    .plugin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .plugin-card {
+        padding: 12px;
+    }
+
+    /* ── Session Modal ── */
+    .session-modal {
+        width: 95vw;
+        max-height: 90vh;
+    }
+
+    .session-type-cards {
+        grid-template-columns: 1fr;
+    }
+
+    /* ── Confirmation Cards ── */
+    .confirmation-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .confirm-btn {
+        width: 100%;
+    }
+
+    /* ── Tab Bar ── */
+    .tab-bar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+    }
+
+    .tab-bar::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* ── Utilities ── */
+
+/* Hidden on desktop, shown on mobile */
+.mobile-menu-btn {
+    display: none;
+}
+
+/* Safe area insets for iPhone notch */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    @media (max-width: 768px) {
+        .nav-rail {
+            padding-bottom: env(safe-area-inset-bottom);
+            height: calc(56px + env(safe-area-inset-bottom));
+        }
+
+        .main-area,
+        .page-container {
+            padding-bottom: calc(56px + env(safe-area-inset-bottom));
+        }
+    }
+}
+
