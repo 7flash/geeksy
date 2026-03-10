@@ -17,7 +17,7 @@
 - [x] **Remove stale scheduled tasks from DB** — Done: cancelled in DB directly.
 
 ## 🟢 Priority: Features
-- [ ] **Agent conversation search improvements** — Ctrl+K search only searches visible messages. Extend to search SQLite message history.
+- [x] ~~**Agent conversation search improvements**~~ — ✅ DONE. Ctrl+K opens search modal with real-time debounced search (200ms) across SQLite history. Keyboard nav (↑↓ Enter Esc), match highlighting, snippet extraction (±80 chars), click-to-scroll with highlight flash.
 - [x] ~~**Plugin health monitoring**~~ — ✅ DONE. Metrics API probes `/health` on each running plugin (3s timeout), auto-marks unreachable as error. Dashboard shows color-coded status (green/amber) with hover tooltip for per-plugin response times.
 - [x] ~~**Responsive mobile layout**~~ — ✅ DONE. Nav rail → bottom tab bar, session sidebar → slide-over drawer with overlay, hamburger menu, single-column layout, iPhone safe area, tablet breakpoint (≤1024px).
 
