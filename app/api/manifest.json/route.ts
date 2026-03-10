@@ -4,7 +4,7 @@ export async function GET() {
         name: 'Geeksy — Personal OS',
         short_name: 'Geeksy',
         description: 'Personal OS for autonomous AI agents',
-        start_url: '/agent/1',
+        start_url: '/',
         display: 'standalone',
         background_color: '#0a0a0f',
         theme_color: '#6366f1',
