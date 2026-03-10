@@ -75,8 +75,8 @@ export async function runHeartbeat() {
         const pendingObjectives = db.objectives.select().where({ agentId: agent.id, status: 'pending' }).all();
         let activePlugins: any[] = [];
         let pendingSchedules: any[] = [];
-        try { activePlugins = db.plugins?.select().where({ status: 'running' }).all() || []; } catch { }
-        try { pendingSchedules = db.schedules?.select().where({ status: 'active' }).all() || []; } catch { }
+        try { activePlugins = db.plugins?.select().where({ status: 'running' }).all() || []; } catch (e) { console.warn('[heartbeat] plugins query failed:', e); }
+        try { pendingSchedules = db.schedules?.select().where({ status: 'active' }).all() || []; } catch (e) { console.warn('[heartbeat] schedules query failed:', e); }
         const hasWork = pendingObjectives.length > 0 || activePlugins.length > 0 || pendingSchedules.length > 0;
 
         if (!hasWork) {
@@ -127,10 +127,16 @@ export async function runHeartbeat() {
 
             console.log(`[heartbeat] Agent ${agent.id} pruned response:`, pruneText.substring(0, 100));
 
-            // Wipe legacy rows
-            messages.forEach((m: any) => { if (m.delete) m.delete() });
-            db.objectives.select().where({ agentId: agent.id }).all().forEach((o: any) => { if (o.delete) o.delete() });
-            db.files.select().where({ agentId: agent.id }).all().forEach((f: any) => { if (f.delete) f.delete() });
+            // Wipe legacy rows using proper ORM delete
+            for (const m of messages) {
+                try { db.messages.delete(m.id); } catch { }
+            }
+            for (const o of db.objectives.select().where({ agentId: agent.id }).all()) {
+                try { db.objectives.delete(o.id); } catch { }
+            }
+            for (const f of db.files.select().where({ agentId: agent.id }).all()) {
+                try { db.files.delete(f.id); } catch { }
+            }
 
             // Re-initialize session to clear its internal short-term memory
             session = new Session(config);
@@ -161,40 +167,49 @@ export async function runHeartbeat() {
         heartbeatStats.lastTickAt = Date.now();
         console.log(`[heartbeat] Tick #${heartbeatStats.totalTicks} for Agent ${agent.id}...`);
 
-        for await (const event of session.send(prompt)) {
-            if (event.type === 'thinking_delta') {
-                fullText += (event as any).delta || '';
-            }
-            if (event.type === 'planning') {
-                const objectives = (event as any).objectives || []
-                for (const obj of objectives) {
-                    try {
-                        db.objectives.upsert(
-                            { agentId: agent.id, name: obj.name },
-                            { agentId: agent.id, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
-                        )
-                    } catch { }
+        // 5-minute timeout to prevent stuck heartbeats
+        const timeout = setTimeout(() => {
+            console.error('[heartbeat] Tick timed out after 5 minutes');
+            heartbeatStats.lastTickResult = 'error';
+            isHeartbeatRunning = false;
+        }, 5 * 60 * 1000);
+
+        try {
+            for await (const event of session.send(prompt)) {
+                if (event.type === 'thinking_delta') {
+                    fullText += (event as any).delta || '';
                 }
-            }
-            if (event.type === 'objective_check') {
-                const results = (event as any).results || []
-                for (const r of results) {
-                    const existing = db.objectives.select().where({ agentId: agent.id, name: r.name }).first()
-                    if (existing) {
-                        db.objectives.update(existing.id, {
-                            status: r.met ? 'complete' : 'failed',
-                            result: r.reason || '',
-                        })
+                if (event.type === 'planning') {
+                    const objectives = (event as any).objectives || []
+                    for (const obj of objectives) {
+                        try {
+                            db.objectives.upsert(
+                                { agentId: agent.id, name: obj.name },
+                                { agentId: agent.id, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
+                            )
+                        } catch (e) { console.warn('[heartbeat] objective upsert failed:', obj.name, e); }
+                    }
+                }
+                if (event.type === 'objective_check') {
+                    const results = (event as any).results || []
+                    for (const r of results) {
+                        const existing = db.objectives.select().where({ agentId: agent.id, name: r.name }).first()
+                        if (existing) {
+                            db.objectives.update(existing.id, {
+                                status: r.met ? 'complete' : 'failed',
+                                result: r.reason || '',
+                            })
+                        }
                     }
                 }
             }
-        }
+        } finally { clearTimeout(timeout); }
 
         const trimmed = fullText.trim();
         const withoutThoughts = trimmed.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
 
         if (withoutThoughts && withoutThoughts.toUpperCase() !== "IDLE") {
-            console.log("[heartbeat] Agent acted:", withoutThoughts);
+            console.log(`[heartbeat] Agent acted (${withoutThoughts.length} chars):`, withoutThoughts.substring(0, 120));
             db.messages.insert({ agentId: agent.id, role: 'assistant', content: fullText });
             heartbeatStats.lastTickResult = 'acted';
         } else {
