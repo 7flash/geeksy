@@ -12,7 +12,7 @@
 
 ## 🟡 Priority: Improve
 - [x] ~~**Heartbeat reliability**~~ — ✅ DONE. Added 3 guards: (1) API key check — silently skips if no LLM keys configured, (2) work check — only makes LLM calls when pending objectives/plugins/schedules exist, (3) dynamic prompt instead of hardcoded PumpFun/Telegram instructions. Telemetry now tracks `totalSkips` and `skipped` state.
-- [ ] **Telegram bot error handling** — `tg-bot.ts` has basic error recovery but messages can be lost during reconnection. Add message queue with retry.
+- [x] ~~**Telegram bot error handling**~~ — ✅ DONE. Added outbound message queue with 3 retries + exponential backoff. Handles 429 rate limits with `retry_after`. Polling has exponential backoff on errors (up to 60s). No-token polling reduced to 30s.
 - [x] ~~**Client code modularization**~~ — ✅ DONE. `page.client.tsx` split from 474→105 lines. Extracted `sessions-ui.ts`, `heartbeat-ui.ts`, `metrics-ui.ts`.
 - [x] **Remove stale scheduled tasks from DB** — Done: cancelled in DB directly.
 
