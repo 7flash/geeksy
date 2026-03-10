@@ -10,6 +10,8 @@ let isHeartbeatRunning = false;
 const skillsDir = join(process.cwd(), "skills");
 
 // ── Heartbeat telemetry ──
+interface ToolCall { name: string; result?: string; at: number; }
+
 const heartbeatStats = {
     lastTickAt: 0,
     lastTickResult: 'pending' as 'idle' | 'acted' | 'pruned' | 'paused' | 'error' | 'pending' | 'skipped',
@@ -17,6 +19,7 @@ const heartbeatStats = {
     totalTicks: 0,
     totalSkips: 0,
     startedAt: Date.now(),
+    lastToolCalls: [] as ToolCall[],
 };
 
 export function getHeartbeatStats() {
@@ -174,6 +177,7 @@ export async function runHeartbeat() {
         ].filter(Boolean).join('\n');
 
         let fullText = "";
+        const toolCalls: ToolCall[] = [];
         heartbeatStats.totalTicks++;
         heartbeatStats.lastTickAt = Date.now();
         console.log(`[heartbeat] Tick #${heartbeatStats.totalTicks} for Agent ${agent.id}...`);
@@ -213,8 +217,20 @@ export async function runHeartbeat() {
                         }
                     }
                 }
+                if (event.type === 'tool_start') {
+                    const name = (event as any).tool || (event as any).name || 'unknown';
+                    toolCalls.push({ name, at: Date.now() });
+                    console.log(`[heartbeat]   └ tool: ${name}`);
+                }
+                if (event.type === 'tool_result') {
+                    const last = toolCalls[toolCalls.length - 1];
+                    if (last) last.result = String((event as any).result || '').substring(0, 80);
+                }
             }
         } finally { clearTimeout(timeout); }
+
+        // Store last tool calls (cap at 10)
+        heartbeatStats.lastToolCalls = toolCalls.slice(-10);
 
         const trimmed = fullText.trim();
         const withoutThoughts = trimmed.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
