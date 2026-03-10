@@ -19,7 +19,7 @@
 ## 🟢 Priority: Features
 - [ ] **Agent conversation search improvements** — Ctrl+K search only searches visible messages. Extend to search SQLite message history.
 - [ ] **Plugin health monitoring** — Show real-time plugin status (response time, error rate) in the dashboard metrics bar.
-- [ ] **Responsive mobile layout** — Current UI is desktop-first. Optimize panels and sidebar for mobile breakpoints.
+- [x] ~~**Responsive mobile layout**~~ — ✅ DONE. Nav rail → bottom tab bar, session sidebar → slide-over drawer with overlay, hamburger menu, single-column layout, iPhone safe area, tablet breakpoint (≤1024px).
 
 ## 📝 Architecture Notes
 - **Architecture**: Single Gateway — all communication flows through one chat interface (web + telegram bot). Shared message history, not per-agent.
