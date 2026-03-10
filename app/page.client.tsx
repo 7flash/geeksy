@@ -88,7 +88,7 @@ async function selectSession(id: number, session?: any) {
 
     // Highlight in sidebar
     document.querySelectorAll('.session-item').forEach(el => {
-        el.classList.toggle('active', el.dataset.id === String(id))
+        (el as HTMLElement).classList.toggle('active', (el as HTMLElement).dataset.id === String(id))
     })
 
     // Update header
