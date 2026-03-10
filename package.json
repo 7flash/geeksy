@@ -1,11 +1,12 @@
 {
     "name": "geeksy",
     "version": "0.1.0",
-    "description": "Chat interface for autonomous AI agents",
+    "description": "Personal OS for autonomous AI agents",
     "type": "module",
     "scripts": {
         "dev": "bun run app/server.ts",
         "start": "bun run app/server.ts",
+        "test": "bun test app/lib/",
         "build:css": "bun run build-css.ts"
     },
     "dependencies": {
