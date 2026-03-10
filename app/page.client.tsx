@@ -10,6 +10,7 @@ import {
 import { initSessionUI, getActiveSessionId } from './lib/sessions-ui'
 import { initHeartbeatUI } from './lib/heartbeat-ui'
 import { initMetricsUI } from './lib/metrics-ui'
+import { initSearchUI } from './lib/search-ui'
 
 configure({ timestamps: true })
 
@@ -51,6 +52,7 @@ export default function mount() {
     initSessionUI()
     initHeartbeatUI()
     initMetricsUI()
+    initSearchUI()
 
     // Auto-resize textarea
     dom.inputEl.addEventListener('input', () => {

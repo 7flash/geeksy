@@ -20,6 +20,7 @@ const ORDER = [
     'panels.css',
     'plugins.css',
     'sessions.css',
+    'search.css',
     'mobile.css',
 ];
 
