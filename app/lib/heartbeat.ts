@@ -62,6 +62,14 @@ export function startHeartbeat() {
     }, 5000);
 }
 
+/** Resume heartbeat after unpause or circuit breaker reset */
+export function resumeHeartbeat() {
+    heartbeatStats.consecutiveFailures = 0;
+    currentInterval = 60_000; // reset to default
+    console.log('[heartbeat] Resumed — scheduling next tick in 60s');
+    scheduleNext();
+}
+
 /** Check if any LLM API key is configured */
 function hasApiKey(): boolean {
     return !!(
