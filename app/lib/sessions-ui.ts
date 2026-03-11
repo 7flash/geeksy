@@ -8,6 +8,8 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let lastKnownMsgCount = 0
 
 export function getActiveSessionId() { return activeSessionId }
+/** Call after locally rendering a message to prevent polling from re-rendering it */
+export function bumpKnownMsgCount(n = 1) { lastKnownMsgCount += n }
 
 export async function loadSessions(): Promise<any[]> {
     try {

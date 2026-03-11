@@ -9,7 +9,7 @@ import { appendUserBubble, appendLoading, appendCard, appendResponseBubble, forc
 import { renderObjectivesPane, renderFilesPane, renderSchedulePane, resetMessageCount } from './panels'
 import { handleEvent, clearLoading } from './events'
 import { openPluginConfig } from './plugin-config'
-import { getActiveSessionId, selectSession, refreshSessions } from './sessions-ui'
+import { getActiveSessionId, selectSession, refreshSessions, bumpKnownMsgCount } from './sessions-ui'
 import type { AgentEntry, ToolCardEntry } from './types'
 
 // ══════════════════════════════════════
@@ -339,6 +339,7 @@ export async function sendMessage() {
     }
 
     appendUserBubble(text)
+    bumpKnownMsgCount(1) // tell poller we already rendered this
     setActiveLoadingEl(appendLoading())
     forceScrollDown()
 

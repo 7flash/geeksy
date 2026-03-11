@@ -12,6 +12,7 @@ import {
     appendResponseBubble, appendThinkingCard, scrollDown,
 } from './chat-ui'
 import { renderObjectivesPane, updateObjectives, renderFilesPane, switchTab, fetchSchedules } from './panels'
+import { bumpKnownMsgCount } from './sessions-ui'
 
 export function clearLoading() {
     if (activeLoadingEl) { activeLoadingEl.remove(); setActiveLoadingEl(null) }
@@ -20,10 +21,17 @@ export function clearLoading() {
 /** Strip tool‐call JSON blocks from thinking text — tool cards show this already */
 function cleanThinkingText(text: string): string {
     return text
-        // Remove ```json blocks containing tool calls
+        // Remove ```json blocks containing tool calls (closed)
         .replace(/```json\s*[\s\S]*?```/g, '')
+        // Remove unclosed ```json blocks at end of stream (partial tool call still arriving)
+        .replace(/```json\s*[\s\S]*$/g, '')
         // Remove standalone inline tool JSON objects  
         .replace(/\[?\s*\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"params"\s*:[\s\S]*?\}\s*\]?/g, '')
+        // Remove partial tool JSON at end of stream (e.g. [{"tool": "exec" still being typed)
+        .replace(/\[?\s*\{\s*"tool"\s*:\s*"[^"]*"?\s*[,}]?[\s\S]*$/g, (match) => {
+            // Only strip if it looks like a tool call, not regular text
+            return match.includes('"tool"') ? '' : match;
+        })
         .replace(/\n{3,}/g, '\n\n')
         .trim()
 }
@@ -213,7 +221,10 @@ export function handleEvent(type: string, data: any) {
             if (lastThinkingMessage) {
                 if (lastThinkingEl) lastThinkingEl.remove()
                 const cleaned = cleanThinkingText(lastThinkingMessage)
-                if (cleaned) appendResponseBubble(cleaned)
+                if (cleaned) {
+                    appendResponseBubble(cleaned)
+                    bumpKnownMsgCount(1)
+                }
             }
 
             // For quick responses, show minimal completion (no card)
