@@ -4,6 +4,7 @@ import { Session } from "smart-agent-ai"
 import type { AgentConfig } from "smart-agent-ai"
 import { db } from '../../lib/db'
 import { createScheduleTool } from '../../lib/schedule-tool'
+import { scheduleFollowUp } from '../../lib/heartbeat'
 import { join } from "path"
 import { readdirSync } from "fs"
 
@@ -255,6 +256,19 @@ export async function POST(req: Request) {
                 // Save sessionId to agent record
                 if (body.agentId) {
                     db.agents.update(body.agentId, { sessionId: session.id })
+
+                    // Schedule a follow-up heartbeat if the agent took real action (used tools)
+                    const toolsUsed = assistantText.length > 0;
+                    if (toolsUsed && eventCount > 5) {
+                        // Agent did substantial work — schedule a follow-up in 2 minutes
+                        const briefContext = body.message.substring(0, 120);
+                        scheduleFollowUp(
+                            body.agentId,
+                            'Check if previous task completed successfully and if user needs follow-up',
+                            `User asked: "${briefContext}"`,
+                            120_000, // 2 minute delay
+                        );
+                    }
                 }
 
                 measureSync(`SSE complete (${eventCount} events)`)
