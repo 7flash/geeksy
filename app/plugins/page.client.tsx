@@ -269,4 +269,91 @@ export function mount() {
             })
         }
     })
+
+    // ── Fetch registry and populate Discover Plugins section ──
+    fetchRegistry()
 }
+
+async function fetchRegistry() {
+    const grid = document.querySelector('.plugin-registry-section .plugin-grid')
+    if (!grid) return
+
+    // Collect already-installed package names from the page
+    const installed = new Set<string>()
+    document.querySelectorAll('.plugin-card-pkg').forEach(el => {
+        installed.add(el.textContent?.trim() || '')
+    })
+
+    try {
+        const res = await fetch('/api/plugins/registry')
+        if (!res.ok) throw new Error('Registry unavailable')
+        const packages = await res.json()
+
+        // Filter out already-installed
+        const available = (packages as any[]).filter(p => !installed.has(p.packageName))
+
+        if (available.length === 0) {
+            grid.innerHTML = '<div class="overview-empty" style="grid-column: 1 / -1">All available plugins are already installed! 🎉</div>'
+            return
+        }
+
+        grid.innerHTML = ''
+        for (const pkg of available) {
+            const card = document.createElement('div')
+            card.className = 'plugin-card registry-card'
+            card.style.borderColor = 'transparent'
+            card.style.background = 'var(--bg-card)'
+            card.innerHTML = `
+                <div class="plugin-card-header">
+                    <span class="plugin-card-icon">${pkg.icon || '🧩'}</span>
+                    <div class="plugin-card-info">
+                        <div class="plugin-card-name" style="color: #fff">${pkg.name}</div>
+                        <div class="plugin-card-pkg" style="opacity: 0.7">${pkg.packageName} • ${pkg.version || '1.0.0'}</div>
+                    </div>
+                    <button class="plugin-suggestion-btn" data-pkg="${pkg.packageName}" style="
+                        background: var(--green-bg); color: var(--green); border: none;
+                        padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;
+                    ">Install</button>
+                </div>
+                ${pkg.description ? `<div class="plugin-card-desc">${pkg.description}</div>` : ''}
+                ${pkg.author ? `<div class="plugin-card-port" style="margin-top: 8px; opacity: 0.5">By ${pkg.author}</div>` : ''}
+            `
+            grid.appendChild(card)
+
+            // Attach install handler
+            const btn = card.querySelector('.plugin-suggestion-btn') as HTMLButtonElement
+            btn.addEventListener('click', async () => {
+                btn.textContent = 'Installing…'
+                btn.disabled = true
+                try {
+                    const r = await fetch('/api/plugins', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: pkg.name,
+                            packageName: pkg.packageName,
+                            icon: pkg.icon || '🧩',
+                            description: pkg.description || '',
+                        })
+                    })
+                    if (r.ok) {
+                        window.location.reload()
+                    } else {
+                        const data = await r.json()
+                        alert(data.error || 'Failed to install')
+                        btn.textContent = 'Install'
+                        btn.disabled = false
+                    }
+                } catch {
+                    btn.textContent = 'Install'
+                    btn.disabled = false
+                }
+            })
+        }
+    } catch {
+        grid.innerHTML = '<div class="overview-empty" style="grid-column: 1 / -1">Could not reach plugin registry. Check your connection.</div>'
+    }
+}
+
+export default mount
+
