@@ -1,38 +1,26 @@
-# Geeksy Personal OS — Tasks
+# Geeksy — Tasks & Ideas
 
 ## 🔴 Priority: Fix
-- [x] **joke-sender.ts double-path URL bug** — Fixed: `STATE_URL` used directly instead of appending duplicate path.
-- [x] **Scheduler stale test tasks** — Cancelled `random-joke-task` (ID 16) and `fun-fact-task` (ID 17) in DB.
-- [x] ~~**Sidebar overlapping chat header**~~ — ✅ DONE. `.gateway-page > .main-area` now uses `grid-column: 3 / -1` instead of inheriting `2 / -1` from generic `.main-area`. Session sidebar correctly occupies column 2, main area column 3.
-- [x] ~~**TypeScript compilation errors**~~ — ✅ DONE. Only 1 error: `el.dataset` on `Element` instead of `HTMLElement` in `page.client.tsx:91`. Cast fix applied. `npx tsc --noEmit` now passes cleanly.
-- [x] ~~**CSS file is 87KB monolith**~~ — ✅ DONE. Split into 8 modular files under `app/css/`: base (1.7KB), pages (13.6KB), nav (1.4KB), sidebar (3.2KB), chat (21.6KB), panels (30.1KB), plugins (14.1KB), sessions (7.9KB). `globals.css` auto-generated via `bun run build:css`.
-- [x] ~~**API key not persisting across restarts**~~ — ✅ Already implemented. Keys saved to `.geeksy-keys.json` via `loadKeys()`/`saveKeys()`. Applied to `process.env` on module load via `applyKeys()`. File is gitignored, so production keys don't leak. User needs to configure keys via `/models` page after fresh deploy.
-- [x] ~~**Plugins page 500 error**~~ — ✅ DONE. `Object.entries(vnode.props)` in Melina SSR `head.ts` crashed when props was null. Fixed with `|| {}` guard. Published `melina@2.5.2`, deployed to server.
-- [x] ~~**Server OOM crashes**~~ — ✅ DONE. Added 2GB swap file to prevent Linux OOM killer from terminating bun processes on the 2GB RAM VPS.
+- [x] ~~**Session auto-load broken**~~ — ✅ DONE. `initSessionUI()` called without `await` in page.client.tsx. Fixed by sequencing `restoreState()` then `initSessionUI()` in async IIFE.
+- [x] ~~**Plugins page rendering "null"**~~ — ✅ DONE. `PluginsPage` was async — the self-fetch to localhost:3737 deadlocked Bun's single-threaded server. Made component sync, removed self-fetch.
+- [x] ~~**Duplicate chat message bubbles**~~ — ✅ DONE. Message polling (3s interval) re-rendered messages that `sendMessage()` already appended. Added `__geeksy_isRunning` window flag to pause polling during active processing.
+- [ ] **Raw JSON tool calls leak into chat** — AI sometimes outputs `[{"tool":"exec",...}]` as rendered code blocks. `cleanThinkingText()` strips fenced JSON but streaming deltas render before cleanup. Need to suppress code blocks containing tool call JSON during streaming.
+- [ ] **Telegram bot conversation flow freezes** — Conversation gets stuck at a long AI warning/disclaimer response. The bot should be more concise and action-oriented.
 
 ## 🟡 Priority: Improve
-- [x] ~~**Heartbeat reliability**~~ — ✅ DONE. Added 3 guards: (1) API key check — silently skips if no LLM keys configured, (2) work check — only makes LLM calls when pending objectives/plugins/schedules exist, (3) dynamic prompt instead of hardcoded PumpFun/Telegram instructions. Telemetry now tracks `totalSkips` and `skipped` state.
-- [x] ~~**Telegram bot error handling**~~ — ✅ DONE. Added outbound message queue with 3 retries + exponential backoff. Handles 429 rate limits with `retry_after`. Polling has exponential backoff on errors (up to 60s). No-token polling reduced to 30s.
-- [x] ~~**Client code modularization**~~ — ✅ DONE. `page.client.tsx` split from 474→105 lines. Extracted `sessions-ui.ts`, `heartbeat-ui.ts`, `metrics-ui.ts`.
-- [x] **Remove stale scheduled tasks from DB** — Done: cancelled in DB directly.
+- [x] ~~**Default system prompt**~~ — ✅ DONE. Added `DEFAULT_SYSTEM_PROMPT` in chat/route.ts — teaches AI to be concise, use Bun/TypeScript, `Get-Date` for time, use bgrun for processes.
+- [ ] **Telegram session read-only in web** — Sessions created via Telegram bot should display messages but disable the web chat input. Show banner: "This session is managed via Telegram."
+- [ ] **Timeline tab: newest objectives on top** — Objectives currently render oldest-first. Should reverse order so newest appear at top.
+- [ ] **Plugins page: fetch registry client-side** — Registry currently shows empty. Add client-side fetch to `/api/plugins/registry` in a mount script for the plugins page.
 
 ## 🟢 Priority: Features
-- [x] ~~**Agent conversation search improvements**~~ — ✅ DONE. Ctrl+K opens search modal with real-time debounced search (200ms) across SQLite history. Keyboard nav (↑↓ Enter Esc), match highlighting, snippet extraction (±80 chars), click-to-scroll with highlight flash.
-- [x] ~~**Plugin health monitoring**~~ — ✅ DONE. Metrics API probes `/health` on each running plugin (3s timeout), auto-marks unreachable as error. Dashboard shows color-coded status (green/amber) with hover tooltip for per-plugin response times.
-- [x] ~~**Responsive mobile layout**~~ — ✅ DONE. Nav rail → bottom tab bar, session sidebar → slide-over drawer with overlay, hamburger menu, single-column layout, iPhone safe area, tablet breakpoint (≤1024px).
+- [ ] **Browserbase plugin** — Add Browserbase to plugin registry. Plugin should: install CLI, provide config wizard for project ID + API key, install browser skill, and teach agent to use it.
+- [ ] **Session types with gateways** — Each session has a `type` (web, telegram, api). The gateway determines where messages flow. Web sessions chat in browser, telegram sessions route through bot.
 
 ## 📝 Architecture Notes
-- **Architecture**: Single Gateway — all communication flows through one chat interface (web + telegram bot). Shared message history, not per-agent.
-- **Heartbeat**: Uses `smart-agent-ai` sessions. Runs every 60s, checks that all objectives of running agents are being completed. Auto-prunes at 200 messages. Paused state persists across restarts.
-- **Framework**: Melina.js (file-router, SSR + client mount)
-- **Port**: 3737 (default)
-- **Database**: `geeksy.db` — agents, messages, objectives, files, schedules, agentState, plugins (sqlite-zod-orm)
-- **Production**: `root@202.155.132.139:/root/geeksy/` — managed by bgrun (not systemd), git-based deploy
-- **Deploy**: `git push` → bgrun dashboard fetch + restart (or `bgrun --restart geeksy --fetch`)
-- **DNS**: geeksy.xyz → 202.155.132.139 (A record), HTTPS via Caddy reverse proxy
-- **Tabs**: Objectives, Files, Schedule, Processes, Memory, Skills
-- **Skills**: Parsed from `skills/*.md` via YAML frontmatter
-- **Plugins**: Loaded from sibling directories with `geeksy-plugin.json`
-- **Chat UI**: `app/lib/chat-ui.tsx`, `app/lib/events.ts` (SSE handler), `app/lib/agents.tsx` (CRUD)
-- **Telegram**: `app/lib/tg-bot.ts` — BotFather bot gateway, relays to active AI session, shared history with web UI
-- **Scheduler**: `app/api/schedule/scheduler.ts` — supports `once`, `interval`, `sequential`, and `cron` task types
+- **Framework**: Melina.js (Bun-native, file-based routing)
+- **Agent runtime**: smart-agent-ai (Session/Agent with Classifier-Planner-Executor pipeline)
+- **Port**: 3737 (configured via BUN_PORT)
+- **DB**: SQLite via sqlite-zod-orm (agents, sessions, messages, objectives, plugins, files, skills)
+- **Plugins**: geeksy-pumpfun-plugin (port 3457), geeksy-telegram-plugin (port 3738)
+- **Client**: jsx-dom rendering with direct DOM manipulation, SSE streaming for chat events

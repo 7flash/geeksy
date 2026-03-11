@@ -16,6 +16,31 @@ const skillsDir = join(process.cwd(), "skills")
 
 import { sessions } from '../../lib/session-store'
 
+/** Default system prompt — personality and behavior for Geeksy sessions */
+const DEFAULT_SYSTEM_PROMPT = `You are Geeksy, a personal AI assistant. Be concise, friendly, and proactive.
+
+PERSONALITY:
+- Answer like a helpful friend, not a formal assistant
+- Keep responses SHORT — 1-3 sentences for simple questions, longer only when needed
+- Be proactive: if something can be done, just do it instead of asking permission
+- Never refuse simple requests or add unnecessary warnings/disclaimers
+- Match the user's language (if they write in Russian, respond in Russian)
+
+TECHNICAL RULES:
+- ALWAYS use Bun and TypeScript — NEVER Python, Node.js, or npm
+- For shell commands, use Bun.shell or exec tool with PowerShell syntax (this is Windows)
+- For long-running or background processes, ALWAYS use bgrun (not direct process spawn)
+- To get the current time: new Date().toLocaleString() — you always have access to this
+- For browser automation tasks, use Browserbase (not Selenium or Playwright)
+- Install packages with: bun add <package>
+
+BEHAVIOR:
+- When asked "what time is it" or similar, use the exec tool: Get-Date
+- When asked to create files, just create them — don't explain what you'll do first
+- When running commands, show what you're doing, don't narrate it
+- If a command fails, try a different approach — don't repeat the same failing command
+- Never output raw JSON tool calls in your response text — use tools properly`
+
 /** DELETE /api/chat?sessionId=x — abort a running session */
 export async function DELETE(req: Request) {
     const url = new URL(req.url)
@@ -58,6 +83,7 @@ export async function POST(req: Request) {
         cwd?: string
         sessionId?: string
         agentId?: number
+        dbSessionId?: number
     }
 
     const model = body.model || "gemini-2.5-flash"
@@ -97,7 +123,8 @@ export async function POST(req: Request) {
     const safeModeRow = body.agentId ? db.agentState.select().where({ agentId: body.agentId, key: 'safe_mode' }).first() : null;
     const safeMode = safeModeRow?.value === 'true';
 
-    let systemPrompt = body.agentId ? db.agents.select().where({ id: body.agentId }).first()?.systemPrompt : undefined;
+    const dbPrompt = body.agentId ? db.agents.select().where({ id: body.agentId }).first()?.systemPrompt : undefined;
+    let systemPrompt = dbPrompt || DEFAULT_SYSTEM_PROMPT;
 
     // RAG: Query local vector memory for context injection
     let augmentedMessage = body.message
@@ -138,7 +165,19 @@ export async function POST(req: Request) {
 
             // Persist user message to DB
             if (body.agentId) {
-                db.messages.insert({ agentId: body.agentId, role: 'user', content: body.message })
+                db.messages.insert({ agentId: body.agentId, sessionId: body.dbSessionId, role: 'user', content: body.message })
+            }
+            // Update session activity
+            if (body.dbSessionId) {
+                try {
+                    const session = db.sessions.select().where({ id: body.dbSessionId }).first()
+                    if (session) {
+                        db.sessions.update(body.dbSessionId, {
+                            messageCount: (session.messageCount || 0) + 1,
+                            lastActiveAt: Date.now(),
+                        })
+                    }
+                } catch { }
             }
 
             // Emit session ID
@@ -195,7 +234,19 @@ export async function POST(req: Request) {
 
                 // Persist assistant response and semantic vector memory
                 if (body.agentId && assistantText) {
-                    db.messages.insert({ agentId: body.agentId, role: 'assistant', content: assistantText })
+                    db.messages.insert({ agentId: body.agentId, sessionId: body.dbSessionId, role: 'assistant', content: assistantText })
+                    // Update session message count for assistant response
+                    if (body.dbSessionId) {
+                        try {
+                            const sess = db.sessions.select().where({ id: body.dbSessionId }).first()
+                            if (sess) {
+                                db.sessions.update(body.dbSessionId, {
+                                    messageCount: (sess.messageCount || 0) + 1,
+                                    lastActiveAt: Date.now(),
+                                })
+                            }
+                        } catch { }
+                    }
                     try {
                         addSemanticMemory(`User: ${body.message}\nAgent: ${assistantText}`, { agentId: body.agentId })
                     } catch { }

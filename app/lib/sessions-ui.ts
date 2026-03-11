@@ -1,6 +1,11 @@
 // app/lib/sessions-ui.ts — Session management UI: CRUD, selection, modals, telegram setup
+import { renderMarkdown } from './markdown'
+import { dom } from './state'
+import { appendUserBubble, appendResponseBubble, scrollDown } from './chat-ui'
 
 let activeSessionId: number | null = null
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let lastKnownMsgCount = 0
 
 export function getActiveSessionId() { return activeSessionId }
 
@@ -85,7 +90,8 @@ export async function selectSession(id: number, session?: any) {
         } catch { }
     }
     updateHeaderForSession(session)
-    loadSessionChat(id)
+    await loadSessionChat(id)
+    startMessagePolling(id)
 }
 
 function updateHeaderForSession(session: any | null) {
@@ -100,11 +106,13 @@ function updateHeaderForSession(session: any | null) {
 }
 
 async function loadSessionChat(sessionId: number) {
+    const chatArea = document.getElementById('chat-area')
+    if (!chatArea) return
+
     try {
-        const res = await fetch(`/api/chat?sessionId=${sessionId}`)
+        // Fetch messages for this session from the state API
+        const res = await fetch(`/api/sessions/messages?sessionId=${sessionId}`)
         const messages = await res.json()
-        const chatArea = document.getElementById('chat-area')
-        if (!chatArea) return
 
         if (!Array.isArray(messages) || messages.length === 0) {
             chatArea.innerHTML = `
@@ -114,9 +122,66 @@ async function loadSessionChat(sessionId: number) {
                     <p>Send a message to start this session</p>
                 </div>
             `
+            lastKnownMsgCount = 0
             return
         }
-    } catch { }
+
+        // Clear and render all messages
+        chatArea.innerHTML = ''
+        for (const msg of messages) {
+            if (msg.role === 'user') {
+                appendUserBubble(msg.content)
+            } else if (msg.role === 'assistant' && msg.content) {
+                appendResponseBubble(msg.content)
+            }
+        }
+        lastKnownMsgCount = messages.length
+        scrollDown()
+    } catch {
+        chatArea.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">💬</div>
+                <h3>Ready to chat</h3>
+                <p>Send a message to start this session</p>
+            </div>
+        `
+        lastKnownMsgCount = 0
+    }
+}
+
+/** Poll for new messages from other devices/sessions */
+function startMessagePolling(sessionId: number) {
+    if (pollTimer) clearInterval(pollTimer)
+    pollTimer = setInterval(async () => {
+        if (activeSessionId !== sessionId) return
+        // Skip polling while actively processing — sendMessage handles rendering
+        if ((window as any).__geeksy_isRunning) return
+        try {
+            const res = await fetch(`/api/sessions/messages?sessionId=${sessionId}&count=true`)
+            const data = await res.json()
+            const serverCount = data.count ?? 0
+            if (serverCount > lastKnownMsgCount) {
+                // New messages arrived — fetch only the new ones
+                const newRes = await fetch(`/api/sessions/messages?sessionId=${sessionId}&offset=${lastKnownMsgCount}`)
+                const newMsgs = await newRes.json()
+                if (Array.isArray(newMsgs) && newMsgs.length > 0) {
+                    for (const msg of newMsgs) {
+                        if (msg.role === 'user') {
+                            appendUserBubble(msg.content)
+                        } else if (msg.role === 'assistant' && msg.content) {
+                            appendResponseBubble(msg.content)
+                        }
+                    }
+                    lastKnownMsgCount = serverCount
+                    scrollDown()
+                }
+            }
+        } catch { /* silent — network hiccup */ }
+    }, 3000)
+}
+
+export function stopMessagePolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
 }
 
 export async function refreshSessions(onSelect?: (id: number, session: any) => void) {
@@ -226,7 +291,7 @@ export async function createTelegramSession() {
 }
 
 /** Wire up all session-related event listeners */
-export function initSessionUI() {
+export async function initSessionUI() {
     document.getElementById('new-session-btn')?.addEventListener('click', openNewSessionModal)
     document.getElementById('close-session-modal')?.addEventListener('click', closeNewSessionModal)
     document.getElementById('create-web-session')?.addEventListener('click', createWebSession)
@@ -276,11 +341,18 @@ export function initSessionUI() {
         refreshSessions(wrappedSelect)
     }
 
-    // Restore last session
+    // Restore last session and load its messages
+    // Sessions are the primary concept — this is where messages get loaded
     const savedSessionId = localStorage.getItem('geeksy:activeSessionId')
+
+    const sessions = await loadSessions()
     if (savedSessionId) {
         activeSessionId = Number(savedSessionId)
-        selectSession(activeSessionId)
+        const session = sessions.find((s: any) => s.id === activeSessionId)
+        await selectSession(activeSessionId, session)
+    } else if (sessions.length > 0) {
+        // Auto-select the first (most recent) session
+        await selectSession(sessions[0].id, sessions[0])
     }
 
     refreshSessions()

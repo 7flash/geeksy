@@ -9,6 +9,7 @@ import { appendUserBubble, appendLoading, appendCard, appendResponseBubble, forc
 import { renderObjectivesPane, renderFilesPane, renderSchedulePane, resetMessageCount } from './panels'
 import { handleEvent, clearLoading } from './events'
 import { openPluginConfig } from './plugin-config'
+import { getActiveSessionId, selectSession, refreshSessions } from './sessions-ui'
 import type { AgentEntry, ToolCardEntry } from './types'
 
 // ══════════════════════════════════════
@@ -17,16 +18,20 @@ import type { AgentEntry, ToolCardEntry } from './types'
 
 export async function restoreState() {
     try {
-        const agents: any[] = await fetch('/api/agents').then(r => r.json())
-        let globalAgent = agents.find((a: any) => a.id === 1 || a.name === 'Geeksy Global') || agents[0]
+        // Ensure the global agent exists (needed for smart-agent backend)
+        const res = await fetch('/api/agents')
+        const agents = await res.json() as any[]
 
-        if (!globalAgent) {
-            const res = await fetch('/api/agents', {
+        let globalAgent: any
+        if (agents.length > 0) {
+            globalAgent = agents[0]
+        } else {
+            const r = await fetch('/api/agents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'Geeksy Global' }),
+                body: JSON.stringify({ name: 'Gateway' }),
             })
-            globalAgent = await res.json()
+            globalAgent = await r.json()
         }
 
         state.agents = [{
@@ -37,7 +42,8 @@ export async function restoreState() {
             model: globalAgent.model,
         }]
 
-        await selectAgent(globalAgent.id)
+        state.activeAgentId = globalAgent.id
+        // Don't load messages or push URL — sessions handle that now
     } catch { /* first load, DB error */ }
 }
 
@@ -294,6 +300,7 @@ export async function sendMessage() {
 
     const agent = getActiveAgent()!
     state.isRunning = true
+        ; (window as any).__geeksy_isRunning = true
     agent.status = 'running'
     dom.agentStatusDot.className = 'agent-status-dot active'
     setSendButtonMode('stop')
@@ -302,6 +309,23 @@ export async function sendMessage() {
     renderSidebar()
 
     hideEmptyState()
+
+    // Auto-create a session if none is active
+    if (!getActiveSessionId()) {
+        try {
+            const sessionName = text.length > 30 ? text.substring(0, 30) + '…' : text
+            const sRes = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: sessionName, type: 'web' }),
+            })
+            const sData = await sRes.json()
+            if (sData.session?.id) {
+                await selectSession(sData.session.id, sData.session)
+                refreshSessions()
+            }
+        } catch { }
+    }
 
     if (!agent.sessionId) {
         agent.name = text.length > 24 ? text.substring(0, 24) + '…' : text
@@ -329,6 +353,7 @@ export async function sendMessage() {
                     skills: [...state.activeSkills],
                     sessionId: agent.sessionId,
                     agentId: agent.id,
+                    dbSessionId: getActiveSessionId(),
                 }),
             }))
 
@@ -370,6 +395,7 @@ export async function sendMessage() {
 
     clearLoading()
     state.isRunning = false
+        ; (window as any).__geeksy_isRunning = false
     agent.status = 'idle'
     dom.agentStatusDot.className = 'agent-status-dot'
     setSendButtonMode('send')
