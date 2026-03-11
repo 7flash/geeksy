@@ -79,8 +79,14 @@ export function getHeartbeatStats() {
         isRunning: isHeartbeatRunning,
         uptimeMs: Date.now() - heartbeatStats.startedAt,
         currentIntervalMs: currentInterval,
+        followUpQueueLength: _followUpQueue.length,
     };
 }
+
+/** @internal — exposed for tests only */
+export function _getFollowUpQueue() { return [..._followUpQueue]; }
+/** @internal — clear queue for test isolation */
+export function _clearFollowUpQueue() { _followUpQueue.length = 0; }
 
 // ── Adaptive interval ──
 const MIN_INTERVAL = 30_000;   // 30s when active
