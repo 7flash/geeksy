@@ -224,7 +224,7 @@ async function handleUserMessage(chatId: number, text: string, username: string,
     const typingInterval = setInterval(sendTyping, 4000);
 
     try {
-        for await (const event of session.send(`Reply via Telegram to ${username}: ${text}`)) {
+        for await (const event of session.send(text)) {
             if (event.type === 'thinking_delta') {
                 fullText += (event as any).delta || '';
             }

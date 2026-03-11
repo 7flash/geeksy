@@ -94,6 +94,33 @@ export async function selectSession(id: number, session?: any) {
     updateHeaderForSession(session)
     await loadSessionChat(id)
     startMessagePolling(id)
+
+    // ── Telegram sessions: disable chat input ──
+    const input = document.getElementById('input') as HTMLTextAreaElement | null
+    const sendBtn = document.getElementById('send-btn') as HTMLButtonElement | null
+    const isTelegram = session?.type === 'telegram_bot'
+
+    // Remove any existing banner
+    document.getElementById('tg-readonly-banner')?.remove()
+
+    if (input) {
+        input.disabled = isTelegram
+        input.placeholder = isTelegram ? 'This session is managed via Telegram Bot' : 'Message Gateway...'
+        input.style.opacity = isTelegram ? '0.4' : '1'
+    }
+    if (sendBtn) {
+        sendBtn.disabled = isTelegram
+        sendBtn.style.opacity = isTelegram ? '0.3' : '1'
+    }
+
+    if (isTelegram) {
+        const banner = document.createElement('div')
+        banner.id = 'tg-readonly-banner'
+        banner.style.cssText = 'padding:8px 16px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:8px;margin:0 16px 8px;font-size:12px;color:#60a5fa;text-align:center;'
+        banner.textContent = '📱 Messages in this session are routed through Telegram. Reply via the bot.'
+        const chatArea = document.getElementById('chat-area')
+        chatArea?.parentElement?.insertBefore(banner, chatArea)
+    }
 }
 
 function updateHeaderForSession(session: any | null) {
