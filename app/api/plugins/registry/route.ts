@@ -62,6 +62,14 @@ export async function GET() {
                 version: "1.0.0",
                 author: "galaxydo",
                 icon: "💊"
+            },
+            {
+                name: "Browserbase",
+                packageName: "geeksy-browserbase-plugin",
+                description: "Cloud browser automation via Browserbase. Agents control headless browsers for web scraping, testing, and interaction.",
+                version: "1.0.0",
+                author: "galaxydo",
+                icon: "🌐"
             }
         ]
 
