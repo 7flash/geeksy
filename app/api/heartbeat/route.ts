@@ -1,10 +1,16 @@
 import { db } from '../../lib/db'
-import { getHeartbeatStats, resumeHeartbeat, scheduleFollowUp } from '../../lib/heartbeat'
+import { getHeartbeatStats, resumeHeartbeat, scheduleFollowUp, _getFollowUpQueue } from '../../lib/heartbeat'
 
 export async function GET(req: Request) {
     const row = db.agentState.select().where({ agentId: 1, key: 'heartbeat_paused' }).first()
     const stats = getHeartbeatStats()
-    return Response.json({ paused: row?.value === 'true', ...stats })
+    const followUps = _getFollowUpQueue().map(fu => ({
+        reason: fu.reason,
+        context: fu.context.substring(0, 80),
+        scheduledAt: fu.scheduledAt,
+        readyIn: Math.max(0, fu.scheduledAt - Date.now()),
+    }))
+    return Response.json({ paused: row?.value === 'true', ...stats, followUps })
 }
 
 export async function POST(req: Request) {
