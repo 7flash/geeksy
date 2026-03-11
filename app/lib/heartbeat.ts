@@ -9,6 +9,57 @@ import '../api/models/route'
 let isHeartbeatRunning = false;
 const skillsDir = join(process.cwd(), "skills");
 
+// ── Follow-up queue ──
+// After user interactions, follow-up objectives are queued here.
+// The heartbeat picks them up on the next tick.
+interface FollowUp {
+    reason: string; // What to check: "verify task completion", "check user satisfaction", etc.
+    context: string; // Brief context from the original interaction
+    scheduledAt: number;
+    agentId: number;
+}
+const _followUpQueue: FollowUp[] = [];
+
+/**
+ * Schedule a follow-up heartbeat after a user interaction.
+ * The heartbeat will pick this up on its next tick and act on it.
+ */
+export function scheduleFollowUp(
+    agentId: number,
+    reason: string,
+    context: string,
+    delayMs: number = 0, // 0 = next tick, otherwise min delay
+) {
+    _followUpQueue.push({
+        reason,
+        context,
+        scheduledAt: Date.now() + delayMs,
+        agentId,
+    });
+    // If heartbeat interval is slow, speed it up for the follow-up
+    if (currentInterval > 60_000) {
+        currentInterval = 60_000;
+    }
+    console.log(`[heartbeat] Follow-up scheduled: "${reason}" (delay: ${delayMs}ms)`);
+}
+
+/** Get pending follow-ups ready to execute */
+function drainFollowUps(agentId: number): FollowUp[] {
+    const now = Date.now();
+    const ready: FollowUp[] = [];
+    const remaining: FollowUp[] = [];
+    for (const fu of _followUpQueue) {
+        if (fu.agentId === agentId && fu.scheduledAt <= now) {
+            ready.push(fu);
+        } else {
+            remaining.push(fu);
+        }
+    }
+    _followUpQueue.length = 0;
+    _followUpQueue.push(...remaining);
+    return ready;
+}
+
 // ── Heartbeat telemetry ──
 interface ToolCall { name: string; result?: string; at: number; }
 
@@ -118,13 +169,17 @@ export async function runHeartbeat() {
             return;
         }
 
-        // Check if there's actual work to do: pending objectives, active plugins, or scheduled tasks
+        // Check if there's actual work to do: pending objectives, active plugins, scheduled tasks, or follow-ups
         const pendingObjectives = db.objectives.select().where({ agentId: agent.id, status: 'pending' }).all();
         let activePlugins: any[] = [];
         let pendingSchedules: any[] = [];
         try { activePlugins = db.plugins?.select().where({ status: 'running' }).all() || []; } catch (e) { console.warn('[heartbeat] plugins query failed:', e); }
         try { pendingSchedules = db.schedules?.select().where({ status: 'active' }).all() || []; } catch (e) { console.warn('[heartbeat] schedules query failed:', e); }
-        const hasWork = pendingObjectives.length > 0 || activePlugins.length > 0 || pendingSchedules.length > 0;
+
+        // Drain ready follow-ups
+        const followUps = drainFollowUps(agent.id);
+
+        const hasWork = pendingObjectives.length > 0 || activePlugins.length > 0 || pendingSchedules.length > 0 || followUps.length > 0;
 
         if (!hasWork) {
             heartbeatStats.lastTickAt = Date.now();
@@ -199,12 +254,14 @@ export async function runHeartbeat() {
         const objectiveList = pendingObjectives.map((o: any) => `- ${o.name}: ${o.description || '(no description)'}`).join('\n');
         const pluginList = activePlugins.map((p: any) => p.name || p.packageName).join(', ');
         const scheduleList = pendingSchedules.map((s: any) => `- ${s.name}: ${s.type} (${s.status})`).join('\n');
+        const followUpList = followUps.map(fu => `- ${fu.reason} (context: ${fu.context})`).join('\n');
 
         const prompt = [
             "SYSTEM HEARTBEAT TICK: Check the current state and take action if needed.",
             objectiveList ? `\nPending Objectives:\n${objectiveList}` : '',
             pluginList ? `\nActive Plugins: ${pluginList}` : '',
             scheduleList ? `\nActive Schedules:\n${scheduleList}` : '',
+            followUpList ? `\nFollow-Up Tasks (from recent interactions):\n${followUpList}\nFor each follow-up: evaluate the situation, take action if needed, and if the user needs an update, send them a message.` : '',
             "\nCheck for pending objectives and complete them. Check active plugins for new data or events.",
             "If absolutely nothing needs attention, reply EXACTLY with 'IDLE'. DO NOT write conversational filler.",
         ].filter(Boolean).join('\n');
