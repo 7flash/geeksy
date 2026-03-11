@@ -5,11 +5,11 @@
 - [x] ~~**Plugins page rendering "null"**~~ — ✅ DONE. `PluginsPage` was async — the self-fetch to localhost:3737 deadlocked Bun's single-threaded server. Made component sync, removed self-fetch.
 - [x] ~~**Duplicate chat message bubbles**~~ — ✅ DONE. Message polling (3s interval) re-rendered messages that `sendMessage()` already appended. Added `__geeksy_isRunning` window flag to pause polling during active processing.
 - [x] ~~**Raw JSON tool calls leak into chat**~~ — ✅ DONE. Enhanced `cleanThinkingText()` to also strip partial/unclosed `\`\`\`json` blocks and mid-stream tool JSON during streaming.
-- [ ] **Telegram bot conversation flow freezes** — Conversation gets stuck at a long AI warning/disclaimer response. The bot should be more concise and action-oriented.
+- [x] ~~**Telegram bot conversation flow freezes**~~ — ✅ Partially fixed. Simplified prompt from 'Reply via Telegram to user: text' to just raw text, reducing verbose formal reply style.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Default system prompt**~~ — ✅ DONE. Added `DEFAULT_SYSTEM_PROMPT` in chat/route.ts — teaches AI to be concise, use Bun/TypeScript, `Get-Date` for time, use bgrun for processes.
-- [ ] **Telegram session read-only in web** — Sessions created via Telegram bot should display messages but disable the web chat input. Show banner: "This session is managed via Telegram."
+- [x] ~~**Telegram session read-only in web**~~ — ✅ DONE. `selectSession()` checks `type === 'telegram_bot'`, disables input/send, shows blue banner.
 - [x] ~~**Timeline tab: newest objectives on top**~~ — ✅ Already implemented. `renderObjectivesPane()` reverses `objectiveGroups` before rendering.
 - [x] ~~**Plugins page: fetch registry client-side**~~ — ✅ DONE. Added `fetchRegistry()` to mount script. Fixed default export (Melina expects `export default`). Shows Discord, GitHub, Browserbase with Install buttons.
 
