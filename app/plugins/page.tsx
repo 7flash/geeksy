@@ -15,24 +15,15 @@ function parseConfig(configStr: string): Record<string, any> {
     try { return JSON.parse(configStr) } catch { return {} }
 }
 
-export default async function PluginsPage() {
-    const plugins = db.plugins.select().all()
+export default function PluginsPage() {
+    let plugins: any[] = []
+    try {
+        plugins = db.plugins.select().all()
+    } catch { }
     const installedPkgs = new Set(plugins.map((p: any) => p.packageName))
 
-    // Fetch dynamic registry
-    let registry: any[] = []
-    try {
-        const url = `http://localhost:${process.env.PORT || 3737}/api/plugins/registry`
-        const res = await fetch(url)
-        if (res.ok) {
-            const result = await res.json()
-            registry = Array.isArray(result) ? result : []
-        }
-    } catch {
-        // Fallback or empty if server API is unavailable during build/init
-    }
-
-    const availablePkgs = registry.filter(p => !installedPkgs.has(p.packageName))
+    // Registry data will be empty on initial render — client script fetches it
+    const availablePkgs: any[] = []
 
     return (
         <div className="page-container">

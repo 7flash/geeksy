@@ -49,7 +49,6 @@ export default function mount() {
     document.getElementById('clear-chat-btn')?.addEventListener('click', clearCurrentChat)
 
     // ── Initialize UI modules ──
-    initSessionUI()
     initHeartbeatUI()
     initMetricsUI()
     initSearchUI()
@@ -100,8 +99,11 @@ export default function mount() {
         setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied') }, 1500)
     })
 
-    // Restore agent state (existing logic for chat)
-    restoreState()
+        // Bootstrap: ensure agent exists, then load session + messages
+        ; (async () => {
+            await restoreState()    // Ensure global agent exists in DB
+            await initSessionUI()   // Load sessions, select saved/first, render messages
+        })()
 
     return () => { }
 }
