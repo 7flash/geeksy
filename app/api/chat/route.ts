@@ -4,6 +4,7 @@ import { Session } from "smart-agent-ai"
 import type { AgentConfig } from "smart-agent-ai"
 import { db } from '../../lib/db'
 import { createScheduleTool } from '../../lib/schedule-tool'
+import { createAgentMessageTool } from '../../lib/agent-message-tool'
 import { scheduleFollowUp } from '../../lib/heartbeat'
 import { join } from "path"
 import { readdirSync } from "fs"
@@ -146,7 +147,7 @@ export async function POST(req: Request) {
         maxIterations: 10,
         safeMode,
         systemPrompt,
-        tools: [createScheduleTool(body.agentId)],
+        tools: [createScheduleTool(body.agentId), createAgentMessageTool(body.agentId)],
     }
 
     // Get or create session

@@ -3,6 +3,7 @@ import { join } from 'path'
 import { readdirSync } from 'fs'
 import { db } from './db'
 import { createScheduleTool } from './schedule-tool'
+import { createAgentMessageTool } from './agent-message-tool'
 import { sessions } from './session-store'
 import '../api/models/route'
 
@@ -198,7 +199,7 @@ async function handleUserMessage(chatId: number, text: string, username: string,
         skills: skillPaths.length > 0 ? skillPaths : undefined,
         maxIterations: 10,
         safeMode,
-        tools: [createScheduleTool(agent.id)],
+        tools: [createScheduleTool(agent.id), createAgentMessageTool(agent.id)],
     };
 
     // Per-chat sessions — each Telegram user gets their own isolated conversation

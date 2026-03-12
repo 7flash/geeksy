@@ -3,6 +3,7 @@ import { join } from 'path'
 import { readdirSync } from 'fs'
 import { db } from './db'
 import { createScheduleTool } from './schedule-tool'
+import { createAgentMessageTool } from './agent-message-tool'
 import { sessions } from './session-store'
 import '../api/models/route'
 
@@ -214,7 +215,7 @@ export async function runHeartbeat() {
             skills: skillPaths.length > 0 ? skillPaths : undefined,
             maxIterations: 5,
             safeMode,
-            tools: [createScheduleTool(agent.id)],
+            tools: [createScheduleTool(agent.id), createAgentMessageTool(agent.id)],
         };
 
         // Reuse the active session to maintain memory
