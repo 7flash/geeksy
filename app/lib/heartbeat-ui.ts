@@ -54,8 +54,8 @@ export function initHeartbeatUI() {
     const updateUI = (data: any) => {
         const paused = data.paused
         heartbeatBtn.classList.toggle('paused', paused)
-        heartbeatBtn.style.opacity = paused ? '0.3' : '1'
-        heartbeatBtn.style.filter = paused ? 'grayscale(1)' : 'none'
+        heartbeatBtn.style.opacity = paused ? '0.6' : '1'
+        heartbeatBtn.style.filter = paused ? 'grayscale(0.8)' : 'none'
 
         if (data.consecutiveFailures > 0) {
             dot.style.background = '#ef4444'
@@ -102,6 +102,24 @@ export function initHeartbeatUI() {
             `
         }
 
+        // History section
+        const historyList: any[] = data.lastToolCalls || []
+        let historyHtml = ''
+        if (historyList.length > 0) {
+            historyHtml = `
+                <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(128,90,255,0.2)">
+                    <div style="font-weight:600;color:#94a3b8;margin-bottom:4px;font-size:11px">🕒 Recent Actions</div>
+                    ${historyList.slice(-5).reverse().map((tool: any) => `
+                        <div style="margin:2px 0;font-size:10px;color:#888;display:flex;gap:6px">
+                            <span style="color:#aaa;flex-shrink:0">${formatAgo(tool.at)}</span>
+                            <span style="color:#cbd5e1" class="truncate">${tool.name}</span>
+                            ${tool.result ? `<span style="color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tool.result}</span>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `
+        }
+
         tooltip.innerHTML = `
             <div style="font-weight:600;color:#fff;margin-bottom:6px">Heartbeat ${status}</div>
             <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;line-height:1.6">
@@ -115,6 +133,7 @@ export function initHeartbeatUI() {
                 <span style="color:#888">Interval</span><span>${data.currentIntervalMs ? Math.floor(data.currentIntervalMs / 1000) + 's' : '—'}</span>
             </div>
             ${fuHtml}
+            ${historyHtml}
         `
     }
 
