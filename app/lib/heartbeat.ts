@@ -62,7 +62,7 @@ interface ToolCall { name: string; result?: string; at: number; }
 
 const heartbeatStats = {
     lastTickAt: 0,
-    lastTickResult: 'pending' as 'idle' | 'acted' | 'pruned' | 'paused' | 'error' | 'pending' | 'skipped',
+    lastTickResult: 'pending' as 'idle' | 'acted' | 'pruned' | 'paused' | 'error' | 'pending' | 'skipped' | 'budget',
     consecutiveFailures: 0,
     totalTicks: 0,
     totalSkips: 0,
@@ -73,7 +73,22 @@ const heartbeatStats = {
     totalOutputTokens: 0,
     lastTickInputTokens: 0,
     lastTickOutputTokens: 0,
+    // Daily budget tracking
+    dailyTokensUsed: 0,
+    dailyBudgetLimit: 500_000, // configurable, 0 = unlimited
+    dailyResetDate: new Date().toDateString(),
+    budgetExceeded: false,
 };
+
+function checkDailyBudgetReset() {
+    const today = new Date().toDateString();
+    if (heartbeatStats.dailyResetDate !== today) {
+        heartbeatStats.dailyTokensUsed = 0;
+        heartbeatStats.dailyResetDate = today;
+        heartbeatStats.budgetExceeded = false;
+        console.log('[heartbeat] Daily token budget reset');
+    }
+}
 
 export function getHeartbeatStats() {
     return {
@@ -180,6 +195,16 @@ export async function runHeartbeat() {
                 { agentId: 1, key: 'heartbeat_paused', value: 'true' },
             );
             heartbeatStats.lastTickResult = 'paused';
+            return;
+        }
+
+        // Daily budget check
+        checkDailyBudgetReset();
+        if (heartbeatStats.dailyBudgetLimit > 0 && heartbeatStats.dailyTokensUsed >= heartbeatStats.dailyBudgetLimit) {
+            heartbeatStats.budgetExceeded = true;
+            heartbeatStats.lastTickResult = 'budget';
+            heartbeatStats.lastTickAt = Date.now();
+            console.log(`[heartbeat] Daily token budget exceeded (${heartbeatStats.dailyTokensUsed.toLocaleString()}/${heartbeatStats.dailyBudgetLimit.toLocaleString()}) — skipping tick`);
             return;
         }
 
@@ -355,6 +380,7 @@ export async function runHeartbeat() {
         heartbeatStats.lastTickOutputTokens = outputTokens;
         heartbeatStats.totalInputTokens += inputTokens;
         heartbeatStats.totalOutputTokens += outputTokens;
+        heartbeatStats.dailyTokensUsed += inputTokens + outputTokens;
 
         if (withoutThoughts && withoutThoughts.toUpperCase() !== "IDLE") {
             console.log(`[heartbeat] Agent acted (${withoutThoughts.length} chars, ~${inputTokens}+${outputTokens} tok):`, withoutThoughts.substring(0, 120));

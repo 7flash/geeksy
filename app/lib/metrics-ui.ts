@@ -57,10 +57,20 @@ export function initMetricsUI() {
             const colors: Record<string, string> = {
                 acted: 'var(--green)', idle: '', error: 'var(--red)',
                 paused: 'var(--text-tertiary)', skipped: 'var(--text-tertiary)',
+                budget: 'var(--amber)',
             }
             hbEl.style.color = colors[hb.lastTickResult] || ''
 
+            // Budget exceeded indicator
+            if (hb.budgetExceeded) {
+                hbEl.textContent = `💰 BUDGET`
+                hbEl.style.color = 'var(--amber)'
+            }
+
             // Tooltip
+            const dailyPct = hb.dailyBudgetLimit > 0
+                ? ` (${Math.round(hb.dailyTokensUsed / hb.dailyBudgetLimit * 100)}%)`
+                : ''
             const lines = [
                 `Status: ${hb.lastTickResult || 'pending'}`,
                 `Interval: ${intervalSec}s (adaptive 30s–300s)`,
@@ -72,6 +82,11 @@ export function initMetricsUI() {
                 `  Output: ${(hb.totalOutputTokens || 0).toLocaleString()} tok`,
                 `  Total:  ${((hb.totalInputTokens || 0) + (hb.totalOutputTokens || 0)).toLocaleString()} tok`,
                 hb.lastTickInputTokens ? `  Last tick: ~${hb.lastTickInputTokens}+${hb.lastTickOutputTokens} tok` : '',
+                '',
+                `💰 Daily Budget:`,
+                `  Used: ${(hb.dailyTokensUsed || 0).toLocaleString()} tok${dailyPct}`,
+                hb.dailyBudgetLimit > 0 ? `  Limit: ${hb.dailyBudgetLimit.toLocaleString()} tok` : '  Limit: unlimited',
+                hb.budgetExceeded ? `  ⚠️ BUDGET EXCEEDED — heartbeat paused` : '',
             ]
             const tools = hb.lastToolCalls || []
             if (tools.length > 0) {
