@@ -18,7 +18,7 @@
 - [x] ~~**Mobile dashboard**~~ — ✅ DONE. 344-line `mobile.css` with bottom tab bar, sidebar drawer, safe area insets, responsive grids.
 
 ## 🟢 Priority: Features (Open)
-- [ ] **Calendar view for schedules** — Visual 7-day grid showing scheduled tasks with time slots.
+- [x] ~~**Calendar view for schedules**~~ — ✅ DONE. 7-day grid with CSS classes (`.cal-*`), today highlight with accent glow, interval/cron task deduplication (shows on every day), status-colored task chips (pending/running/completed/failed/cancelled), Today navigation button, week task count, click-to-list-view. 190 lines CSS in `panels.css`.
 - [ ] **Agent memory inspector** — UI to view/edit/export the agent's `core_memory` and semantic embeddings.
 - [ ] **Webhook triggers** — HTTP POST endpoint that triggers agent actions (for external integrations like GitHub webhooks, Stripe events).
 - [ ] **Multi-agent conversations** — Allow agents to message each other for collaborative task completion.
