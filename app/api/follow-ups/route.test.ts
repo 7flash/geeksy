@@ -13,7 +13,7 @@ describe('follow-ups API', () => {
     })
 
     it('GET returns empty array initially', async () => {
-        const res = await GET(new Request('http://localhost/api/follow-ups'))
+        const res = await (GET as any)(new Request('http://localhost/api/follow-ups'))
         const body = await res.json()
         expect(body.ok).toBe(true)
         expect(body.followUps).toHaveLength(0)
@@ -24,7 +24,7 @@ describe('follow-ups API', () => {
         db.followUps.insert({ agentId: 1, reason: 'r2', context: 'c2', scheduledAt: 300 })
         db.followUps.insert({ agentId: 1, reason: 'r3', context: 'c3', scheduledAt: 200 })
 
-        const res = await GET(new Request('http://localhost/api/follow-ups'))
+        const res = await (GET as any)(new Request('http://localhost/api/follow-ups'))
         const body = await res.json()
 
         expect(body.followUps).toHaveLength(3)
@@ -38,7 +38,7 @@ describe('follow-ups API', () => {
         db.followUps.insert({ agentId: 1, reason: 'r1', context: 'c1', scheduledAt: 100 })
         db.followUps.insert({ agentId: 1, reason: 'r2', context: 'c2', scheduledAt: 200 })
 
-        await DELETE(new Request('http://localhost/api/follow-ups'))
+        await (DELETE as any)(new Request('http://localhost/api/follow-ups'))
 
         const stored = db.followUps.select().all()
         expect(stored).toHaveLength(0)
@@ -48,7 +48,7 @@ describe('follow-ups API', () => {
         const id1 = db.followUps.insert({ agentId: 1, reason: 'r1', context: 'c1', scheduledAt: 100 }).id!
         const id2 = db.followUps.insert({ agentId: 1, reason: 'r2', context: 'c2', scheduledAt: 200 }).id!
 
-        await DELETE(new Request(`http://localhost/api/follow-ups?id=${id1}`))
+        await (DELETE as any)(new Request(`http://localhost/api/follow-ups?id=${id1}`))
 
         const stored = db.followUps.select().all()
         expect(stored).toHaveLength(1)
