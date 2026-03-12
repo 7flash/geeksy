@@ -18,7 +18,7 @@
 - [x] ~~**Mobile dashboard**~~ — ✅ DONE. 344-line `mobile.css` with bottom tab bar, sidebar drawer, safe area insets, responsive grids.
 
 ## 🟢 Priority: Features (Open)
-- [ ] **Stale session cleanup** — Dashboard shows several Telegram sessions with 0 messages. Add a "🗑 Clean empty sessions" button or auto-prune sessions with 0 messages after 24h.
+- [x] ~~**Stale session cleanup**~~ — ✅ DONE. Amber "🗑 Clean N empty" button appears at top of session list when there are sessions with 0 messages. `DELETE /api/sessions?cleanup=empty` bulk-removes them. Session list enriched with `messageCount`.
 - [ ] **Heartbeat cost tracking** — Track cumulative token usage from heartbeat ticks and show in metrics bar tooltip. Currently heartbeat consumes tokens every 135s but there's no visibility into total cost.
 - [ ] **Session search** — Currently Ctrl+K searches messages within a session. Add the ability to search across all sessions by title/content.
 
