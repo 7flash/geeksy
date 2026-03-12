@@ -68,6 +68,7 @@ export default function Page() {
                             </div>
                         </div>
                         <div className="agent-header-actions">
+                            <button className="header-icon-btn" id="theme-toggle-btn" title="Toggle dark/light theme">🌙</button>
                             <button className="header-icon-btn" id="heartbeat-toggle-btn" title="Toggle autonomous heartbeat" style={{ color: 'var(--red)', opacity: 1 }}>❤</button>
                             <button className="header-icon-btn" id="export-chat-btn" title="Export chat as Markdown">⬇</button>
                             <button className="header-icon-btn" id="clear-chat-btn" title="Clear chat (Ctrl+L)">🗑</button>

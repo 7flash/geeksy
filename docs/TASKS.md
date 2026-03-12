@@ -6,6 +6,8 @@
 ## 🟡 Priority: Improve
 - [x] ~~**Inline session renaming**~~ — ✅ DONE. Double-click session name to edit inline. Input with accent border, Enter saves via `PUT /api/sessions`, Escape/blur cancels. CSS: `.session-rename-input` with focus glow.
 - [x] ~~**Keyboard shortcuts help**~~ — ✅ DONE. `?` or `Ctrl+/` opens glassmorphism overlay with 4 sections (General, Search, Chat, Sessions). Shows all shortcuts with `<kbd>` styling. Closes on Escape, click-outside, or ✕. CSS: `.shortcuts-overlay`, `.shortcuts-panel`, `.shortcuts-key` with frosted backdrop.
+- [x] ~~**Dark/light theme toggle**~~ — ✅ DONE. 🌙/☀️ button in header. `[data-theme="light"]` CSS custom property overrides in `base.css` — every component adapts automatically via vars. Persisted in `localStorage('geeksy_theme')`. Restored on mount. Zero per-component CSS changes needed.
+- [ ] **Heartbeat token budget alert** — When cumulative heartbeat tokens exceed a configurable daily limit, show an amber warning in the metrics bar and optionally pause heartbeat. Currently no spending guard.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Heartbeat follow-up UI**~~ — ✅ DONE. Tooltip with pending follow-ups, countdown timers, purple badge.

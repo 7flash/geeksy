@@ -81,6 +81,26 @@ function toggleShortcutsPanel() {
 export default function mount() {
     initDom()
 
+    // ── Theme toggle ──
+    const savedTheme = localStorage.getItem('geeksy_theme') || 'dark'
+    if (savedTheme === 'light') document.documentElement.setAttribute('data-theme', 'light')
+    const themeBtn = document.getElementById('theme-toggle-btn')
+    if (themeBtn) {
+        themeBtn.textContent = savedTheme === 'light' ? '☀️' : '🌙'
+        themeBtn.addEventListener('click', () => {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light'
+            if (isLight) {
+                document.documentElement.removeAttribute('data-theme')
+                localStorage.setItem('geeksy_theme', 'dark')
+                themeBtn.textContent = '🌙'
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light')
+                localStorage.setItem('geeksy_theme', 'light')
+                themeBtn.textContent = '☀️'
+            }
+        })
+    }
+
     // Load skills and models
     loadSkills()
     loadModels()
