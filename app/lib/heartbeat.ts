@@ -281,15 +281,18 @@ export async function runHeartbeat() {
         heartbeatStats.lastTickAt = Date.now();
         console.log(`[heartbeat] Tick #${heartbeatStats.totalTicks} for Agent ${agent.id}...`);
 
-        // 5-minute timeout to prevent stuck heartbeats
+        // 5-minute timeout with proper abort to prevent stuck heartbeats
+        let timedOut = false;
         const timeout = setTimeout(() => {
-            console.error('[heartbeat] Tick timed out after 5 minutes');
+            console.error('[heartbeat] Tick timed out after 5 minutes — aborting session');
+            timedOut = true;
+            try { session!.abort(); } catch { }
             heartbeatStats.lastTickResult = 'error';
-            isHeartbeatRunning = false;
         }, 5 * 60 * 1000);
 
         try {
             for await (const event of session.send(prompt)) {
+                if (timedOut) break;
                 if (event.type === 'thinking_delta') {
                     fullText += (event as any).delta || '';
                 }
