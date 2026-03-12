@@ -5,7 +5,7 @@
 
 ## 🟡 Priority: Improve
 - [x] ~~**Inline session renaming**~~ — ✅ DONE. Double-click session name to edit inline. Input with accent border, Enter saves via `PUT /api/sessions`, Escape/blur cancels. CSS: `.session-rename-input` with focus glow.
-- [ ] **Keyboard shortcuts help** — `?` or `Ctrl+/` opens a floating panel showing all available shortcuts (Ctrl+K search, session nav, quick replies). Good for discoverability.
+- [x] ~~**Keyboard shortcuts help**~~ — ✅ DONE. `?` or `Ctrl+/` opens glassmorphism overlay with 4 sections (General, Search, Chat, Sessions). Shows all shortcuts with `<kbd>` styling. Closes on Escape, click-outside, or ✕. CSS: `.shortcuts-overlay`, `.shortcuts-panel`, `.shortcuts-key` with frosted backdrop.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Heartbeat follow-up UI**~~ — ✅ DONE. Tooltip with pending follow-ups, countdown timers, purple badge.

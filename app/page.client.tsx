@@ -14,6 +14,70 @@ import { initSearchUI } from './lib/search-ui'
 
 configure({ timestamps: true })
 
+const SHORTCUTS = [
+    {
+        section: 'General', items: [
+            { keys: '?', desc: 'Show keyboard shortcuts' },
+            { keys: 'Ctrl + /', desc: 'Show keyboard shortcuts' },
+            { keys: 'Escape', desc: 'Stop agent / close panel' },
+            { keys: 'Ctrl + L', desc: 'Clear chat' },
+        ]
+    },
+    {
+        section: 'Search & Navigation', items: [
+            { keys: 'Ctrl + K', desc: 'Search conversations' },
+            { keys: '↑ ↓', desc: 'Navigate search results' },
+            { keys: 'Enter', desc: 'Open selected result' },
+        ]
+    },
+    {
+        section: 'Chat', items: [
+            { keys: 'Enter', desc: 'Send message' },
+            { keys: 'Shift + Enter', desc: 'New line in input' },
+        ]
+    },
+    {
+        section: 'Sessions', items: [
+            { keys: 'Double-click', desc: 'Rename session' },
+        ]
+    },
+]
+
+function toggleShortcutsPanel() {
+    const existing = document.querySelector('.shortcuts-overlay')
+    if (existing) { existing.remove(); return }
+
+    const overlay = document.createElement('div')
+    overlay.className = 'shortcuts-overlay'
+    overlay.innerHTML = `
+        <div class="shortcuts-panel">
+            <div class="shortcuts-header">
+                <span class="shortcuts-title">⌨ Keyboard Shortcuts</span>
+                <button class="shortcuts-close">✕</button>
+            </div>
+            <div class="shortcuts-body">
+                ${SHORTCUTS.map(s => `
+                    <div class="shortcuts-section">
+                        <div class="shortcuts-section-title">${s.section}</div>
+                        ${s.items.map(i => `
+                            <div class="shortcuts-row">
+                                <kbd class="shortcuts-key">${i.keys}</kbd>
+                                <span class="shortcuts-desc">${i.desc}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || (e.target as HTMLElement).closest('.shortcuts-close')) {
+            overlay.remove()
+        }
+    })
+    document.body.appendChild(overlay)
+}
+
 export default function mount() {
     initDom()
 
@@ -85,13 +149,25 @@ export default function mount() {
 
     // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
+        // Don't trigger shortcuts when typing in inputs
+        const tag = (e.target as HTMLElement).tagName
+        const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable
+
         if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
             e.preventDefault()
             clearCurrentChat()
         }
         if (e.key === 'Escape') {
+            // Close shortcuts panel if open
+            const panel = document.querySelector('.shortcuts-overlay')
+            if (panel) { panel.remove(); return }
             if (state.isRunning) stopAgent()
             else closeSettings()
+        }
+        // ? or Ctrl+/ → keyboard shortcuts help
+        if ((e.key === '?' && !isInput) || ((e.ctrlKey || e.metaKey) && e.key === '/')) {
+            e.preventDefault()
+            toggleShortcutsPanel()
         }
     })
 
