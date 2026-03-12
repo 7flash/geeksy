@@ -92,6 +92,21 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: default;
+}
+
+.session-rename-input {
+    width: 100%;
+    background: var(--bg-0);
+    border: 1px solid var(--accent);
+    color: var(--text-1);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
 .session-item-meta {

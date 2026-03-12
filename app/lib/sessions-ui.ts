@@ -213,6 +213,37 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
             </div>
         `
 
+        item.querySelector('.session-item-name')?.addEventListener('dblclick', (e) => {
+            e.stopPropagation()
+            const nameEl = e.currentTarget as HTMLElement
+            const currentName = s.name
+            const input = document.createElement('input')
+            input.type = 'text'
+            input.className = 'session-rename-input'
+            input.value = currentName
+            input.addEventListener('keydown', async (ke) => {
+                if (ke.key === 'Enter') {
+                    ke.preventDefault()
+                    const newName = input.value.trim()
+                    if (newName && newName !== currentName) {
+                        await fetch('/api/sessions', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: s.id, name: newName }),
+                        })
+                    }
+                    refreshSessions(onSelect)
+                } else if (ke.key === 'Escape') {
+                    refreshSessions(onSelect)
+                }
+            })
+            input.addEventListener('blur', () => refreshSessions(onSelect))
+            nameEl.innerHTML = ''
+            nameEl.appendChild(input)
+            input.focus()
+            input.select()
+        })
+
         item.querySelector('.session-tag-btn')?.addEventListener('click', (e) => {
             e.stopPropagation()
             showTagPicker(e as MouseEvent, s.id, onSelect)

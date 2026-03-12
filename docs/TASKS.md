@@ -4,6 +4,10 @@
 - [x] ~~**Metrics bar shows 0/0 plugins**~~ — ✅ FIXED. `auto-discover.ts` now scans multiple directories: parent of CWD (local dev), home dir (server `/root/`), and `PLUGIN_SCAN_DIR` env var. Previously only checked `../` relative to CWD which missed plugins on the server.
 
 ## 🟡 Priority: Improve
+- [x] ~~**Inline session renaming**~~ — ✅ DONE. Double-click session name to edit inline. Input with accent border, Enter saves via `PUT /api/sessions`, Escape/blur cancels. CSS: `.session-rename-input` with focus glow.
+- [ ] **Keyboard shortcuts help** — `?` or `Ctrl+/` opens a floating panel showing all available shortcuts (Ctrl+K search, session nav, quick replies). Good for discoverability.
+
+## 🟡 Priority: Improve
 - [x] ~~**Heartbeat follow-up UI**~~ — ✅ DONE. Tooltip with pending follow-ups, countdown timers, purple badge.
 - [x] ~~**Heartbeat follow-up live test**~~ — ✅ DONE. 6 integration tests for drain lifecycle. 21 tests total.
 
