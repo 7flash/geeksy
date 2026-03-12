@@ -376,6 +376,132 @@ function AgentSafetySection() {
     )
 }
 
+function WebhookSection() {
+    const [hooks, setHooks] = (window as any)._preact.useState([])
+    const [creating, setCreating] = (window as any)._preact.useState(false)
+    const [status, setStatus] = (window as any)._preact.useState('')
+
+    const loadHooks = async () => {
+        try {
+            const res = await fetch('/api/webhooks')
+            const data = await res.json()
+            setHooks(data.webhooks || [])
+        } catch { setHooks([]) }
+    }
+
+        ; (window as any)._preact.useEffect(() => { loadHooks() }, [])
+
+    const createHook = async () => {
+        const name = (document.getElementById('wh-name') as HTMLInputElement)?.value?.trim()
+        const sessionId = parseInt((document.getElementById('wh-session') as HTMLSelectElement)?.value || '0')
+        const source = (document.getElementById('wh-source') as HTMLSelectElement)?.value || 'custom'
+        const filter = (document.getElementById('wh-filter') as HTMLInputElement)?.value?.trim() || ''
+
+        if (!name || !sessionId) { setStatus('❌ Name and session required'); return }
+
+        setStatus('Creating...')
+        try {
+            const res = await fetch('/api/webhooks', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, sessionId, source, eventFilter: filter }),
+            })
+            const data = await res.json()
+            if (data.ok) {
+                // Show full URL for copying
+                const url = `${location.origin}/api/webhooks?token=${data.webhook.token}`
+                setStatus(`✅ Created! URL copied to clipboard`)
+                try { navigator.clipboard.writeText(url) } catch { }
+                setCreating(false)
+                await loadHooks()
+            } else {
+                setStatus(`❌ ${data.error}`)
+            }
+        } catch { setStatus('❌ Failed to create') }
+    }
+
+    const deleteHook = async (id: number) => {
+        if (!confirm('Delete this webhook?')) return
+        await fetch(`/api/webhooks?id=${id}`, { method: 'DELETE' })
+        await loadHooks()
+    }
+
+    return (
+        <div className="settings-group">
+            <span className="settings-label">🔗 Webhooks</span>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', marginTop: '4px' }}>
+                Receive events from GitHub, Stripe, or custom services → routed as agent messages.
+            </div>
+
+            {/* Existing webhooks */}
+            {hooks.length > 0 && (
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {hooks.map((h: any) => (
+                        <div key={h.id} style={{
+                            background: 'rgba(128,90,255,0.06)',
+                            border: '1px solid rgba(128,90,255,0.15)',
+                            borderRadius: '8px',
+                            padding: '8px 10px',
+                            fontSize: '12px',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{h.name}</span>
+                                <span style={{
+                                    background: 'rgba(128,90,255,0.15)',
+                                    color: '#a78bfa',
+                                    padding: '1px 6px',
+                                    borderRadius: '8px',
+                                    fontSize: '9px',
+                                    fontWeight: 600,
+                                }}>{h.source}</span>
+                                <span style={{ fontSize: '10px', color: '#888', fontFamily: 'monospace' }}>
+                                    {h.token}
+                                </span>
+                                <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#666' }}>
+                                    {h.triggerCount || 0} triggers
+                                </span>
+                                <button className="backup-btn-sm danger" onClick={() => deleteHook(h.id)}>✕</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Create form */}
+            {creating ? (
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <input id="wh-name" className="backup-input" placeholder="Webhook name (e.g. GitHub Pushes)" style={{ width: '100%' }} />
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <select id="wh-session" className="backup-input" style={{ flex: 1 }}>
+                            <option value="">Select session...</option>
+                            {state.agents.map((a: any) => (
+                                <option key={a.id} value={a.id}>{a.name}</option>
+                            ))}
+                        </select>
+                        <select id="wh-source" className="backup-input" style={{ width: 'auto' }}>
+                            <option value="github">GitHub</option>
+                            <option value="stripe">Stripe</option>
+                            <option value="gitlab">GitLab</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <input id="wh-filter" className="backup-input" placeholder="Event filter (e.g. push,pull_request — empty = all)" style={{ width: '100%' }} />
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <button className="backup-btn primary" onClick={createHook}>Create</button>
+                        <button className="backup-btn-sm" onClick={() => setCreating(false)}>Cancel</button>
+                    </div>
+                </div>
+            ) : (
+                <button className="backup-btn" onClick={() => setCreating(true)} style={{ marginTop: '8px' }}>
+                    + New Webhook
+                </button>
+            )}
+
+            {status && <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', marginTop: '4px' }}>{status}</div>}
+        </div>
+    )
+}
+
 function SettingsModal() {
     const cwd = location.origin
     const model = dom.modelSelect.value
@@ -414,6 +540,9 @@ function SettingsModal() {
 
                     {/* Cloud Backup */}
                     <CloudBackupSection />
+
+                    {/* Webhooks */}
+                    <WebhookSection />
 
                     <div className="settings-group">
                         <span className="settings-label">Keyboard Shortcuts</span>
