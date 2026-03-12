@@ -20,7 +20,7 @@
 ## 🟢 Priority: Features (Open)
 - [x] ~~**Calendar view for schedules**~~ — ✅ DONE. 7-day grid with CSS classes (`.cal-*`), today highlight with accent glow, interval/cron task deduplication (shows on every day), status-colored task chips (pending/running/completed/failed/cancelled), Today navigation button, week task count, click-to-list-view. 190 lines CSS in `panels.css`.
 - [x] ~~**Agent memory inspector**~~ — ✅ DONE. Full CRUD: search/filter across keys+values, inline edit with save/cancel, "+ Add" form for new entries, JSON export download, byte-size stats, grouped by key prefix. 190 lines CSS (`.memory-toolbar`, `.memory-search`, `.memory-add-form`, `.memory-edit-btn`, `.memory-save-btn`).
-- [ ] **Webhook triggers** — HTTP POST endpoint that triggers agent actions (for external integrations like GitHub webhooks, Stripe events).
+- [x] ~~**Webhook triggers**~~ — ✅ DONE. `POST /api/webhooks?token=whk_...` endpoint with auto-detection for GitHub (push/PR/issues/star/release), Stripe (payments/subscriptions/invoices), GitLab events. Token-based auth, event filtering, fire-and-forget chat delivery. Settings UI with create/delete/list. Persisted in agentState. 280 lines route + 130 lines settings UI.
 - [ ] **Multi-agent conversations** — Allow agents to message each other for collaborative task completion.
 
 ## 📝 Architecture Notes
