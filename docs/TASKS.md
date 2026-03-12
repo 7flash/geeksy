@@ -23,7 +23,7 @@
 - [x] ~~**Webhook triggers**~~ — ✅ DONE. `POST /api/webhooks?token=whk_...` endpoint with auto-detection for GitHub (push/PR/issues/star/release), Stripe (payments/subscriptions/invoices), GitLab events. Token-based auth, event filtering, fire-and-forget chat delivery. Settings UI with create/delete/list. Persisted in agentState. 280 lines route + 130 lines settings UI.
 - [x] ~~**Multi-agent conversations**~~ — ✅ DONE. `send_message_to_agent` tool lets agents message each other by name. Messages attributed with sender, delivered via `/api/chat` (fire-and-forget), logged in messages table. Tool wired into chat, heartbeat, and tg-bot sessions. REST API at `/api/agent-message` for programmatic use. 80 lines tool + 110 lines route.
 - [x] ~~**Heartbeat prompt optimization**~~ — ✅ DONE. Sections-only prompt builder: skips empty objectives/plugins/schedules/follow-ups. Quiet ticks send 8-token "No pending items" instead of 500-token boilerplate. ~50% token savings on idle ticks.
-- [ ] **Conversation export** — Export a conversation as markdown or JSON for sharing/archiving. Add to `/api/conversations/:id/export`.
+- [x] ~~**Conversation export**~~ — ✅ DONE. `GET /api/conversations/export?sessionId=X&format=md|json`. Markdown with role headers + timestamps. 📥 button on each session card downloads .md file.
 - [ ] **Plugin auto-discovery** — Scan `node_modules` for packages matching `geeksy-*-plugin` pattern and auto-register them instead of manual config.
 
 ## 📝 Architecture Notes

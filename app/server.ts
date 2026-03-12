@@ -5,6 +5,7 @@ import path from 'path';
 
 import { startHeartbeat } from './lib/heartbeat';
 import { startTgBot } from './lib/tg-bot';
+import { discoverPlugins } from './api/plugins/auto-discover';
 
 const appDir = import.meta.dir;
 
@@ -19,6 +20,9 @@ await measure('Melina server start', () => start({
     appDir,
     defaultTitle: 'Geeksy',
 }));
+
+// Auto-discover plugins from sibling directories (non-blocking)
+discoverPlugins().catch(e => console.warn('[server] Plugin discovery failed:', e));
 
 startHeartbeat();
 startTgBot();
