@@ -72,6 +72,17 @@ export default function mount() {
         else sendMessage()
     })
 
+    // Quick reply templates
+    document.getElementById('quick-replies')?.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.quick-reply-btn') as HTMLElement | null
+        if (!btn) return
+        const msg = btn.dataset.msg
+        if (msg) {
+            dom.inputEl.value = msg
+            sendMessage()
+        }
+    })
+
     // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'l') {

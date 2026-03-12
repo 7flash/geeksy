@@ -130,6 +130,13 @@ export default function Page() {
                     </div>
 
                     <div className="input-area">
+                        <div className="quick-replies" id="quick-replies">
+                            <button className="quick-reply-btn" data-msg="continue">▶ Continue</button>
+                            <button className="quick-reply-btn" data-msg="explain more">💡 Explain</button>
+                            <button className="quick-reply-btn" data-msg="show the code">📝 Code</button>
+                            <button className="quick-reply-btn" data-msg="what are the next steps?">🗺 Next steps</button>
+                            <button className="quick-reply-btn" data-msg="summarize this conversation">📋 Summarize</button>
+                        </div>
                         <div className="input-row">
                             <textarea className="input-field" id="input" rows={1} placeholder="Message Gateway..." />
                             <button className="send-btn" id="send-btn">

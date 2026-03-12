@@ -843,6 +843,47 @@
     background: var(--border);
 }
 
+/* ── Quick Reply Templates ── */
+.quick-replies {
+    display: flex;
+    gap: 6px;
+    max-width: 720px;
+    margin: 0 auto 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 2px;
+}
+
+.quick-replies::-webkit-scrollbar {
+    display: none;
+}
+
+.quick-reply-btn {
+    background: rgba(99, 102, 241, 0.06);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    color: var(--text-2);
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all .15s ease;
+}
+
+.quick-reply-btn:hover {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: var(--text-1);
+    transform: translateY(-1px);
+}
+
+.quick-reply-btn:active {
+    transform: scale(0.97);
+}
+
 /* ── Input ── */
 .input-area {
     padding: 16px 20px 8px;
@@ -1084,4 +1125,4 @@
 
 /* ══════════════════════════════════════
    OVERVIEW PANEL (bottom tabs)
-   ══════════════════════════════════════ */
+   ══════════════════════════════════════ */
