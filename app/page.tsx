@@ -155,7 +155,7 @@ export default function Page() {
                         <button className="tab" data-tab="processes">Processes</button>
                         <button className="tab" data-tab="skills">Skills</button>
                         <button className="tab" data-tab="timeline">Timeline</button>
-                        <button className="tab" data-tab="prompt">Prompt</button>
+                        <button className="tab" data-tab="prompt">🔍 Prompts</button>
                     </div>
                     <div className="tab-content" id="tab-content">
                         <div className="tab-pane active" id="pane-objectives">

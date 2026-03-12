@@ -103,6 +103,8 @@ export default function mount() {
         ; (async () => {
             await restoreState()    // Ensure global agent exists in DB
             await initSessionUI()   // Load sessions, select saved/first, render messages
+            // Initialize active tab to load data/start polling (e.g. Processes)
+            switchTab(state.activeTab || 'objectives')
         })()
 
     return () => { }

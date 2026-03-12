@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { getHeartbeatStats, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { getHeartbeatStats, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue, _drainFollowUps } from './heartbeat'
 import { db } from './db'
 
 describe('heartbeat stats', () => {
@@ -133,6 +133,80 @@ describe('heartbeat follow-up system', () => {
         // scheduledAt should be approximately now (within 50ms)
         expect(fu.scheduledAt).toBeGreaterThanOrEqual(before)
         expect(fu.scheduledAt).toBeLessThanOrEqual(before + 50)
+    })
+})
+
+describe('heartbeat follow-up drain lifecycle', () => {
+    beforeEach(() => {
+        _clearFollowUpQueue()
+        try { (db as any).db.query('INSERT OR IGNORE INTO agents (id, name, model) VALUES (?, ?, ?)').run(1, 'Test Agent 1', 'gemini') } catch { }
+    })
+
+    it('drainFollowUps returns ready items and marks them processed', () => {
+        scheduleFollowUp(1, 'check task', 'user asked to deploy', 0)
+        const queue = _getFollowUpQueue()
+        expect(queue).toHaveLength(1)
+        expect(queue[0].status).toBe('pending')
+
+        // Drain should return the item and mark it processed
+        const drained = _drainFollowUps(1)
+        expect(drained).toHaveLength(1)
+        expect(drained[0].reason).toBe('check task')
+        expect(drained[0].context).toContain('deploy')
+
+        // Queue should now be empty (pending only)
+        const remaining = _getFollowUpQueue()
+        expect(remaining).toHaveLength(0)
+
+        // But the row still exists in DB as 'processed'
+        const allRows = db.followUps.select().all()
+        expect(allRows.length).toBeGreaterThanOrEqual(1)
+        const processed = allRows.filter((r: any) => r.status === 'processed')
+        expect(processed.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('drainFollowUps does NOT return future-scheduled items', () => {
+        scheduleFollowUp(1, 'future check', 'context', 300_000) // 5min in the future
+        const drained = _drainFollowUps(1)
+        expect(drained).toHaveLength(0)
+
+        // Item is still pending
+        const queue = _getFollowUpQueue()
+        expect(queue).toHaveLength(1)
+        expect(queue[0].status).toBe('pending')
+    })
+
+    it('drainFollowUps only returns items for the correct agent', () => {
+        try { (db as any).db.query('INSERT OR IGNORE INTO agents (id, name, model) VALUES (?, ?, ?)').run(2, 'Test Agent 2', 'gemini') } catch { }
+        scheduleFollowUp(1, 'agent1 task', 'ctx1')
+        scheduleFollowUp(2, 'agent2 task', 'ctx2')
+
+        const drained1 = _drainFollowUps(1)
+        expect(drained1).toHaveLength(1)
+        expect(drained1[0].reason).toBe('agent1 task')
+
+        // Agent 2's item still pending
+        const drained2 = _drainFollowUps(2)
+        expect(drained2).toHaveLength(1)
+        expect(drained2[0].reason).toBe('agent2 task')
+    })
+
+    it('double drain returns empty (idempotent)', () => {
+        scheduleFollowUp(1, 'one-shot', 'ctx')
+        const first = _drainFollowUps(1)
+        expect(first).toHaveLength(1)
+
+        const second = _drainFollowUps(1)
+        expect(second).toHaveLength(0)
+    })
+
+    it('follow-up speeds up heartbeat interval', () => {
+        // When a follow-up is scheduled and interval is slow, it should cap at 60s
+        const stats = getHeartbeatStats()
+        // Schedule follow-up (this internally caps interval to 60s if > 60s)
+        scheduleFollowUp(1, 'urgent', 'ctx')
+        const afterStats = getHeartbeatStats()
+        expect(afterStats.currentIntervalMs).toBeLessThanOrEqual(60_000)
     })
 })
 

@@ -81,6 +81,8 @@ export function getHeartbeatStats() {
 
 /** @internal — exposed for tests only */
 export function _getFollowUpQueue(): FollowUp[] { return db.followUps.select().where({ status: 'pending' }).all() as FollowUp[]; }
+/** @internal — drain follow-ups for testing */
+export function _drainFollowUps(agentId: number): FollowUp[] { return drainFollowUps(agentId); }
 /** @internal — clear queue for test isolation */
 export function _clearFollowUpQueue() {
     for (const fu of db.followUps.select().all()) {

@@ -88,7 +88,13 @@ export async function selectSession(id: number, session?: any) {
     if (!session) {
         try {
             const res = await fetch(`/api/sessions?id=${id}`)
-            session = await res.json()
+            if (res.ok) {
+                session = await res.json()
+            } else if (res.status === 404) {
+                localStorage.removeItem('geeksy:activeSessionId')
+                refreshSessions()
+                return
+            }
         } catch { }
     }
     updateHeaderForSession(session)

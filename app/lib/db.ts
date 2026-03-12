@@ -88,6 +88,24 @@ export const db = new Database(dbPath, {
         description: z.string().optional(),        // short description
         icon: z.string().default('🧩'),            // emoji icon
     }),
+    prompts: z.object({
+        eventId: z.string().default(''),             // jsx-ai hook event ID
+        method: z.string().default('callLLM'),       // callLLM | callText | streamLLM
+        model: z.string().default(''),
+        provider: z.string().default(''),             // gemini | openai | anthropic
+        strategy: z.string().optional(),              // native | xml | natural | nlt | hybrid
+        messages: z.string().default('[]'),           // JSON: raw messages array sent to LLM
+        system: z.string().optional(),                // system prompt text
+        tools: z.string().optional(),                 // JSON: tool names array
+        responseText: z.string().optional(),          // LLM response text
+        toolCalls: z.string().optional(),             // JSON: tool calls from response
+        tokensIn: z.number().optional(),
+        tokensOut: z.number().optional(),
+        tokensThinking: z.number().optional(),
+        durationMs: z.number().optional(),
+        error: z.string().optional(),
+        source: z.string().default('unknown'),        // which app sent this (geeksy, smart-agent, etc)
+    })
 }, {
     timestamps: true,
     relations: {
@@ -105,6 +123,7 @@ export const db = new Database(dbPath, {
         agentState: ['agentId'],
         plugins: ['packageName'],
         sessions: ['type', 'status'],
+        prompts: ['eventId', 'model'],
     },
     cascade: {
         agents: ['messages', 'objectives', 'files', 'followUps', 'agentState'],

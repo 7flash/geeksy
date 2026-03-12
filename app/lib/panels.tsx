@@ -1017,75 +1017,591 @@ export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'processes'
         renderTimelinePane()
     }
     if (tab === 'prompt') {
+        startPromptPolling()
         renderPromptPane()
+    } else {
+        stopPromptPolling()
     }
 }
 
 // ══════════════════════════════════════
-// PROMPT EDITOR
+// PROMPT EXPLORER — jsx-ai trace viewer
 // ══════════════════════════════════════
+
+interface PromptTrace {
+    id: number
+    eventId: string
+    method: string
+    model: string
+    provider: string
+    strategy?: string
+    messages: string
+    system?: string
+    tools?: string
+    responseText?: string
+    toolCalls?: string
+    tokensIn?: number
+    tokensOut?: number
+    tokensThinking?: number
+    durationMs?: number
+    error?: string
+    source: string
+    createdAt?: number
+}
+
+let promptTraces: PromptTrace[] = []
+let promptPoller: ReturnType<typeof setInterval> | null = null
+let expandedPromptId: number | null = null
+let promptEditorOpen = false
+let promptFilter: 'all' | 'callLLM' | 'callText' | 'streamLLM' | 'errors' = 'all'
+
+async function fetchPromptTraces() {
+    try {
+        const res = await fetch('/api/prompts?limit=200')
+        if (res.ok) {
+            const data = await res.json()
+            promptTraces = data.prompts || []
+            renderPromptPane()
+        }
+    } catch { }
+}
+
+export function startPromptPolling() {
+    if (promptPoller) return
+    fetchPromptTraces()
+    promptPoller = setInterval(fetchPromptTraces, 4000)
+}
+
+export function stopPromptPolling() {
+    if (promptPoller) { clearInterval(promptPoller); promptPoller = null }
+}
+
+function formatDuration(ms?: number): string {
+    if (!ms) return '—'
+    if (ms < 1000) return `${ms}ms`
+    return `${(ms / 1000).toFixed(1)}s`
+}
+
+function formatTokens(n?: number): string {
+    if (!n) return '0'
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+    return String(n)
+}
+
+function methodBadge(method: string) {
+    const colors: Record<string, string> = {
+        callLLM: '#a78bfa',
+        callText: '#60a5fa',
+        streamLLM: '#34d399',
+    }
+    const color = colors[method] || '#888'
+    return (
+        <span style={{
+            background: color + '22',
+            color,
+            padding: '2px 8px',
+            borderRadius: '10px',
+            fontSize: '10px',
+            fontWeight: 600,
+            fontFamily: 'monospace',
+        }}>{method}</span>
+    )
+}
+
+function providerBadge(provider: string) {
+    const colors: Record<string, string> = {
+        gemini: '#fbbc04',
+        openai: '#10a37f',
+        anthropic: '#d97706',
+    }
+    const color = colors[provider] || '#888'
+    return (
+        <span style={{
+            background: color + '18',
+            color,
+            padding: '1px 6px',
+            borderRadius: '8px',
+            fontSize: '9px',
+            fontWeight: 600,
+        }}>{provider}</span>
+    )
+}
+
+function strategyBadge(strategy?: string) {
+    if (!strategy) return null
+    return (
+        <span style={{
+            background: 'rgba(255,255,255,0.06)',
+            color: '#888',
+            padding: '1px 6px',
+            borderRadius: '8px',
+            fontSize: '9px',
+            fontFamily: 'monospace',
+        }}>⚙ {strategy}</span>
+    )
+}
+
+function truncate(s: string, max: number): string {
+    if (s.length <= max) return s
+    return s.substring(0, max) + '…'
+}
+
+function JsonBlock({ data, label }: { data: string; label: string }) {
+    let formatted: string
+    try {
+        formatted = JSON.stringify(JSON.parse(data), null, 2)
+    } catch {
+        formatted = data
+    }
+    return (
+        <div style={{ marginBottom: '8px' }}>
+            <div style={{ fontSize: '10px', color: '#888', fontWeight: 600, marginBottom: '4px', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>{label}</div>
+            <pre style={{
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '6px',
+                padding: '10px',
+                fontSize: '11px',
+                fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                lineHeight: '1.5',
+                color: '#c8c8d4',
+                overflowX: 'auto' as const,
+                maxHeight: '300px',
+                overflowY: 'auto' as const,
+                whiteSpace: 'pre-wrap' as const,
+                wordBreak: 'break-word' as const,
+                margin: 0,
+            }}>{formatted}</pre>
+        </div>
+    )
+}
+
+function PromptDetailView({ trace }: { trace: PromptTrace }) {
+    let parsedMessages: any[] = []
+    try { parsedMessages = JSON.parse(trace.messages || '[]') } catch { }
+    let parsedToolCalls: any[] = []
+    try { parsedToolCalls = JSON.parse(trace.toolCalls || '[]') } catch { }
+    let parsedTools: string[] = []
+    try { parsedTools = JSON.parse(trace.tools || '[]') } catch { }
+
+    return (
+        <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '12px',
+            padding: '12px',
+            background: 'rgba(0,0,0,0.15)',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+        }}>
+            {/* ── LEFT: Raw Messages Sent to LLM ── */}
+            <div>
+                <div style={{
+                    fontSize: '11px', fontWeight: 700, color: '#a78bfa',
+                    marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px',
+                }}>
+                    <span>📨</span> RAW MESSAGES → LLM
+                </div>
+
+                {trace.system && (
+                    <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: 600, marginBottom: '2px' }}>SYSTEM</div>
+                        <pre style={{
+                            background: 'rgba(245,158,11,0.06)',
+                            border: '1px solid rgba(245,158,11,0.15)',
+                            borderRadius: '6px',
+                            padding: '8px',
+                            fontSize: '11px',
+                            fontFamily: 'monospace',
+                            lineHeight: '1.4',
+                            color: '#d4d4d8',
+                            whiteSpace: 'pre-wrap' as const,
+                            wordBreak: 'break-word' as const,
+                            margin: 0,
+                            maxHeight: '200px',
+                            overflowY: 'auto' as const,
+                        }}>{trace.system}</pre>
+                    </div>
+                )}
+
+                {parsedMessages.map((msg: any, i: number) => {
+                    const roleColor =
+                        msg.role === 'user' ? '#60a5fa' :
+                            msg.role === 'assistant' ? '#34d399' :
+                                msg.role === 'system' ? '#f59e0b' : '#888'
+                    return (
+                        <div key={i} style={{ marginBottom: '6px' }}>
+                            <div style={{ fontSize: '10px', color: roleColor, fontWeight: 600, marginBottom: '2px' }}>
+                                {msg.role?.toUpperCase()}
+                            </div>
+                            <pre style={{
+                                background: roleColor + '08',
+                                border: `1px solid ${roleColor}15`,
+                                borderRadius: '6px',
+                                padding: '8px',
+                                fontSize: '11px',
+                                fontFamily: 'monospace',
+                                lineHeight: '1.4',
+                                color: '#d4d4d8',
+                                whiteSpace: 'pre-wrap' as const,
+                                wordBreak: 'break-word' as const,
+                                margin: 0,
+                                maxHeight: '200px',
+                                overflowY: 'auto' as const,
+                            }}>{msg.content}</pre>
+                        </div>
+                    )
+                })}
+
+                {parsedTools.length > 0 && (
+                    <JsonBlock data={JSON.stringify(parsedTools)} label="Tools Declared" />
+                )}
+            </div>
+
+            {/* ── RIGHT: Response + Metadata ── */}
+            <div>
+                <div style={{
+                    fontSize: '11px', fontWeight: 700, color: '#34d399',
+                    marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px',
+                }}>
+                    <span>📩</span> LLM RESPONSE
+                </div>
+
+                {trace.error && (
+                    <div style={{
+                        background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.3)',
+                        borderRadius: '6px',
+                        padding: '8px',
+                        fontSize: '11px',
+                        color: '#ef4444',
+                        marginBottom: '8px',
+                        fontFamily: 'monospace',
+                    }}>
+                        ❌ {trace.error}
+                    </div>
+                )}
+
+                {trace.responseText && (
+                    <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '10px', color: '#34d399', fontWeight: 600, marginBottom: '2px' }}>TEXT</div>
+                        <pre style={{
+                            background: 'rgba(52,211,153,0.06)',
+                            border: '1px solid rgba(52,211,153,0.15)',
+                            borderRadius: '6px',
+                            padding: '8px',
+                            fontSize: '11px',
+                            fontFamily: 'monospace',
+                            lineHeight: '1.4',
+                            color: '#d4d4d8',
+                            whiteSpace: 'pre-wrap' as const,
+                            wordBreak: 'break-word' as const,
+                            margin: 0,
+                            maxHeight: '300px',
+                            overflowY: 'auto' as const,
+                        }}>{trace.responseText}</pre>
+                    </div>
+                )}
+
+                {parsedToolCalls.length > 0 && (
+                    <JsonBlock data={JSON.stringify(parsedToolCalls, null, 2)} label="Tool Calls" />
+                )}
+
+                {/* Usage Stats */}
+                <div style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    marginTop: '8px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '8px',
+                    fontSize: '11px',
+                }}>
+                    <div>
+                        <div style={{ color: '#888', fontSize: '9px', marginBottom: '2px' }}>INPUT</div>
+                        <div style={{ color: '#60a5fa', fontWeight: 600, fontFamily: 'monospace' }}>{formatTokens(trace.tokensIn)}</div>
+                    </div>
+                    <div>
+                        <div style={{ color: '#888', fontSize: '9px', marginBottom: '2px' }}>OUTPUT</div>
+                        <div style={{ color: '#34d399', fontWeight: 600, fontFamily: 'monospace' }}>{formatTokens(trace.tokensOut)}</div>
+                    </div>
+                    <div>
+                        <div style={{ color: '#888', fontSize: '9px', marginBottom: '2px' }}>DURATION</div>
+                        <div style={{ color: '#f59e0b', fontWeight: 600, fontFamily: 'monospace' }}>{formatDuration(trace.durationMs)}</div>
+                    </div>
+                    {trace.tokensThinking ? (
+                        <div>
+                            <div style={{ color: '#888', fontSize: '9px', marginBottom: '2px' }}>THINKING</div>
+                            <div style={{ color: '#c084fc', fontWeight: 600, fontFamily: 'monospace' }}>{formatTokens(trace.tokensThinking)}</div>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    )
+}
 
 export function renderPromptPane() {
     const pane = document.getElementById('pane-prompt')!
     if (!pane) return
-    if (!state.activeAgentId) {
-        render(<div className="overview-empty">Select an agent to edit its system prompt.</div>, pane)
-        return
-    }
+
+    // Filter traces
+    const filtered = promptFilter === 'all'
+        ? promptTraces
+        : promptFilter === 'errors'
+            ? promptTraces.filter(t => !!t.error)
+            : promptTraces.filter(t => t.method === promptFilter)
+
+    // Aggregate stats
+    const totalIn = promptTraces.reduce((s, t) => s + (t.tokensIn || 0), 0)
+    const totalOut = promptTraces.reduce((s, t) => s + (t.tokensOut || 0), 0)
+    const totalDuration = promptTraces.reduce((s, t) => s + (t.durationMs || 0), 0)
+    const errorCount = promptTraces.filter(t => !!t.error).length
 
     const agent = state.agents.find(a => a.id === state.activeAgentId)
-    if (!agent) return
-    const currentPrompt = agent.systemPrompt || ''
+    const currentPrompt = agent?.systemPrompt || ''
 
     render(
-        <div className="prompt-editor-container" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '12px', gap: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#e8e8f0' }}>System Prompt</span>
-                <button
-                    className="save-prompt-btn"
-                    style={{ background: 'rgba(128,90,255,0.2)', color: '#fff', border: '1px solid rgba(128,90,255,0.5)', borderRadius: '6px', padding: '4px 12px', fontSize: '12px', cursor: 'pointer' }}
-                    onClick={async (e) => {
-                        const btn = e.currentTarget as HTMLButtonElement
-                        const area = document.getElementById('prompt-editor-area') as HTMLTextAreaElement
-                        if (!area) return
-                        btn.textContent = 'Saving...'
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* ── Stats Header ── */}
+            <div style={{
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex',
+                gap: '14px',
+                fontSize: '12px',
+                background: 'var(--bg-card)',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+            }}>
+                <span style={{ color: 'var(--text-dim)' }}><strong>Prompt Explorer:</strong></span>
+                <span><span style={{ color: 'var(--text)' }}>{promptTraces.length}</span> traces</span>
+                <span style={{ color: '#60a5fa' }}>↑ {formatTokens(totalIn)} in</span>
+                <span style={{ color: '#34d399' }}>↓ {formatTokens(totalOut)} out</span>
+                <span style={{ color: '#f59e0b' }}>⏱ {formatDuration(totalDuration)}</span>
+                {errorCount > 0 && <span style={{ color: '#ef4444' }}>❌ {errorCount} errors</span>}
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                    {(['all', 'callLLM', 'callText', 'streamLLM', 'errors'] as const).map(f => (
+                        <button
+                            key={f}
+                            style={{
+                                background: promptFilter === f ? 'rgba(128,90,255,0.25)' : 'rgba(255,255,255,0.04)',
+                                border: promptFilter === f ? '1px solid rgba(128,90,255,0.5)' : '1px solid transparent',
+                                borderRadius: '6px',
+                                color: promptFilter === f ? '#c4b5fd' : '#888',
+                                cursor: 'pointer',
+                                fontSize: '10px',
+                                padding: '2px 8px',
+                            }}
+                            onClick={() => { promptFilter = f; renderPromptPane() }}
+                        >{f === 'all' ? 'All' : f === 'errors' ? '❌ Errors' : f}</button>
+                    ))}
+                    <button
+                        style={{
+                            background: 'rgba(239,68,68,0.12)',
+                            border: '1px solid rgba(239,68,68,0.3)',
+                            borderRadius: '6px',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            fontSize: '10px',
+                            padding: '2px 8px',
+                            marginLeft: '8px',
+                        }}
+                        onClick={async () => {
+                            if (!confirm('Clear all prompt traces?')) return
+                            await fetch('/api/prompts', { method: 'DELETE' })
+                            promptTraces = []
+                            renderPromptPane()
+                        }}
+                    >Clear All</button>
+                </div>
+            </div>
+
+            {/* ── Traces List ── */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+                {filtered.length === 0 ? (
+                    <div className="overview-empty" style={{ padding: '40px 20px', textAlign: 'center' as const }}>
+                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
+                        <div style={{ fontSize: '14px', color: '#e8e8f0' }}>No prompt traces yet</div>
+                        <div style={{ fontSize: '12px', color: '#888', marginTop: '6px' }}>
+                            When jsx-ai calls are made (callLLM, callText, streamLLM), they'll appear here automatically.
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#666', marginTop: '12px', fontFamily: 'monospace' }}>
+                            JSX_AI_EXPLORER_URL → http://localhost:3737
+                        </div>
+                    </div>
+                ) : (
+                    filtered.map(trace => {
+                        let previewMsg = ''
                         try {
-                            await fetch(`/api/agents?id=${agent.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ systemPrompt: area.value })
-                            })
-                            agent.systemPrompt = area.value
-                            btn.textContent = '✓ Saved'
-                            btn.style.background = 'rgba(74,222,128,0.2)'
-                            btn.style.borderColor = 'rgba(74,222,128,0.5)'
-                            setTimeout(() => {
-                                btn.textContent = 'Save'
-                                btn.style.background = 'rgba(128,90,255,0.2)'
-                                btn.style.borderColor = 'rgba(128,90,255,0.5)'
-                            }, 2000)
-                        } catch {
-                            btn.textContent = 'Error'
-                        }
-                    }}
-                >
-                    Save
-                </button>
+                            const msgs = JSON.parse(trace.messages || '[]')
+                            const last = msgs[msgs.length - 1]
+                            previewMsg = last?.content ? truncate(last.content, 100) : ''
+                        } catch { }
+                        const isExpanded = expandedPromptId === trace.id
+                        const hasError = !!trace.error
+
+                        return (
+                            <div key={trace.id} style={{
+                                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                                background: hasError ? 'rgba(239,68,68,0.03)' : undefined,
+                            }}>
+                                <div
+                                    style={{
+                                        padding: '10px 12px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        transition: 'background 0.15s',
+                                    }}
+                                    onClick={() => {
+                                        expandedPromptId = isExpanded ? null : trace.id
+                                        renderPromptPane()
+                                    }}
+                                >
+                                    <span style={{
+                                        fontSize: '10px',
+                                        color: '#555',
+                                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                        transition: 'transform 0.15s',
+                                        display: 'inline-block',
+                                        width: '12px',
+                                    }}>▶</span>
+                                    {methodBadge(trace.method)}
+                                    {providerBadge(trace.provider)}
+                                    <span style={{
+                                        fontSize: '11px',
+                                        color: '#e8e8f0',
+                                        fontFamily: 'monospace',
+                                        fontWeight: 600,
+                                    }}>{trace.model}</span>
+                                    {strategyBadge(trace.strategy)}
+                                    <span style={{
+                                        flex: 1,
+                                        fontSize: '11px',
+                                        color: '#888',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap' as const,
+                                    }}>{previewMsg}</span>
+                                    {hasError && <span style={{ color: '#ef4444', fontSize: '11px' }}>❌</span>}
+                                    <span style={{ fontSize: '10px', color: '#666', fontFamily: 'monospace', whiteSpace: 'nowrap' as const }}>
+                                        {formatDuration(trace.durationMs)}
+                                    </span>
+                                    <span style={{ fontSize: '10px', color: '#555', fontFamily: 'monospace', whiteSpace: 'nowrap' as const }}>
+                                        {formatTokens(trace.tokensIn)}→{formatTokens(trace.tokensOut)}
+                                    </span>
+                                    {trace.createdAt && (
+                                        <span style={{ fontSize: '9px', color: '#555', whiteSpace: 'nowrap' as const }}>
+                                            {new Date(trace.createdAt).toLocaleTimeString()}
+                                        </span>
+                                    )}
+                                </div>
+                                {isExpanded && <PromptDetailView trace={trace} />}
+                            </div>
+                        )
+                    })
+                )}
             </div>
-            <textarea
-                id="prompt-editor-area"
-                className="input-field"
-                style={{ flex: 1, resize: 'none', height: '100%', fontFamily: 'monospace', fontSize: '13px', lineHeight: '1.5', padding: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '8px', color: '#ccc' }}
-                placeholder="You are a helpful assistant. Define custom behaviors, constraints, and personality here..."
-                defaultValue={currentPrompt}
-            />
-            <div style={{ fontSize: '11px', color: '#888' }}>
-                This prompt will be prepended to all new conversations for this agent.
-            </div>
+
+            {/* ── Collapsible System Prompt Editor ── */}
+            {agent && (
+                <div style={{
+                    borderTop: '1px solid rgba(128,90,255,0.15)',
+                }}>
+                    <div
+                        style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '12px',
+                            color: '#a78bfa',
+                            fontWeight: 600,
+                        }}
+                        onClick={() => { promptEditorOpen = !promptEditorOpen; renderPromptPane() }}
+                    >
+                        <span style={{
+                            transition: 'transform 0.2s',
+                            transform: promptEditorOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                            display: 'inline-block',
+                        }}>▶</span>
+                        📝 System Prompt Editor
+                    </div>
+                    {promptEditorOpen && (
+                        <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <textarea
+                                id="prompt-editor-area"
+                                className="input-field"
+                                style={{
+                                    resize: 'vertical' as const,
+                                    minHeight: '120px',
+                                    fontFamily: 'monospace',
+                                    fontSize: '12px',
+                                    lineHeight: '1.5',
+                                    padding: '10px',
+                                    background: 'rgba(0,0,0,0.25)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '8px',
+                                    color: '#ccc',
+                                }}
+                                placeholder="System prompt for this agent..."
+                                defaultValue={currentPrompt}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '10px', color: '#666' }}>
+                                    Prepended to all conversations
+                                </span>
+                                <button
+                                    className="save-prompt-btn"
+                                    style={{
+                                        background: 'rgba(128,90,255,0.2)',
+                                        color: '#fff',
+                                        border: '1px solid rgba(128,90,255,0.5)',
+                                        borderRadius: '6px',
+                                        padding: '4px 16px',
+                                        fontSize: '11px',
+                                        cursor: 'pointer',
+                                    }}
+                                    onClick={async (e) => {
+                                        const btn = e.currentTarget as HTMLButtonElement
+                                        const area = document.getElementById('prompt-editor-area') as HTMLTextAreaElement
+                                        if (!area || !agent) return
+                                        btn.textContent = 'Saving...'
+                                        try {
+                                            await fetch(`/api/agents?id=${agent.id}`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ systemPrompt: area.value })
+                                            })
+                                            agent.systemPrompt = area.value
+                                            btn.textContent = '✓ Saved'
+                                            btn.style.background = 'rgba(74,222,128,0.2)'
+                                            btn.style.borderColor = 'rgba(74,222,128,0.5)'
+                                            setTimeout(() => {
+                                                btn.textContent = 'Save'
+                                                btn.style.background = 'rgba(128,90,255,0.2)'
+                                                btn.style.borderColor = 'rgba(128,90,255,0.5)'
+                                            }, 2000)
+                                        } catch {
+                                            btn.textContent = 'Error'
+                                        }
+                                    }}
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>,
         pane
     )
 }
+
 
 // ══════════════════════════════════════
 // PROCESSES (bgrun process list)
