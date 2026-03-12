@@ -1,7 +1,7 @@
 # Geeksy Personal OS — Tasks & Ideas
 
 ## 🔴 Priority: Fix
-- [ ] **Metrics bar shows 0/0 plugins** — `db.plugins` table is empty on production because auto-discover doesn't find sibling plugin dirs on the server. Skills show plugins fine but metrics doesn't count them. Fix: either seed `db.plugins` from skills on boot, or refactor metrics to count skill-backed plugins.
+- [x] ~~**Metrics bar shows 0/0 plugins**~~ — ✅ FIXED. `auto-discover.ts` now scans multiple directories: parent of CWD (local dev), home dir (server `/root/`), and `PLUGIN_SCAN_DIR` env var. Previously only checked `../` relative to CWD which missed plugins on the server.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Heartbeat follow-up UI**~~ — ✅ DONE. Tooltip with pending follow-ups, countdown timers, purple badge.
