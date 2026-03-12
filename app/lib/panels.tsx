@@ -447,7 +447,7 @@ export function renderSchedulePane() {
                                         {s.retry && s.retry.max > 0 && <span className="schedule-type" style={{ color: 'var(--amber, #f59e0b)' }}>↻ {s.retry.count}/{s.retry.max} retries · </span>}
                                         {s.nextRun && s.status === 'pending' && s.nextRun > Date.now() && <span>next in {formatTimeUntil(s.nextRun)}</span>}
                                         {s.nextRun && s.status === 'pending' && s.nextRun <= Date.now() && <span style={{ color: 'var(--amber)' }}>starting now</span>}
-                                        {s.lastRun && <span>last run {new Date(s.lastRun).toLocaleTimeString()}</span>}
+                                        {s.lastRun && <span> · last run {new Date(s.lastRun).toLocaleTimeString()}</span>}
                                         {s.progress && s.progress.completed > 0 && <span> · ran {s.progress.completed}×</span>}
                                     </div>
                                     {s.lastOutput && <div className="schedule-output">{s.lastOutput.substring(0, 100)}{s.lastOutput.length > 100 ? '...' : ''}</div>}
