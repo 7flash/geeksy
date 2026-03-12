@@ -7,6 +7,22 @@ let activeSessionId: number | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let lastKnownMsgCount = 0
 
+// ── Pinned sessions (localStorage) ──
+const PINNED_KEY = 'geeksy_pinned_sessions'
+function getPinnedIds(): Set<number> {
+    try { return new Set(JSON.parse(localStorage.getItem(PINNED_KEY) || '[]')) }
+    catch { return new Set() }
+}
+function savePinnedIds(ids: Set<number>) {
+    localStorage.setItem(PINNED_KEY, JSON.stringify([...ids]))
+}
+function togglePin(id: number): boolean {
+    const pins = getPinnedIds()
+    if (pins.has(id)) { pins.delete(id) } else { pins.add(id) }
+    savePinnedIds(pins)
+    return pins.has(id)
+}
+
 export function getActiveSessionId() { return activeSessionId }
 /** Call after locally rendering a message to prevent polling from re-rendering it */
 export function bumpKnownMsgCount(n = 1) { lastKnownMsgCount += n }
@@ -63,7 +79,18 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         })
         list.appendChild(cleanupBar)
     }
-    for (const s of sessions) {
+
+    // Sort: pinned first, then by most recent
+    const pinnedIds = getPinnedIds()
+    const sorted = [...sessions].sort((a, b) => {
+        const ap = pinnedIds.has(a.id) ? 1 : 0
+        const bp = pinnedIds.has(b.id) ? 1 : 0
+        if (ap !== bp) return bp - ap
+        return (b.lastActiveAt || b.id) - (a.lastActiveAt || a.id)
+    })
+
+    for (const s of sorted) {
+        const isPinned = pinnedIds.has(s.id)
         const item = document.createElement('div')
         item.className = `session-item${s.id === activeSessionId ? ' active' : ''}`
         item.dataset.id = String(s.id)
@@ -73,7 +100,7 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
                 ${s.type === 'telegram_bot' ? '📱' : '🌐'}
             </div>
             <div class="session-item-info">
-                <div class="session-item-name">${s.name}</div>
+                <div class="session-item-name">${isPinned ? '📌 ' : ''}${s.name}</div>
                 <div class="session-item-meta">
                     <span class="session-type-badge session-type-${s.type}">
                         ${s.type === 'telegram_bot' ? 'Telegram' : 'Web'}
@@ -82,13 +109,21 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
                 </div>
             </div>
             <div class="session-item-actions">
+                <button class="session-pin-btn" data-id="${s.id}" title="${isPinned ? 'Unpin' : 'Pin'} session">${isPinned ? '📌' : '📍'}</button>
                 <button class="session-export-btn" data-id="${s.id}" title="Export conversation">📥</button>
                 <button class="session-delete-btn" data-id="${s.id}" title="Delete session">×</button>
             </div>
         `
 
+        item.querySelector('.session-pin-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation()
+            togglePin(s.id)
+            refreshSessions(onSelect)
+        })
+
         item.addEventListener('click', (e) => {
             if ((e.target as HTMLElement).closest('.session-delete-btn')) return
+            if ((e.target as HTMLElement).closest('.session-pin-btn')) return
             if ((e.target as HTMLElement).closest('.session-export-btn')) return
             onSelect(s.id, s)
         })

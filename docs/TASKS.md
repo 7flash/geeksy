@@ -21,7 +21,7 @@
 - [x] ~~**Stale session cleanup**~~ — ✅ DONE. Amber "🗑 Clean N empty" button appears at top of session list when there are sessions with 0 messages. `DELETE /api/sessions?cleanup=empty` bulk-removes them. Session list enriched with `messageCount`.
 - [x] ~~**Heartbeat cost tracking**~~ — ✅ DONE. Estimates input/output tokens per tick (~4 chars/token). Tracks cumulative totals in `heartbeatStats`. Metrics API includes `totalInputTokens`, `totalOutputTokens`, `lastTickInputTokens`, `lastTickOutputTokens`. Heartbeat tooltip shows full token breakdown.
 - [x] ~~**Session search**~~ — ✅ DONE. Ctrl+K opens command palette searching across all sessions by title and message content. API: `GET /api/search?q=X`. CSS: rewrote `search.css` to match `search-ui.ts` DOM (`.search-overlay`, `.search-input-wrap`). Highlights matches, keyboard nav (↑↓↵ESC).
-- [ ] **Session pinning** — Allow users to pin important sessions to the top of the session list. Persisted via localStorage or agentState.
+- [x] ~~**Session pinning**~~ — ✅ DONE. 📌 pin toggle per session row. Pinned sessions sort to top. Persisted in `localStorage('geeksy_pinned_sessions')`. CSS: `.session-pin-btn` with accent hover. Pin icon shows in session name.
 - [ ] **Message reactions** — Add emoji reactions to messages (👍 ❤️ 😂) for quick feedback without typing. Useful for TG bot conversations.
 
 ## 🟢 Priority: Features (Completed)
