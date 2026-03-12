@@ -53,13 +53,20 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
                 </div>
             </div>
             <div class="session-item-actions">
+                <button class="session-export-btn" data-id="${s.id}" title="Export conversation">📥</button>
                 <button class="session-delete-btn" data-id="${s.id}" title="Delete session">×</button>
             </div>
         `
 
         item.addEventListener('click', (e) => {
             if ((e.target as HTMLElement).closest('.session-delete-btn')) return
+            if ((e.target as HTMLElement).closest('.session-export-btn')) return
             onSelect(s.id, s)
+        })
+
+        item.querySelector('.session-export-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation()
+            window.open(`/api/conversations/export?sessionId=${s.id}&format=md`, '_blank')
         })
 
         item.querySelector('.session-delete-btn')?.addEventListener('click', async (e) => {
