@@ -23,6 +23,76 @@ function togglePin(id: number): boolean {
     return pins.has(id)
 }
 
+// ── Session tags (localStorage) ──
+const TAGS_KEY = 'geeksy_session_tags'
+const TAG_DEFS = [
+    { id: 'debug', label: 'Debug', color: '#ef4444' },
+    { id: 'feature', label: 'Feature', color: '#6366f1' },
+    { id: 'research', label: 'Research', color: '#3b82f6' },
+    { id: 'bug', label: 'Bug', color: '#f59e0b' },
+    { id: 'idea', label: 'Idea', color: '#22c55e' },
+    { id: 'review', label: 'Review', color: '#a855f7' },
+] as const
+type TagId = typeof TAG_DEFS[number]['id']
+let _tagFilter: TagId | null = null
+
+function getSessionTags(): Record<number, TagId[]> {
+    try { return JSON.parse(localStorage.getItem(TAGS_KEY) || '{}') } catch { return {} }
+}
+function saveSessionTags(tags: Record<number, TagId[]>) {
+    localStorage.setItem(TAGS_KEY, JSON.stringify(tags))
+}
+function toggleTag(sessionId: number, tag: TagId) {
+    const all = getSessionTags()
+    const current = all[sessionId] || []
+    const idx = current.indexOf(tag)
+    if (idx >= 0) current.splice(idx, 1)
+    else current.push(tag)
+    if (current.length > 0) all[sessionId] = current
+    else delete all[sessionId]
+    saveSessionTags(all)
+}
+function getTagDef(id: TagId) { return TAG_DEFS.find(t => t.id === id) }
+
+function showTagPicker(e: MouseEvent, sessionId: number, onSelect: (id: number, s: any) => void) {
+    // Remove existing picker
+    document.querySelector('.tag-picker-popup')?.remove()
+
+    const currentTags = getSessionTags()[sessionId] || []
+    const popup = document.createElement('div')
+    popup.className = 'tag-picker-popup'
+    popup.innerHTML = TAG_DEFS.map(t => {
+        const isActive = currentTags.includes(t.id)
+        return `<button class="tag-picker-opt${isActive ? ' active' : ''}" data-tag="${t.id}" style="--tag-color: ${t.color}">
+            <span class="tag-picker-dot" style="background: ${t.color}"></span>${t.label}
+        </button>`
+    }).join('')
+
+    // Position near the button
+    const rect = (e.target as HTMLElement).getBoundingClientRect()
+    popup.style.top = `${rect.bottom + 4}px`
+    popup.style.left = `${Math.max(4, rect.left - 60)}px`
+
+    popup.addEventListener('click', (ev) => {
+        const opt = (ev.target as HTMLElement).closest('.tag-picker-opt') as HTMLElement
+        if (!opt) return
+        toggleTag(sessionId, opt.dataset.tag as TagId)
+        refreshSessions(onSelect)
+        popup.remove()
+    })
+
+    // Close on outside click
+    const closeHandler = (ev: MouseEvent) => {
+        if (!popup.contains(ev.target as Node)) {
+            popup.remove()
+            document.removeEventListener('click', closeHandler)
+        }
+    }
+    setTimeout(() => document.addEventListener('click', closeHandler), 0)
+
+    document.body.appendChild(popup)
+}
+
 export function getActiveSessionId() { return activeSessionId }
 /** Call after locally rendering a message to prevent polling from re-rendering it */
 export function bumpKnownMsgCount(n = 1) { lastKnownMsgCount += n }
@@ -80,6 +150,22 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         list.appendChild(cleanupBar)
     }
 
+    // Tag filter bar
+    const tagFilterBar = document.createElement('div')
+    tagFilterBar.className = 'session-tag-filter-bar'
+    tagFilterBar.innerHTML = `
+        <button class="tag-filter-chip${!_tagFilter ? ' active' : ''}" data-tag="">All</button>
+        ${TAG_DEFS.map(t => `<button class="tag-filter-chip${_tagFilter === t.id ? ' active' : ''}" data-tag="${t.id}" style="--tag-color: ${t.color}">${t.label}</button>`).join('')}
+    `
+    tagFilterBar.addEventListener('click', (e) => {
+        const chip = (e.target as HTMLElement).closest('.tag-filter-chip') as HTMLElement
+        if (!chip) return
+        const tag = chip.dataset.tag as TagId | ''
+        _tagFilter = tag || null
+        refreshSessions(onSelect)
+    })
+    list.appendChild(tagFilterBar)
+
     // Sort: pinned first, then by most recent
     const pinnedIds = getPinnedIds()
     const sorted = [...sessions].sort((a, b) => {
@@ -89,8 +175,19 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         return (b.lastActiveAt || b.id) - (a.lastActiveAt || a.id)
     })
 
-    for (const s of sorted) {
+    // Apply tag filter
+    const allTags = getSessionTags()
+    const filtered = _tagFilter
+        ? sorted.filter(s => (allTags[s.id] || []).includes(_tagFilter!))
+        : sorted
+
+    for (const s of filtered) {
         const isPinned = pinnedIds.has(s.id)
+        const sessionTags = allTags[s.id] || []
+        const tagBadgesHtml = sessionTags.map(tid => {
+            const def = getTagDef(tid)
+            return def ? `<span class="session-tag-dot" style="background: ${def.color}" title="${def.label}"></span>` : ''
+        }).join('')
         const item = document.createElement('div')
         item.className = `session-item${s.id === activeSessionId ? ' active' : ''}`
         item.dataset.id = String(s.id)
@@ -100,7 +197,7 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
                 ${s.type === 'telegram_bot' ? '📱' : '🌐'}
             </div>
             <div class="session-item-info">
-                <div class="session-item-name">${isPinned ? '📌 ' : ''}${s.name}</div>
+                <div class="session-item-name">${isPinned ? '📌 ' : ''}${s.name} ${tagBadgesHtml}</div>
                 <div class="session-item-meta">
                     <span class="session-type-badge session-type-${s.type}">
                         ${s.type === 'telegram_bot' ? 'Telegram' : 'Web'}
@@ -109,11 +206,17 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
                 </div>
             </div>
             <div class="session-item-actions">
+                <button class="session-tag-btn" data-id="${s.id}" title="Tag session">🏷</button>
                 <button class="session-pin-btn" data-id="${s.id}" title="${isPinned ? 'Unpin' : 'Pin'} session">${isPinned ? '📌' : '📍'}</button>
                 <button class="session-export-btn" data-id="${s.id}" title="Export conversation">📥</button>
                 <button class="session-delete-btn" data-id="${s.id}" title="Delete session">×</button>
             </div>
         `
+
+        item.querySelector('.session-tag-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation()
+            showTagPicker(e as MouseEvent, s.id, onSelect)
+        })
 
         item.querySelector('.session-pin-btn')?.addEventListener('click', (e) => {
             e.stopPropagation()
@@ -122,6 +225,7 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         })
 
         item.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement).closest('.session-tag-btn')) return
             if ((e.target as HTMLElement).closest('.session-delete-btn')) return
             if ((e.target as HTMLElement).closest('.session-pin-btn')) return
             if ((e.target as HTMLElement).closest('.session-export-btn')) return

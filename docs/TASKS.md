@@ -23,7 +23,7 @@
 - [x] ~~**Session search**~~ — ✅ DONE. Ctrl+K opens command palette searching across all sessions by title and message content. API: `GET /api/search?q=X`. CSS: rewrote `search.css` to match `search-ui.ts` DOM (`.search-overlay`, `.search-input-wrap`). Highlights matches, keyboard nav (↑↓↵ESC).
 - [x] ~~**Session pinning**~~ — ✅ DONE. 📌 pin toggle per session row. Pinned sessions sort to top. Persisted in `localStorage('geeksy_pinned_sessions')`. CSS: `.session-pin-btn` with accent hover. Pin icon shows in session name.
 - [x] ~~**Message reactions**~~ — ✅ DONE. 👍 👎 ⭐ reaction buttons on every assistant bubble. Toggle with localStorage persistence. CSS: `.reaction-btn`, `.reaction-badge.active`, `.reaction-bar`. Already existed in `chat-ui.tsx`.
-- [ ] **Conversation tagging** — Allow users to tag sessions with colored labels (e.g. "debug", "feature", "research") for organization. Filter session list by tag.
+- [x] ~~**Conversation tagging**~~ — ✅ DONE. 6 colored tags (Debug, Feature, Research, Bug, Idea, Review). 🏷 button per session opens picker popup. Tags show as colored dots next to session name. Filter bar at top of session list filters by tag. localStorage-backed. CSS: `.tag-filter-chip`, `.tag-picker-popup`, `.session-tag-dot`.
 - [x] ~~**Quick reply templates**~~ — ✅ DONE. 5 preset buttons above chat input: ▶ Continue, 💡 Explain, 📝 Code, 🗺 Next steps, 📋 Summarize. Click auto-fills and sends. CSS: `.quick-replies`, `.quick-reply-btn` pill buttons with scrollable row.
 
 ## 🟢 Priority: Features (Completed)

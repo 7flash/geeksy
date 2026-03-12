@@ -451,3 +451,119 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* ── Session Tags ── */
+.session-tag-filter-bar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-wrap: wrap;
+}
+
+.session-tag-filter-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.tag-filter-chip {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-3);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 9px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+}
+
+.tag-filter-chip:hover {
+    border-color: var(--tag-color, var(--border));
+    color: var(--tag-color, var(--text-1));
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.tag-filter-chip.active {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: var(--tag-color, var(--accent));
+    color: var(--tag-color, var(--accent));
+    font-weight: 600;
+}
+
+.session-tag-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-left: 3px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.session-tag-btn {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color .15s, background .15s;
+}
+
+.session-tag-btn:hover {
+    color: var(--text-1);
+    background: var(--bg-3);
+}
+
+/* Tag Picker Popup */
+.tag-picker-popup {
+    position: fixed;
+    z-index: 600;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+    min-width: 120px;
+    animation: fadeUp .15s ease;
+}
+
+.tag-picker-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-2);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all .1s;
+}
+
+.tag-picker-opt:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-1);
+}
+
+.tag-picker-opt.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--tag-color, var(--text-1));
+    font-weight: 600;
+}
+
+.tag-picker-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
