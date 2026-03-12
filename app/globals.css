@@ -4843,6 +4843,36 @@ body {
     background: rgba(239, 68, 68, .1);
 }
 
+/* ── Session Cleanup Bar ── */
+.session-cleanup-bar {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.session-cleanup-btn {
+    width: 100%;
+    background: rgba(245, 158, 11, .08);
+    border: 1px solid rgba(245, 158, 11, .2);
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    padding: 6px 12px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.session-cleanup-btn:hover {
+    background: rgba(245, 158, 11, .15);
+    border-color: rgba(245, 158, 11, .4);
+}
+
+.session-cleanup-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
 /* ── New Session Modal ── */
 .session-modal-overlay {
     position: fixed;
@@ -5093,7 +5123,7 @@ body {
 /* ═══ search.css ═══ */
 /* ═══ Search Modal (Ctrl+K) ═══ */
 
-.search-modal-overlay {
+.search-overlay {
     display: none;
     position: fixed;
     inset: 0;
@@ -5103,6 +5133,10 @@ body {
     justify-content: center;
     align-items: flex-start;
     padding-top: 15vh;
+}
+
+.search-overlay.visible {
+    display: flex;
 }
 
 .search-modal {
@@ -5118,7 +5152,19 @@ body {
     animation: slideUp 0.15s ease-out;
 }
 
-.search-input-wrapper {
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.search-input-wrap {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -5127,7 +5173,9 @@ body {
 }
 
 .search-icon {
-    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--text-3);
     flex-shrink: 0;
 }
 
@@ -5171,14 +5219,22 @@ body {
     border-radius: 2px;
 }
 
-.search-empty {
+.search-empty,
+.search-loading {
     padding: 32px 16px;
     text-align: center;
     color: var(--text-3);
     font-size: 13px;
 }
 
+.search-loading {
+    color: var(--accent);
+}
+
 .search-result-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
     padding: 10px 12px;
     border-radius: var(--r-sm);
     cursor: pointer;
@@ -5190,32 +5246,38 @@ body {
     background: var(--bg-3);
 }
 
-.search-result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
+.search-result-icon {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+    padding-top: 2px;
 }
 
-.search-role-user {
-    font-size: 11px;
+.search-result-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-result-title {
+    font-size: 13px;
     font-weight: 600;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--text-1);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.search-role-assistant {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--green);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.search-result-time {
+.search-result-type {
     font-size: 10px;
+    font-weight: 500;
     color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+    padding: 1px 5px;
+    background: var(--bg-3);
+    border-radius: 3px;
 }
 
 .search-result-snippet {
@@ -5230,7 +5292,7 @@ body {
     -webkit-box-orient: vertical;
 }
 
-.search-mark {
+.search-highlight {
     background: rgba(99, 102, 241, 0.3);
     color: var(--text-1);
     border-radius: 2px;
@@ -5238,13 +5300,19 @@ body {
 }
 
 .search-footer {
+    display: flex;
+    gap: 16px;
     padding: 8px 16px;
     border-top: 1px solid var(--border);
-}
-
-.search-footer-hint {
     font-size: 10px;
     color: var(--text-3);
+    font-family: var(--mono);
+}
+
+.search-footer span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 /* Highlight flash when scrolling to a search result */
@@ -5258,12 +5326,12 @@ body {
     }
 }
 
-.search-highlight {
+.msg-highlight {
     animation: searchFlash 2s ease-out;
 }
 
 @media (max-width: 768px) {
-    .search-modal-overlay {
+    .search-overlay {
         padding-top: 5vh;
     }
 
