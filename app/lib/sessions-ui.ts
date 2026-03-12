@@ -33,7 +33,36 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         return
     }
 
+    // Count empty sessions for cleanup button
+    const emptySessions = sessions.filter(s => (s.messageCount || 0) === 0)
+
     list.innerHTML = ''
+
+    // Add cleanup button if there are empty sessions
+    if (emptySessions.length > 0) {
+        const cleanupBar = document.createElement('div')
+        cleanupBar.className = 'session-cleanup-bar'
+        cleanupBar.innerHTML = `
+            <button class="session-cleanup-btn" title="Remove ${emptySessions.length} empty session(s)">
+                🗑 Clean ${emptySessions.length} empty
+            </button>
+        `
+        cleanupBar.querySelector('.session-cleanup-btn')?.addEventListener('click', async () => {
+            const btn = cleanupBar.querySelector('.session-cleanup-btn') as HTMLButtonElement
+            btn.textContent = '⏳ Cleaning...'
+            btn.disabled = true
+            try {
+                const res = await fetch('/api/sessions?cleanup=empty', { method: 'DELETE' })
+                const data = await res.json()
+                if (activeSessionId && emptySessions.some(s => s.id === activeSessionId)) {
+                    activeSessionId = null
+                    updateHeaderForSession(null)
+                }
+                refreshSessions(onSelect)
+            } catch { btn.textContent = '❌ Failed'; btn.disabled = false }
+        })
+        list.appendChild(cleanupBar)
+    }
     for (const s of sessions) {
         const item = document.createElement('div')
         item.className = `session-item${s.id === activeSessionId ? ' active' : ''}`

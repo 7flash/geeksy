@@ -8,13 +8,18 @@ export async function GET(req: Request) {
     if (id) {
         const session = db.sessions.select().where({ id: Number(id) }).first()
         if (!session) return Response.json({ error: 'Session not found' }, { status: 404 })
-        return Response.json(session)
+        const messageCount = db.messages.select().where({ sessionId: Number(id) }).count()
+        return Response.json({ ...session, messageCount })
     }
 
     // List all sessions, most recent first
     const sessions = db.sessions.select().all()
-    sessions.sort((a: any, b: any) => (b.lastActiveAt || b.id) - (a.lastActiveAt || a.id))
-    return Response.json(sessions)
+    const enriched = sessions.map((s: any) => ({
+        ...s,
+        messageCount: db.messages.select().where({ sessionId: s.id }).count(),
+    }))
+    enriched.sort((a: any, b: any) => (b.lastActiveAt || b.id) - (a.lastActiveAt || a.id))
+    return Response.json(enriched)
 }
 
 export async function POST(req: Request) {
@@ -59,6 +64,22 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
     const url = new URL(req.url)
     const id = url.searchParams.get('id')
+    const cleanup = url.searchParams.get('cleanup')
+
+    // Bulk cleanup: remove sessions with 0 messages
+    if (cleanup === 'empty') {
+        const sessions = db.sessions.select().all()
+        let deleted = 0
+        for (const s of sessions) {
+            const msgCount = db.messages.select().where({ sessionId: s.id }).count()
+            if (msgCount === 0) {
+                db.sessions.delete(s.id)
+                deleted++
+            }
+        }
+        return Response.json({ ok: true, deleted })
+    }
+
     if (!id) return Response.json({ error: 'Missing session id' }, { status: 400 })
 
     // Delete session messages first
