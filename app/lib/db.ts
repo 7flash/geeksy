@@ -70,6 +70,13 @@ export const db = new Database(dbPath, {
         key: z.string(),
         value: z.string(),
     }),
+    followUps: z.object({
+        agentId: z.number(),
+        reason: z.string(),
+        context: z.string(),
+        scheduledAt: z.number(),
+        status: z.string().default('pending'), // 'pending' | 'processed'
+    }),
     plugins: z.object({
         name: z.string(),                          // display name e.g. "Telegram"
         packageName: z.string(),                   // npm package e.g. "geeksy-telegram-plugin"
@@ -87,18 +94,20 @@ export const db = new Database(dbPath, {
         messages: { agentId: 'agents' },
         objectives: { agentId: 'agents' },
         files: { agentId: 'agents' },
+        followUps: { agentId: 'agents' },
     },
     indexes: {
         messages: ['agentId', 'sessionId'],
         objectives: ['agentId'],
         files: ['agentId'],
+        followUps: ['agentId', 'status'],
         schedules: ['status', 'agentId'],
         agentState: ['agentId'],
         plugins: ['packageName'],
         sessions: ['type', 'status'],
     },
     cascade: {
-        agents: ['messages', 'objectives', 'files', 'agentState'],
+        agents: ['messages', 'objectives', 'files', 'followUps', 'agentState'],
     },
 })
 

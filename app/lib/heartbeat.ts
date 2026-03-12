@@ -12,13 +12,14 @@ const skillsDir = join(process.cwd(), "skills");
 // ── Follow-up queue ──
 // After user interactions, follow-up objectives are queued here.
 // The heartbeat picks them up on the next tick.
-interface FollowUp {
-    reason: string; // What to check: "verify task completion", "check user satisfaction", etc.
-    context: string; // Brief context from the original interaction
+export interface FollowUp {
+    id?: number;
+    reason: string;
+    context: string;
     scheduledAt: number;
     agentId: number;
+    status?: string;
 }
-const _followUpQueue: FollowUp[] = [];
 
 /**
  * Schedule a follow-up heartbeat after a user interaction.
@@ -30,11 +31,12 @@ export function scheduleFollowUp(
     context: string,
     delayMs: number = 0, // 0 = next tick, otherwise min delay
 ) {
-    _followUpQueue.push({
+    db.followUps.insert({
         reason,
         context,
         scheduledAt: Date.now() + delayMs,
         agentId,
+        status: 'pending'
     });
     // If heartbeat interval is slow, speed it up for the follow-up
     if (currentInterval > 60_000) {
@@ -46,17 +48,11 @@ export function scheduleFollowUp(
 /** Get pending follow-ups ready to execute */
 function drainFollowUps(agentId: number): FollowUp[] {
     const now = Date.now();
-    const ready: FollowUp[] = [];
-    const remaining: FollowUp[] = [];
-    for (const fu of _followUpQueue) {
-        if (fu.agentId === agentId && fu.scheduledAt <= now) {
-            ready.push(fu);
-        } else {
-            remaining.push(fu);
-        }
+    const ready = (db.followUps.select().where({ agentId, status: 'pending' }).all() as FollowUp[])
+        .filter(fu => fu.scheduledAt <= now);
+    for (const fu of ready) {
+        db.followUps.update(fu.id!, { status: 'processed' });
     }
-    _followUpQueue.length = 0;
-    _followUpQueue.push(...remaining);
     return ready;
 }
 
@@ -79,14 +75,18 @@ export function getHeartbeatStats() {
         isRunning: isHeartbeatRunning,
         uptimeMs: Date.now() - heartbeatStats.startedAt,
         currentIntervalMs: currentInterval,
-        followUpQueueLength: _followUpQueue.length,
+        followUpQueueLength: db.followUps.select().where({ status: 'pending' }).all().length,
     };
 }
 
 /** @internal — exposed for tests only */
-export function _getFollowUpQueue() { return [..._followUpQueue]; }
+export function _getFollowUpQueue(): FollowUp[] { return db.followUps.select().where({ status: 'pending' }).all() as FollowUp[]; }
 /** @internal — clear queue for test isolation */
-export function _clearFollowUpQueue() { _followUpQueue.length = 0; }
+export function _clearFollowUpQueue() {
+    for (const fu of db.followUps.select().all()) {
+        db.followUps.delete(fu.id!);
+    }
+}
 
 // ── Adaptive interval ──
 const MIN_INTERVAL = 30_000;   // 30s when active

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
 import { getHeartbeatStats, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { db } from './db'
 
 describe('heartbeat stats', () => {
     it('returns initial stats shape', () => {
@@ -53,6 +54,9 @@ describe('heartbeat stats', () => {
 describe('heartbeat follow-up system', () => {
     beforeEach(() => {
         _clearFollowUpQueue()
+        try { (db as any).db.query('INSERT OR IGNORE INTO agents (id, name, model) VALUES (?, ?, ?)').run(1, 'Test Agent 1', 'gemini') } catch { }
+        try { (db as any).db.query('INSERT OR IGNORE INTO agents (id, name, model) VALUES (?, ?, ?)').run(2, 'Test Agent 2', 'gemini') } catch { }
+        try { (db as any).db.query('INSERT OR IGNORE INTO agents (id, name, model) VALUES (?, ?, ?)').run(42, 'Test Agent 42', 'gemini') } catch { }
     })
 
     it('scheduleFollowUp adds to queue', () => {
@@ -61,7 +65,8 @@ describe('heartbeat follow-up system', () => {
         expect(queue).toHaveLength(1)
         expect(queue[0].reason).toBe('check satisfaction')
         expect(queue[0].context).toBe('user asked about deploy')
-        expect(queue[0].agentId).toBe(1)
+        const rawFu = (db as any).db.query('SELECT agentId FROM followUps ORDER BY id DESC LIMIT 1').get()
+        expect(rawFu.agentId).toBe(1)
     })
 
     it('scheduleFollowUp with delay sets future scheduledAt', () => {
@@ -115,8 +120,8 @@ describe('heartbeat follow-up system', () => {
         expect(fu).toHaveProperty('reason')
         expect(fu).toHaveProperty('context')
         expect(fu).toHaveProperty('scheduledAt')
-        expect(fu).toHaveProperty('agentId')
-        expect(fu.agentId).toBe(42)
+        const rawFu = (db as any).db.query('SELECT agentId FROM followUps ORDER BY id DESC LIMIT 1').get()
+        expect(rawFu.agentId).toBe(42)
         expect(fu.reason).toBe('verify task')
         expect(fu.context).toContain('deploy to prod')
     })
