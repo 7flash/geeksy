@@ -259,21 +259,27 @@ export async function runHeartbeat() {
             return;
         }
 
-        // Build dynamic prompt based on actual state
-        const objectiveList = pendingObjectives.map((o: any) => `- ${o.name}: ${o.description || '(no description)'}`).join('\n');
-        const pluginList = activePlugins.map((p: any) => p.name || p.packageName).join(', ');
-        const scheduleList = pendingSchedules.map((s: any) => `- ${s.name}: ${s.type} (${s.status})`).join('\n');
-        const followUpList = followUps.map(fu => `- ${fu.reason} (context: ${fu.context})`).join('\n');
+        // Build compact prompt — only include sections with actual content
+        const sections: string[] = [];
 
-        const prompt = [
-            "SYSTEM HEARTBEAT TICK: Check the current state and take action if needed.",
-            objectiveList ? `\nPending Objectives:\n${objectiveList}` : '',
-            pluginList ? `\nActive Plugins: ${pluginList}` : '',
-            scheduleList ? `\nActive Schedules:\n${scheduleList}` : '',
-            followUpList ? `\nFollow-Up Tasks (from recent interactions):\n${followUpList}\nFor each follow-up: evaluate the situation, take action if needed, and if the user needs an update, send them a message.` : '',
-            "\nCheck for pending objectives and complete them. Check active plugins for new data or events.",
-            "If absolutely nothing needs attention, reply EXACTLY with 'IDLE'. DO NOT write conversational filler.",
-        ].filter(Boolean).join('\n');
+        if (pendingObjectives.length > 0) {
+            sections.push(`Objectives:\n${pendingObjectives.map((o: any) => `- ${o.name}${o.description ? ': ' + o.description : ''}`).join('\n')}`);
+        }
+        if (activePlugins.length > 0) {
+            sections.push(`Plugins: ${activePlugins.map((p: any) => p.name || p.packageName).join(', ')}`);
+        }
+        if (pendingSchedules.length > 0) {
+            sections.push(`Schedules:\n${pendingSchedules.map((s: any) => `- ${s.name} (${s.type}/${s.status})`).join('\n')}`);
+        }
+        if (followUps.length > 0) {
+            sections.push(`Follow-ups:\n${followUps.map(fu => `- ${fu.reason} (${fu.context})`).join('\n')}\nEvaluate each, act if needed, notify user if relevant.`);
+        }
+
+        // Early-out: if nothing needs attention, use a minimal prompt
+        const hasPendingWork = sections.length > 0;
+        const prompt = hasPendingWork
+            ? `HEARTBEAT: Act on pending items.\n${sections.join('\n')}\nIf nothing needs action, reply IDLE.`
+            : `HEARTBEAT: No pending items. Reply IDLE.`;
 
         let fullText = "";
         const toolCalls: ToolCall[] = [];

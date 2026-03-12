@@ -22,6 +22,9 @@
 - [x] ~~**Agent memory inspector**~~ — ✅ DONE. Full CRUD: search/filter across keys+values, inline edit with save/cancel, "+ Add" form for new entries, JSON export download, byte-size stats, grouped by key prefix. 190 lines CSS (`.memory-toolbar`, `.memory-search`, `.memory-add-form`, `.memory-edit-btn`, `.memory-save-btn`).
 - [x] ~~**Webhook triggers**~~ — ✅ DONE. `POST /api/webhooks?token=whk_...` endpoint with auto-detection for GitHub (push/PR/issues/star/release), Stripe (payments/subscriptions/invoices), GitLab events. Token-based auth, event filtering, fire-and-forget chat delivery. Settings UI with create/delete/list. Persisted in agentState. 280 lines route + 130 lines settings UI.
 - [x] ~~**Multi-agent conversations**~~ — ✅ DONE. `send_message_to_agent` tool lets agents message each other by name. Messages attributed with sender, delivered via `/api/chat` (fire-and-forget), logged in messages table. Tool wired into chat, heartbeat, and tg-bot sessions. REST API at `/api/agent-message` for programmatic use. 80 lines tool + 110 lines route.
+- [ ] **Heartbeat prompt optimization** — Current prompt is ~500 tokens of boilerplate every tick. Compress it: skip empty sections, cache static parts, only send deltas. Should cut token usage by 50%+.
+- [ ] **Conversation export** — Export a conversation as markdown or JSON for sharing/archiving. Add to `/api/conversations/:id/export`.
+- [ ] **Plugin auto-discovery** — Scan `node_modules` for packages matching `geeksy-*-plugin` pattern and auto-register them instead of manual config.
 
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)
