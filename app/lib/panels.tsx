@@ -480,6 +480,9 @@ async function cancelTask(id: string) {
 // ══════════════════════════════════════
 
 let memoryPoller: ReturnType<typeof setInterval> | null = null
+let memoryFilter = ''
+let memoryAddOpen = false
+let editingMemoryKey: string | null = null
 
 export async function fetchMemoryEntries() {
     if (!state.activeAgentId) return
@@ -507,6 +510,29 @@ function truncateValue(v: string, maxLen = 200): string {
     return v.substring(0, maxLen) + '…'
 }
 
+async function saveMemoryEntry(agentId: number, key: string, value: string) {
+    await fetch('/api/agent-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, key, value }),
+    })
+    await fetchMemoryEntries()
+}
+
+function exportMemoryAsJson() {
+    const data: Record<string, string> = {}
+    for (const entry of state.stateEntries) {
+        try { data[entry.key] = JSON.parse(entry.value) } catch { data[entry.key] = entry.value }
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `memory-agent-${state.activeAgentId}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+}
+
 export function renderMemoryPane() {
     const pane = document.getElementById('pane-memory')!
     if (!pane) return
@@ -514,60 +540,169 @@ export function renderMemoryPane() {
         render(<div className="overview-empty">Select an agent to view its memory.</div>, pane)
         return
     }
-    if (state.stateEntries.length === 0) {
-        render(
-            <div className="overview-empty">
-                <div className="memory-empty-icon">🧠</div>
-                <div>No memory entries yet.</div>
-                <div className="memory-empty-hint">Agents store structured data here via <code>getState</code> / <code>setState</code> in scripts, or through the agent-state API.</div>
-            </div>,
-            pane
-        )
-    } else {
-        // Group entries by key prefix (e.g. "users." → Users collection)
-        const groups = new Map<string, typeof state.stateEntries>()
-        for (const entry of state.stateEntries) {
-            const prefix = entry.key.includes('.') ? entry.key.split('.')[0] : '_ungrouped'
-            if (!groups.has(prefix)) groups.set(prefix, [])
-            groups.get(prefix)!.push(entry)
-        }
 
-        render(
-            <div className="memory-list">
-                {Array.from(groups.entries()).map(([group, entries]) => (
-                    <div className="memory-group" key={group}>
-                        {group !== '_ungrouped' && (
-                            <div className="memory-group-header">
-                                <span className="memory-group-icon">📁</span>
-                                <span className="memory-group-name">{group}</span>
-                                <span className="memory-group-count">{entries.length}</span>
-                            </div>
-                        )}
-                        {entries.map(entry => {
-                            const isJson = entry.value.startsWith('{') || entry.value.startsWith('[')
-                            const shortKey = entry.key.includes('.') ? entry.key.split('.').slice(1).join('.') : entry.key
-                            return (
-                                <div className="memory-item" key={entry.id}>
-                                    <div className="memory-item-header">
-                                        <span className="memory-key">{shortKey}</span>
-                                        <button
-                                            className="memory-delete"
-                                            onClick={() => deleteMemoryEntry(entry.agentId, entry.key)}
-                                            title="Delete entry"
-                                        >✕</button>
-                                    </div>
-                                    <div className={`memory-value ${isJson ? 'json' : ''}`}>
-                                        {isJson ? formatJsonPreview(entry.value) : truncateValue(entry.value)}
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                ))}
-            </div>,
-            pane
+    // Filter entries
+    const filtered = memoryFilter
+        ? state.stateEntries.filter(e =>
+            e.key.toLowerCase().includes(memoryFilter.toLowerCase()) ||
+            e.value.toLowerCase().includes(memoryFilter.toLowerCase())
         )
+        : state.stateEntries
+
+    const totalBytes = state.stateEntries.reduce((s, e) => s + e.key.length + e.value.length, 0)
+
+    // Group entries by key prefix
+    const groups = new Map<string, typeof filtered>()
+    for (const entry of filtered) {
+        const prefix = entry.key.includes('.') ? entry.key.split('.')[0] : '_ungrouped'
+        if (!groups.has(prefix)) groups.set(prefix, [])
+        groups.get(prefix)!.push(entry)
     }
+
+    render(
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* ── Toolbar ── */}
+            <div className="memory-toolbar">
+                <input
+                    className="memory-search"
+                    type="text"
+                    placeholder="🔍 Filter keys or values..."
+                    defaultValue={memoryFilter}
+                    onInput={(e: any) => {
+                        memoryFilter = e.target.value
+                        renderMemoryPane()
+                    }}
+                />
+                <span className="memory-stats">
+                    {state.stateEntries.length} entries · {totalBytes < 1024 ? `${totalBytes}B` : `${(totalBytes / 1024).toFixed(1)}KB`}
+                </span>
+                <button
+                    className="memory-toolbar-btn"
+                    onClick={() => { memoryAddOpen = !memoryAddOpen; renderMemoryPane() }}
+                >+ Add</button>
+                {state.stateEntries.length > 0 && (
+                    <button className="memory-toolbar-btn" onClick={exportMemoryAsJson}>⬇ Export</button>
+                )}
+            </div>
+
+            {/* ── Add Entry Form ── */}
+            {memoryAddOpen && (
+                <div className="memory-add-form">
+                    <div className="memory-add-row">
+                        <input
+                            id="memory-add-key"
+                            className="memory-add-input"
+                            placeholder="key (e.g. user.preferences)"
+                        />
+                    </div>
+                    <textarea
+                        id="memory-add-value"
+                        className="memory-add-textarea"
+                        placeholder='value (plain text or JSON)'
+                    />
+                    <div className="memory-add-row">
+                        <button
+                            className="memory-save-btn"
+                            onClick={async () => {
+                                const keyEl = document.getElementById('memory-add-key') as HTMLInputElement
+                                const valEl = document.getElementById('memory-add-value') as HTMLTextAreaElement
+                                if (!keyEl?.value.trim()) return
+                                await saveMemoryEntry(state.activeAgentId!, keyEl.value.trim(), valEl?.value || '')
+                                memoryAddOpen = false
+                            }}
+                        >Save</button>
+                        <button
+                            className="memory-cancel-btn"
+                            onClick={() => { memoryAddOpen = false; renderMemoryPane() }}
+                        >Cancel</button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Entries ── */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+                {filtered.length === 0 ? (
+                    <div className="overview-empty">
+                        <div className="memory-empty-icon">🧠</div>
+                        <div>{memoryFilter ? 'No matching entries.' : 'No memory entries yet.'}</div>
+                        <div className="memory-empty-hint">Agents store structured data here via <code>getState</code> / <code>setState</code> in scripts, or click "+ Add" above.</div>
+                    </div>
+                ) : (
+                    <div className="memory-list">
+                        {Array.from(groups.entries()).map(([group, entries]) => (
+                            <div className="memory-group" key={group}>
+                                {group !== '_ungrouped' && (
+                                    <div className="memory-group-header">
+                                        <span className="memory-group-icon">📁</span>
+                                        <span className="memory-group-name">{group}</span>
+                                        <span className="memory-group-count">{entries.length}</span>
+                                    </div>
+                                )}
+                                {entries.map(entry => {
+                                    const isJson = entry.value.startsWith('{') || entry.value.startsWith('[')
+                                    const shortKey = entry.key.includes('.') ? entry.key.split('.').slice(1).join('.') : entry.key
+                                    const isEditing = editingMemoryKey === entry.key
+
+                                    return (
+                                        <div className="memory-item" key={entry.id}>
+                                            <div className="memory-item-header">
+                                                <span className="memory-key">{shortKey}</span>
+                                                <div style={{ display: 'flex', gap: '2px' }}>
+                                                    <button
+                                                        className="memory-edit-btn"
+                                                        onClick={() => {
+                                                            editingMemoryKey = isEditing ? null : entry.key
+                                                            renderMemoryPane()
+                                                        }}
+                                                        title={isEditing ? 'Cancel edit' : 'Edit value'}
+                                                    >{isEditing ? '✕' : '✎'}</button>
+                                                    <button
+                                                        className="memory-delete"
+                                                        onClick={() => deleteMemoryEntry(entry.agentId, entry.key)}
+                                                        title="Delete entry"
+                                                    >✕</button>
+                                                </div>
+                                            </div>
+                                            {isEditing ? (
+                                                <div>
+                                                    <textarea
+                                                        id={`memory-edit-${entry.id}`}
+                                                        className="memory-add-textarea"
+                                                        defaultValue={entry.value}
+                                                        style={{ width: '100%' }}
+                                                    />
+                                                    <div className="memory-save-row">
+                                                        <button
+                                                            className="memory-save-btn"
+                                                            onClick={async () => {
+                                                                const el = document.getElementById(`memory-edit-${entry.id}`) as HTMLTextAreaElement
+                                                                if (!el) return
+                                                                await saveMemoryEntry(entry.agentId, entry.key, el.value)
+                                                                editingMemoryKey = null
+                                                            }}
+                                                        >Save</button>
+                                                        <button
+                                                            className="memory-cancel-btn"
+                                                            onClick={() => { editingMemoryKey = null; renderMemoryPane() }}
+                                                        >Cancel</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className={`memory-value ${isJson ? 'json' : ''}`}>
+                                                    {isJson ? formatJsonPreview(entry.value) : truncateValue(entry.value)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>,
+        pane
+    )
 }
 
 function formatJsonPreview(value: string): string {
@@ -586,6 +721,7 @@ async function deleteMemoryEntry(agentId: number, key: string) {
     state.stateEntries = state.stateEntries.filter(e => e.key !== key)
     renderMemoryPane()
 }
+
 
 // ══════════════════════════════════════
 // SKILLS (YAML skill files from skills/ directory)
