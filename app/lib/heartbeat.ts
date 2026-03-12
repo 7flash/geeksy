@@ -68,6 +68,11 @@ const heartbeatStats = {
     totalSkips: 0,
     startedAt: Date.now(),
     lastToolCalls: [] as ToolCall[],
+    // Token tracking (estimated ~4 chars per token)
+    totalInputTokens: 0,
+    totalOutputTokens: 0,
+    lastTickInputTokens: 0,
+    lastTickOutputTokens: 0,
 };
 
 export function getHeartbeatStats() {
@@ -343,12 +348,20 @@ export async function runHeartbeat() {
         const trimmed = fullText.trim();
         const withoutThoughts = trimmed.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
 
+        // Track token usage (estimated ~4 chars per token)
+        const inputTokens = Math.ceil(prompt.length / 4);
+        const outputTokens = Math.ceil(fullText.length / 4);
+        heartbeatStats.lastTickInputTokens = inputTokens;
+        heartbeatStats.lastTickOutputTokens = outputTokens;
+        heartbeatStats.totalInputTokens += inputTokens;
+        heartbeatStats.totalOutputTokens += outputTokens;
+
         if (withoutThoughts && withoutThoughts.toUpperCase() !== "IDLE") {
-            console.log(`[heartbeat] Agent acted (${withoutThoughts.length} chars):`, withoutThoughts.substring(0, 120));
+            console.log(`[heartbeat] Agent acted (${withoutThoughts.length} chars, ~${inputTokens}+${outputTokens} tok):`, withoutThoughts.substring(0, 120));
             db.messages.insert({ agentId: agent.id, role: 'assistant', content: fullText });
             heartbeatStats.lastTickResult = 'acted';
         } else {
-            console.log("[heartbeat] Nothing to report (IDLE).");
+            console.log(`[heartbeat] Nothing to report (IDLE, ~${inputTokens}+${outputTokens} tok).`);
             heartbeatStats.lastTickResult = 'idle';
         }
         heartbeatStats.consecutiveFailures = 0;

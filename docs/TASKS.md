@@ -19,7 +19,7 @@
 
 ## 🟢 Priority: Features (Open)
 - [x] ~~**Stale session cleanup**~~ — ✅ DONE. Amber "🗑 Clean N empty" button appears at top of session list when there are sessions with 0 messages. `DELETE /api/sessions?cleanup=empty` bulk-removes them. Session list enriched with `messageCount`.
-- [ ] **Heartbeat cost tracking** — Track cumulative token usage from heartbeat ticks and show in metrics bar tooltip. Currently heartbeat consumes tokens every 135s but there's no visibility into total cost.
+- [x] ~~**Heartbeat cost tracking**~~ — ✅ DONE. Estimates input/output tokens per tick (~4 chars/token). Tracks cumulative totals in `heartbeatStats`. Metrics API includes `totalInputTokens`, `totalOutputTokens`, `lastTickInputTokens`, `lastTickOutputTokens`. Heartbeat tooltip shows full token breakdown.
 - [ ] **Session search** — Currently Ctrl+K searches messages within a session. Add the ability to search across all sessions by title/content.
 
 ## 🟢 Priority: Features (Completed)

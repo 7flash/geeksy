@@ -120,6 +120,10 @@ export async function GET(req: Request) {
             isRunning: heartbeat.isRunning || false,
             intervalMs: heartbeat.currentIntervalMs || 60000,
             lastToolCalls: heartbeat.lastToolCalls || [],
+            totalInputTokens: heartbeat.totalInputTokens || 0,
+            totalOutputTokens: heartbeat.totalOutputTokens || 0,
+            lastTickInputTokens: heartbeat.lastTickInputTokens || 0,
+            lastTickOutputTokens: heartbeat.lastTickOutputTokens || 0,
         },
         messages: {
             total: messages.length,

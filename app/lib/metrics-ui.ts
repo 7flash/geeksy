@@ -66,6 +66,12 @@ export function initMetricsUI() {
                 `Interval: ${intervalSec}s (adaptive 30s–300s)`,
                 `Ticks: ${ticks}, Skips: ${hb.totalSkips || 0}`,
                 hb.consecutiveFailures > 0 ? `⚠️ Failures: ${hb.consecutiveFailures}` : '',
+                '',
+                `📊 Token Usage (estimated):`,
+                `  Input:  ${(hb.totalInputTokens || 0).toLocaleString()} tok`,
+                `  Output: ${(hb.totalOutputTokens || 0).toLocaleString()} tok`,
+                `  Total:  ${((hb.totalInputTokens || 0) + (hb.totalOutputTokens || 0)).toLocaleString()} tok`,
+                hb.lastTickInputTokens ? `  Last tick: ~${hb.lastTickInputTokens}+${hb.lastTickOutputTokens} tok` : '',
             ]
             const tools = hb.lastToolCalls || []
             if (tools.length > 0) {
