@@ -252,61 +252,91 @@ function renderCalendarView(pane: HTMLElement) {
     }
 
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const statusColors: Record<string, string> = {
-        pending: '#4ade80', running: '#60a5fa', completed: '#888', failed: '#ef4444', cancelled: '#666',
+    const realToday = new Date()
+
+    // Collect tasks for each day — includes interval tasks that repeat
+    function getTasksForDay(day: Date): typeof state.schedules {
+        const dayStart = day.getTime()
+        const dayEnd = dayStart + 86400000
+        return state.schedules.filter(s => {
+            // Interval tasks: show on every day if active
+            if (s.type === 'interval' && (s.status === 'pending' || s.status === 'running')) {
+                return true
+            }
+            // Cron tasks: show on every day if active
+            if (s.type === 'cron' && (s.status === 'pending' || s.status === 'running')) {
+                return true
+            }
+            // One-shot / sequential: check nextRun or lastRun
+            const t = s.nextRun || s.lastRun || 0
+            return t >= dayStart && t < dayEnd
+        })
     }
 
+    // Total tasks this week for the header
+    const weekTasks = new Set<string>()
+    days.forEach(d => getTasksForDay(d).forEach(t => weekTasks.add(t.id)))
+
     render(
-        <div style={{ padding: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <div className="cal-container">
+            {/* ── Navigation ── */}
+            <div className="cal-nav">
                 <button
-                    style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: 14 }}
+                    className="cal-nav-btn"
                     onClick={() => { calendarWeekOffset--; renderCalendarView(pane) }}
                 >◀</button>
-                <span style={{ color: '#e8e8f0', fontSize: 12, fontWeight: 600, flex: 1, textAlign: 'center' as const }}>
-                    {startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {days[6]!.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                <span className="cal-nav-title">
+                    {startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {days[6]!.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {weekTasks.size > 0 && <span className="cal-task-count"> · {weekTasks.size} tasks</span>}
                 </span>
                 <button
-                    style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: 14 }}
+                    className="cal-nav-btn"
                     onClick={() => { calendarWeekOffset++; renderCalendarView(pane) }}
                 >▶</button>
+                {calendarWeekOffset !== 0 && (
+                    <button
+                        className="cal-nav-today"
+                        onClick={() => { calendarWeekOffset = 0; renderCalendarView(pane) }}
+                    >Today</button>
+                )}
                 <button
-                    style={{ background: 'rgba(128,90,255,0.15)', border: '1px solid rgba(128,90,255,0.3)', borderRadius: 6, color: '#a78bfa', cursor: 'pointer', fontSize: 10, padding: '2px 8px' }}
+                    className="cal-nav-today"
                     onClick={() => { scheduleViewMode = 'list'; renderSchedulePane() }}
                 >📋 List</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+
+            {/* ── 7-Day Grid ── */}
+            <div className="cal-grid">
                 {days.map((day, i) => {
-                    const dayStart = day.getTime()
-                    const dayEnd = dayStart + 86400000
-                    const isToday = new Date().toDateString() === day.toDateString()
-                    const tasksToday = state.schedules.filter(s => {
-                        const t = s.nextRun || s.lastRun || 0
-                        return t >= dayStart && t < dayEnd
-                    })
+                    const isToday = realToday.toDateString() === day.toDateString()
+                    const tasksToday = getTasksForDay(day)
+
                     return (
-                        <div style={{
-                            background: isToday ? 'rgba(128,90,255,0.1)' : 'rgba(255,255,255,0.02)',
-                            borderRadius: 6,
-                            padding: 4,
-                            minHeight: 60,
-                            border: isToday ? '1px solid rgba(128,90,255,0.3)' : '1px solid rgba(255,255,255,0.05)',
-                        }}>
-                            <div style={{ fontSize: 9, color: isToday ? '#a78bfa' : '#888', fontWeight: 600, textAlign: 'center' as const }}>{dayNames[i]}</div>
-                            <div style={{ fontSize: 11, color: '#e8e8f0', textAlign: 'center' as const, marginBottom: 2 }}>{day.getDate()}</div>
-                            {tasksToday.map(t => (
-                                <div style={{
-                                    fontSize: 9,
-                                    padding: '1px 4px',
-                                    borderRadius: 4,
-                                    background: (statusColors[t.status] || '#666') + '22',
-                                    color: statusColors[t.status] || '#888',
-                                    marginTop: 1,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap' as const,
-                                }} title={t.name}>{t.name}</div>
-                            ))}
+                        <div className={`cal-day${isToday ? ' today' : ''}`} key={i}>
+                            <div className="cal-day-header">
+                                <span className="cal-day-name">{dayNames[i]}</span>
+                                <span className="cal-day-num">{day.getDate()}</span>
+                            </div>
+                            <div className="cal-tasks">
+                                {tasksToday.length === 0 && (
+                                    <div className="cal-empty">—</div>
+                                )}
+                                {tasksToday.map(t => {
+                                    const status = t.status || 'pending'
+                                    const typeIcon = t.type === 'interval' ? '🔄 ' : t.type === 'cron' ? '⏰ ' : ''
+                                    return (
+                                        <div
+                                            className={`cal-task ${status}`}
+                                            key={t.id}
+                                            title={`${t.name} (${status})${t.type === 'interval' && t.intervalSec ? ` · every ${t.intervalSec}s` : ''}${t.nextRun ? ` · next: ${new Date(t.nextRun).toLocaleTimeString()}` : ''}`}
+                                            onClick={() => {
+                                                scheduleViewMode = 'list'
+                                                renderSchedulePane()
+                                            }}
+                                        >{typeIcon}{t.name}</div>
+                                    )
+                                })}
+                            </div>
                         </div>
                     )
                 })}
@@ -315,6 +345,7 @@ function renderCalendarView(pane: HTMLElement) {
         pane
     )
 }
+
 
 export function renderSchedulePane() {
     const pane = document.getElementById('pane-schedule')!
@@ -1444,7 +1475,7 @@ export function renderPromptPane() {
                         return (
                             <div key={trace.id} style={{
                                 borderBottom: '1px solid rgba(255,255,255,0.04)',
-                                background: hasError ? 'rgba(239,68,68,0.03)' : undefined,
+                                background: hasError ? 'rgba(239,68,68,0.03)' : 'transparent',
                             }}>
                                 <div
                                     style={{
