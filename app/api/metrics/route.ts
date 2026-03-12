@@ -63,6 +63,44 @@ export async function GET(req: Request) {
         pluginHealth.push(entry)
     }
 
+    // Fallback: if db.plugins is empty, count skill .md files that came from plugin directories
+    let pluginTotal = plugins.length
+    let pluginRunning = runningPlugins.length
+    let pluginHealthy = pluginHealth.filter(p => p.healthy).length
+
+    if (plugins.length === 0) {
+        try {
+            const { resolve, join } = await import('path')
+            const { readdirSync, readFileSync, existsSync } = await import('fs')
+            const codeDir = resolve(process.cwd(), '..')
+            const dirs = readdirSync(codeDir).filter(d => {
+                for (const mf of ['geeksy-plugin.json', 'plugin.json']) {
+                    if (existsSync(join(codeDir, d, mf))) return true
+                }
+                return false
+            })
+            pluginTotal = dirs.length
+            pluginRunning = dirs.length
+            pluginHealthy = dirs.length
+            for (const d of dirs) {
+                try {
+                    const mPath = existsSync(join(codeDir, d, 'geeksy-plugin.json'))
+                        ? join(codeDir, d, 'geeksy-plugin.json')
+                        : join(codeDir, d, 'plugin.json')
+                    const manifest = JSON.parse(readFileSync(mPath, 'utf-8'))
+                    pluginHealth.push({
+                        id: 0,
+                        name: manifest.displayName || manifest.name || d,
+                        status: 'running',
+                        healthy: true,
+                    })
+                } catch { }
+            }
+        } catch { }
+    }
+
+
+
     // Agent count
     const agents = db.agents.select().all()
 
@@ -102,9 +140,9 @@ export async function GET(req: Request) {
             totalFail,
         },
         plugins: {
-            total: plugins.length,
-            running: runningPlugins.length,
-            healthy: pluginHealth.filter(p => p.healthy).length,
+            total: pluginTotal,
+            running: pluginRunning,
+            healthy: pluginHealthy,
             items: pluginHealth,
         },
         agents: agents.length,
