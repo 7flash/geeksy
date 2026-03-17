@@ -26,6 +26,87 @@ function renderSessionType(type: string) {
     return type === 'telegram_bot' ? 'Telegram' : type === 'api' ? 'API' : 'Conversation'
 }
 
+function renderChatPlaceholder(kind: 'loading' | 'no-session' | 'empty-conversation') {
+    const chatArea = document.getElementById('chat-area')
+    if (!chatArea) return
+
+    if (kind === 'loading') {
+        chatArea.innerHTML = `
+            <div class="empty-state empty-state-loading">
+                <div class="empty-icon">⏳</div>
+                <h2>Loading conversations</h2>
+                <p>Bringing your workspace back into focus…</p>
+            </div>
+        `
+        return
+    }
+
+    if (kind === 'no-session') {
+        chatArea.innerHTML = `
+            <div class="empty-state empty-state-session">
+                <div class="empty-icon">💬</div>
+                <h2>Start your first conversation</h2>
+                <p>Keep planning, files, objectives, and follow-up work together in one calm thread.</p>
+                <div class="example-chips">
+                    <button class="example-chip" type="button" data-session-action="new">New conversation</button>
+                    <button class="example-chip" type="button" data-prompt="Help me plan today">🗓 plan today</button>
+                    <button class="example-chip" type="button" data-prompt="Review my project status">📊 review status</button>
+                </div>
+            </div>
+        `
+        wireChatPlaceholderActions(chatArea)
+        return
+    }
+
+    chatArea.innerHTML = `
+        <div class="empty-state empty-state-session">
+            <div class="empty-icon">💬</div>
+            <h2>This conversation is ready</h2>
+            <p>Ask Geeksy to plan, edit files, track objectives, or schedule follow-ups here.</p>
+            <div class="example-chips">
+                <button class="example-chip" type="button" data-prompt="Help me plan the next step">🧭 next step</button>
+                <button class="example-chip" type="button" data-prompt="Summarize what needs attention">📝 summarize work</button>
+                <button class="example-chip" type="button" data-prompt="Create a follow-up reminder for tomorrow">⏰ schedule follow-up</button>
+            </div>
+        </div>
+    `
+    wireChatPlaceholderActions(chatArea)
+}
+
+function wireChatPlaceholderActions(root: HTMLElement) {
+    root.querySelectorAll('[data-session-action="new"]').forEach((el) => {
+        el.addEventListener('click', () => openNewSessionModal())
+    })
+
+    root.querySelectorAll('[data-prompt]').forEach((el) => {
+        el.addEventListener('click', () => {
+            const prompt = (el as HTMLElement).dataset.prompt || ''
+            const input = document.getElementById('input') as HTMLTextAreaElement | null
+            if (!input) return
+            input.value = prompt
+            input.dispatchEvent(new Event('input', { bubbles: true }))
+            input.focus()
+        })
+    })
+}
+
+function applyNoSessionComposerState() {
+    const input = document.getElementById('input') as HTMLTextAreaElement | null
+    const sendBtn = document.getElementById('send-btn') as HTMLButtonElement | null
+    document.getElementById('tg-readonly-banner')?.remove()
+
+    if (input) {
+        input.disabled = false
+        input.placeholder = 'Ask Geeksy to start your first conversation...'
+        input.style.opacity = '1'
+    }
+
+    if (sendBtn) {
+        sendBtn.disabled = false
+        sendBtn.style.opacity = '1'
+    }
+}
+
 function wireSessionItem(item: HTMLElement, s: any, onSelect: (id: number, session: any) => void) {
     item.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).closest('.session-item-actions')) return
@@ -49,7 +130,10 @@ function wireSessionItem(item: HTMLElement, s: any, onSelect: (id: number, sessi
         await fetch(`/api/sessions?id=${s.id}`, { method: 'DELETE' })
         if (activeSessionId === s.id) {
             activeSessionId = null
+            stopMessagePolling()
             updateHeaderForSession(null)
+            applyNoSessionComposerState()
+            renderChatPlaceholder('no-session')
         }
         await refreshSessions(onSelect)
     })
@@ -87,10 +171,12 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         list.innerHTML = `
             <div class="session-empty">
                 <div class="session-empty-icon">💬</div>
-                <p>No conversations yet</p>
-                <p class="session-empty-hint">Start a conversation and keep the work in one place.</p>
+                <p class="session-empty-title">No conversations yet</p>
+                <p class="session-empty-hint">Start one thread for planning, files, objectives, and follow-up work.</p>
+                <button class="session-empty-cta" type="button">Start your first conversation</button>
             </div>
         `
+        list.querySelector('.session-empty-cta')?.addEventListener('click', openNewSessionModal)
         return
     }
 
@@ -182,18 +268,14 @@ async function loadSessionChat(sessionId: number) {
     const chatArea = document.getElementById('chat-area')
     if (!chatArea) return
 
+    renderChatPlaceholder('loading')
+
     try {
         const res = await fetch(`/api/sessions/messages?sessionId=${sessionId}`)
         const messages = await res.json()
 
         if (!Array.isArray(messages) || messages.length === 0) {
-            chatArea.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">💬</div>
-                    <h3>Ready to work</h3>
-                    <p>Send a message to start this conversation</p>
-                </div>
-            `
+            renderChatPlaceholder('empty-conversation')
             lastKnownMsgCount = 0
             return
         }
@@ -206,13 +288,7 @@ async function loadSessionChat(sessionId: number) {
         lastKnownMsgCount = messages.length
         scrollDown()
     } catch {
-        chatArea.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">💬</div>
-                <h3>Ready to work</h3>
-                <p>Send a message to start this conversation</p>
-            </div>
-        `
+        renderChatPlaceholder('empty-conversation')
         lastKnownMsgCount = 0
     }
 }
@@ -390,6 +466,8 @@ export async function createTelegramSession() {
 }
 
 export async function initSessionUI() {
+    renderChatPlaceholder('loading')
+
     document.addEventListener('click', (e) => {
         if (!(e.target as HTMLElement).closest('.session-item-actions')) {
             document.querySelectorAll('.session-item-actions.menu-open').forEach((el) => el.classList.remove('menu-open'))
@@ -399,6 +477,7 @@ export async function initSessionUI() {
     wireExistingSessionList(selectSession)
 
     document.getElementById('new-session-btn')?.addEventListener('click', openNewSessionModal)
+    document.querySelector('.session-empty-cta')?.addEventListener('click', openNewSessionModal)
     document.getElementById('close-session-modal')?.addEventListener('click', closeNewSessionModal)
     document.getElementById('create-web-session')?.addEventListener('click', createWebSession)
     document.getElementById('create-telegram-session')?.addEventListener('click', openTelegramSetupModal)
@@ -449,8 +528,16 @@ export async function initSessionUI() {
         activeSessionId = Number(savedSessionId)
         const session = sessions.find((s: any) => s.id === activeSessionId)
         if (session) await selectSession(activeSessionId, session)
+        else if (sessions.length > 0) await selectSession(sessions[0].id, sessions[0])
     } else if (sessions.length > 0) {
         await selectSession(sessions[0].id, sessions[0])
+    } else {
+        activeSessionId = null
+        localStorage.removeItem('geeksy:activeSessionId')
+        stopMessagePolling()
+        updateHeaderForSession(null)
+        applyNoSessionComposerState()
+        renderChatPlaceholder('no-session')
     }
 
     await refreshSessions(mobileSelectHandler)

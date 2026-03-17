@@ -20,8 +20,9 @@ export default function Page() {
                     {sessions.length === 0 ? (
                         <div className="session-empty">
                             <div className="session-empty-icon">💬</div>
-                            <p>No conversations yet</p>
-                            <p className="session-empty-hint">Start a conversation and keep the work in one place.</p>
+                            <p className="session-empty-title">No conversations yet</p>
+                            <p className="session-empty-hint">Start one thread for planning, files, objectives, and follow-up work.</p>
+                            <button className="session-empty-cta" type="button">Start your first conversation</button>
                         </div>
                     ) : (
                         sessions.map((s: any) => (
@@ -93,7 +94,13 @@ export default function Page() {
                 </div>
 
                 <div className="chat-section">
-                    <div className="chat-area" id="chat-area"></div>
+                    <div className="chat-area" id="chat-area">
+                        <div className="empty-state empty-state-loading">
+                            <div className="empty-icon">⏳</div>
+                            <h2>Loading conversations</h2>
+                            <p>Bringing your workspace back into focus…</p>
+                        </div>
+                    </div>
 
                     <div className="input-area">
                         <div className="input-row">

@@ -30,10 +30,12 @@
 - [x] ~~**Prune or hide low-value nav destinations**~~ — ✅ DONE. Demoted side-system destinations in the rail into a calmer `More` group and kept `Main` as the obvious primary destination.
 - [x] ~~**Simplify session list actions**~~ — ✅ DONE. Replaced always-visible delete controls with a calmer overflow menu so session rows feel selectable first and destructive actions are no longer shouting.
 - [x] ~~**Unify session creation language**~~ — ✅ DONE. Standardized the UI around conversations instead of mixed session/chat/bot wording across the main workflow and creation flow.
-- [ ] **Tighten session empty/loading states** — The empty and first-load states still need to match the calmer product direction.
+- [x] ~~**Tighten session empty/loading states**~~ — ✅ DONE. Added calmer sidebar/chat placeholders for first load, no-conversation onboarding, and empty conversations, including clearer CTA/prompt chips.
+- [ ] **Live-check the new session placeholders in browser/mobile** — The calmer empty/loading states should still get a quick visual pass on desktop + narrow layouts.
 - [x] ~~**Prepare production deployment runbook**~~ — ✅ DONE. Added `docs/DEPLOY.md` with the fastest reliable bgrun + env + Caddy deployment path.
 - [x] ~~**Make Geeksy runnable via npx/bunx**~~ — ✅ DONE. Added a real CLI bin, switched package dependencies off local paths, and verified the package tarball is runnable-friendly.
-- [ ] **Publish updated Geeksy npm release** — The new CLI won’t reach `npx geeksy` users until the package is published to npm.
+- [x] ~~**Publish updated Geeksy npm release**~~ — ✅ DONE. Published `geeksy@1.0.0` to npm; `npx geeksy@1.0.0` now resolves the real CLI while `latest` may take a moment to catch up in caches.
+- [ ] **Verify `npx geeksy` latest-tag/cache propagation** — Confirm plain `npx geeksy` resolves `1.0.0` after registry/client caches catch up, not just `npx geeksy@1.0.0`.
 - [ ] **Trim npm package contents** — The tarball still ships extra files that should probably be excluded before release.
 - [ ] **Move production secrets out of tracked local config** — Production secrets should live in env vars or server-local files, not repo-local config.
 - [ ] **Deploy Geeksy to the target server** — Needs the actual server/domain access details to run the deployment.

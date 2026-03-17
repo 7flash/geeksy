@@ -42,10 +42,12 @@
 - [x] ~~**Prune or hide low-value nav destinations**~~ — ✅ DONE. Demoted side-system destinations in the rail into a calmer `More` group and kept `Main` as the obvious primary destination.
 - [x] ~~**Simplify session list actions**~~ — ✅ DONE. Replaced always-visible delete controls with a quieter overflow affordance so rows read as conversations first and destructive actions are revealed only when needed.
 - [x] ~~**Unify session creation language**~~ — ✅ DONE. Standardized the main product voice around conversations instead of mixed session/chat/bot wording across the sidebar, composer, empty states, and creation flow.
-- [ ] **Tighten session empty/loading states** — Session rows are calmer now, but the empty state and first-load experience still need the same polished product voice.
+- [x] ~~**Tighten session empty/loading states**~~ — ✅ DONE. Added calmer sidebar/chat placeholders for first load, no-conversation onboarding, and empty conversations, including clearer CTA/prompt chips.
+- [ ] **Live-check the new session placeholders in browser/mobile** — Give the new empty/loading states a quick visual pass on desktop and narrow layouts to catch spacing/copy issues.
 - [x] ~~**Prepare production deployment runbook**~~ — ✅ DONE. Added `docs/DEPLOY.md` with the fastest repeatable `bgrun` + Caddy + env-based deployment flow.
 - [x] ~~**Make Geeksy runnable via npx/bunx**~~ — ✅ DONE. Added a real `geeksy` bin, switched local dependency paths to published package versions, and verified the package tarball is CLI-ready.
-- [ ] **Publish updated Geeksy npm release** — `npx geeksy` will only use this new CLI after the updated package version is published to npm.
+- [x] ~~**Publish updated Geeksy npm release**~~ — ✅ DONE. Published `geeksy@1.0.0` to npm; `npx geeksy@1.0.0` now resolves the real CLI while `latest` may take a moment to catch up in caches.
+- [ ] **Verify `npx geeksy` latest-tag/cache propagation** — Confirm plain `npx geeksy` resolves `1.0.0` after registry/client caches catch up, not just `npx geeksy@1.0.0`.
 - [ ] **Trim npm package contents** — The tarball still includes tests/backups and other extra files that should likely be excluded before release.
 - [ ] **Move production secrets out of tracked local config** — Do not rely on repo-local config for deployment secrets; production should use env vars or server-local secret files.
 - [ ] **Deploy Geeksy to the target server** — Needs the actual server/domain access details to execute the runbook.

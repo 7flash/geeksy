@@ -159,3 +159,20 @@
     background: rgba(239, 68, 68, 0.12);
     color: #fecaca;
 }
+
+.empty-state-session .empty-icon,
+.empty-state-loading .empty-icon {
+    font-size: 44px;
+}
+
+.empty-state-session h2,
+.empty-state-loading h2 {
+    background: none;
+    -webkit-text-fill-color: initial;
+    color: var(--text-1);
+}
+
+.empty-state-session p,
+.empty-state-loading p {
+    max-width: 420px;
+}
