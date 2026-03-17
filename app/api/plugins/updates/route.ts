@@ -89,7 +89,14 @@ export async function POST(req: Request) {
     if (!plugin) return Response.json({ error: 'Plugin not found' }, { status: 404 })
 
     const latest = await getLatestVersion(plugin.packageName)
-    if (!latest) return Response.json({ error: 'Could not fetch latest version' }, { status: 502 })
+    if (!latest) {
+        return Response.json({
+            success: false,
+            message: 'No registry version available for this plugin yet',
+            packageName: plugin.packageName,
+            version: plugin.version,
+        })
+    }
 
     if (!isNewer(latest, plugin.version || '0.0.0')) {
         return Response.json({ message: 'Already up to date', version: plugin.version })

@@ -5,7 +5,8 @@
 - [x] ~~**Fix models page key-change action**~~ — ✅ DONE. Switched model key actions to explicit delegated button handlers so `Change key`, save, cancel, remove, and Enter-to-save work reliably.
 - [x] ~~**Stop repeated empty-response chat spam**~~ — ✅ DONE. `/api/chat` now stops after the first `LLM returned empty response` error instead of surfacing the same failure across all 10 agent iterations.
 - [x] ~~**Audit remaining writable paths for npm CLI mode**~~ — ✅ DONE. Added `app/lib/paths.ts` and moved skills, backups, saved model keys, plugin install/update paths, and `.config.toml` lookups onto `GEEKSY_HOME` / `GEEKSY_APP_ROOT` aware locations.
-- [ ] **Verify plugin install/update flows in packaged CLI mode** — After the path cleanup, `bun add` / `bun update` plugin flows should be smoke-tested under `npx geeksy` / macOS app-data paths.
+- [x] ~~**Verify plugin install/update flows in packaged CLI mode**~~ — ✅ DONE. Smoke-tested plugin install, manifest/config reads, config save, and update handling under a custom `GEEKSY_HOME`; local/unpublished plugins now degrade gracefully when no npm registry version exists.
+- [ ] **Smoke-test published npm plugin upgrades in packaged CLI mode** — The local-workspace path is covered now, but a real registry-backed plugin should still be tested through `bun add` / `bun update` in app-home mode.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Show CLI version/commit on startup**~~ — ✅ DONE. `npx geeksy` now prints version, commit (when available), and active home/db/skills paths before launching Bun.
