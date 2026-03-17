@@ -24,7 +24,7 @@
 - [x] ~~**Session-aware schedule persistence**~~ — ✅ DONE. Added optional `sessionId` to `schedules`, threaded it through creation/listing/cancellation, and wired chat + Telegram schedule creation to the active session.
 - [x] ~~**Session-scoped schedule filtering in UI**~~ — ✅ DONE. `fetchSchedules()` now requests `/api/schedule?sessionId=...` for the active conversation and schedule-related chat polling uses session-scoped `/api/state` reads.
 - [x] ~~**Simplify Geeksy UI around one primary workflow**~~ — ✅ DONE. The main screen is now centered on sessions + chat with only 3 core tabs (Objectives, Files, Schedule), a reduced metrics bar, and clearer session-first copy.
-- [ ] **Immediate metrics refresh after send completion** — The metrics bar is session-scoped now, but it still waits for the polling interval after a send completes.
+- [x] ~~**Immediate metrics refresh after send completion**~~ — ✅ DONE. Added a `geeksy:refresh-metrics` event; `sendMessage()` dispatches it after completion and `metrics-ui.ts` refreshes the top bar immediately. Verified live in the browser.
 - [ ] **Scheduled chat execution reliability on restart** — Add a regression test or retry guard for chat-based schedules that can fail during server restarts/dev reloads.
 - [ ] **Continue visual cleanup of nav + sessions list** — The main workflow is clearer now, but the remaining chrome still needs a stronger visual design pass.
 

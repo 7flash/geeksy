@@ -397,6 +397,7 @@ export async function sendMessage() {
     clearLoading()
     state.isRunning = false
         ; (window as any).__geeksy_isRunning = false
+    window.dispatchEvent(new CustomEvent('geeksy:refresh-metrics'))
     agent.status = 'idle'
     dom.agentStatusDot.className = 'agent-status-dot'
     setSendButtonMode('send')
