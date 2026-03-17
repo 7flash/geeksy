@@ -1,8 +1,10 @@
 // app/lib/db.ts — Server-side persistence with sqlite-zod-orm
 import { Database, z } from 'sqlite-zod-orm'
-import { join } from 'path'
+import { join, dirname } from 'path'
+import { mkdirSync } from 'fs'
 
-const dbPath = join(process.cwd(), 'data', 'agents.db')
+const dbPath = join(process.env.GEEKSY_HOME || process.cwd(), 'data', 'agents.db')
+mkdirSync(dirname(dbPath), { recursive: true })
 
 export const db = new Database(dbPath, {
     agents: z.object({

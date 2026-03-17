@@ -42,6 +42,8 @@ Optional port override:
 npx geeksy --port 4000
 ```
 
+By default, the npm CLI stores Geeksy data in `~/.geeksy` (`data/agents.db`, `skills/`, backups, and local config). You can override that location with `GEEKSY_HOME`.
+
 Geeksy requires Bun to be installed locally because the server runs on Bun.
 
 Set an API key in Settings or via environment:

@@ -1,7 +1,8 @@
 # Geeksy Personal OS — Tasks & Ideas
 
 ## 🔴 Priority: Fix
-- (none currently)
+- [x] ~~**Fix `npx geeksy` SQLite path**~~ — ✅ DONE. The CLI now launches from a stable writable `~/.geeksy` home, creates `data/agents.db` automatically, and seeds bundled skills there so npm-cache installs no longer fail with `unable to open database file`.
+- [ ] **Audit remaining writable paths for npm CLI mode** — Some config/plugin paths still rely on `process.cwd()` semantics and should be reviewed against `GEEKSY_HOME` / packaged CLI usage.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Heartbeat follow-up UI**~~ — ✅ DONE. Tooltip now shows pending follow-ups list with reasons, countdown timers, and context. Purple badge on heartbeat button when follow-ups queued. API returns full follow-up items.
