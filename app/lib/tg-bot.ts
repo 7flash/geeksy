@@ -198,7 +198,7 @@ async function handleUserMessage(chatId: number, text: string, username: string,
         skills: skillPaths.length > 0 ? skillPaths : undefined,
         maxIterations: 10,
         safeMode,
-        tools: [createScheduleTool(agent.id)],
+        tools: [createScheduleTool(agent.id, dbSessionId)],
     };
 
     // Per-chat sessions — each Telegram user gets their own isolated conversation

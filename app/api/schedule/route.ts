@@ -19,13 +19,18 @@ function detectPort(req: Request) {
 /** GET /api/schedule — list all scheduled tasks */
 export async function GET(req: Request) {
     detectPort(req)
-    const rows = db.schedules.select().all()
+    const url = new URL(req.url)
+    const sessionId = Number(url.searchParams.get('sessionId') || '0') || null
+    const rows = (sessionId
+        ? db.schedules.select().all().filter((r: any) => r.sessionId === sessionId)
+        : db.schedules.select().all())
     const tasks = rows.map(r => ({
         id: String(r.id),
         name: r.name,
         type: r.type,
         status: r.status,
         agentId: r.agentId,
+        sessionId: (r as any).sessionId,
         message: r.message,
         scriptPath: r.scriptPath,
         intervalSec: r.intervalSec,
@@ -68,6 +73,7 @@ export async function POST(req: Request) {
         name: string
         type: 'sequential' | 'interval' | 'once' | 'cron'
         agentId?: number
+        sessionId?: number
         message?: string
         scriptPath?: string
         tasks?: Array<{ name: string; message: string }>
@@ -103,6 +109,7 @@ export async function POST(req: Request) {
         type: body.type || 'once',
         status: 'pending',
         agentId: body.agentId,
+        sessionId: body.sessionId,
         message: body.message,
         scriptPath: body.scriptPath,
         tasks: tasksJson,
@@ -126,10 +133,12 @@ export async function DELETE(req: Request) {
     detectPort(req)
     const url = new URL(req.url)
     const id = url.searchParams.get("id")
+    const sessionId = Number(url.searchParams.get('sessionId') || '0') || null
     if (!id) return Response.json({ error: "Missing id" }, { status: 400 })
 
     const row = db.schedules.select().where({ id: Number(id) }).first()
     if (!row) return Response.json({ error: "Not found" }, { status: 404 })
+    if (sessionId && (row as any).sessionId !== sessionId) return Response.json({ error: "Not found" }, { status: 404 })
 
     db.schedules.update(Number(id), { status: 'cancelled' })
     return Response.json({ ok: true })

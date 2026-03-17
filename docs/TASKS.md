@@ -21,8 +21,10 @@
 - [x] ~~**Show next-run details after schedule creation**~~ — ✅ DONE. Created schedules now get a clean `Schedule Created` chat card with cadence, target, cancel info, and exact next-run timestamp from scheduler state.
 - [x] ~~**Decide global vs session metrics/export behavior**~~ — ✅ DONE. `/api/metrics` and `/api/agent-export` now support optional `sessionId`, keeping global behavior by default while allowing session-scoped messages/objectives/files when requested.
 - [x] ~~**Surface session-scoped metrics in UI**~~ — ✅ DONE. `metrics-ui.ts` now sends `sessionId` to `/api/metrics` using `getActiveSessionId()`, and `sessions-ui.ts` emits `geeksy:session-changed` so counters refresh immediately when you switch conversations.
-- [ ] **Session-aware schedule persistence** — Schedules are still agent-scoped. Add optional `sessionId` so recurring jobs can belong to a specific conversation.
-- [ ] **Session-scoped schedule filtering in UI** — Once schedules gain `sessionId`, filter the Schedule pane to the active conversation instead of the whole agent.
+- [x] ~~**Session-aware schedule persistence**~~ — ✅ DONE. Added optional `sessionId` to `schedules`, threaded it through creation/listing/cancellation, and wired chat + Telegram schedule creation to the active session.
+- [x] ~~**Session-scoped schedule filtering in UI**~~ — ✅ DONE. `fetchSchedules()` now requests `/api/schedule?sessionId=...` for the active conversation and schedule-related chat polling uses session-scoped `/api/state` reads.
+- [ ] **Immediate metrics refresh after send completion** — The metrics bar is session-scoped now, but it still waits for the polling interval after a send completes.
+- [ ] **Scheduled chat execution reliability on restart** — Add a regression test or retry guard for chat-based schedules that can fail during server restarts/dev reloads.
 
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)

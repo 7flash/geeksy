@@ -140,8 +140,9 @@ let schedulePoller: ReturnType<typeof setInterval> | null = null
 let knownMessageCount = 0
 
 export async function fetchSchedules() {
+    const sessionId = getActiveSessionId()
     try {
-        const res = await fetch('/api/schedule')
+        const res = await fetch(sessionId ? `/api/schedule?sessionId=${sessionId}` : '/api/schedule')
         if (res.ok) {
             const data = await res.json()
             // Support both new { tasks, stats } and legacy array format
@@ -161,7 +162,7 @@ export async function fetchSchedules() {
     // Also check for new scheduler-pushed messages
     if (state.activeAgentId) {
         try {
-            const mr = await fetch(`/api/state?agentId=${state.activeAgentId}`)
+            const mr = await fetch(getActiveSessionId() ? `/api/state?agentId=${state.activeAgentId}&sessionId=${getActiveSessionId()}` : `/api/state?agentId=${state.activeAgentId}`)
             if (mr.ok) {
                 const data = await mr.json()
                 const msgs = data.messages || []
@@ -184,7 +185,7 @@ export function startSchedulePolling() {
     if (schedulePoller) return
     // Initialize message count so we don't re-render existing messages
     if (state.activeAgentId) {
-        fetch(`/api/state?agentId=${state.activeAgentId}`)
+        fetch(getActiveSessionId() ? `/api/state?agentId=${state.activeAgentId}&sessionId=${getActiveSessionId()}` : `/api/state?agentId=${state.activeAgentId}`)
             .then(r => r.json())
             .then(data => { knownMessageCount = (data.messages || []).length })
             .catch(() => { })

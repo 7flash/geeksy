@@ -33,8 +33,10 @@
 - [x] ~~**Heartbeat awareness of pending schedules**~~ — ✅ DONE. `app/lib/heartbeat.ts` now treats agent-scoped `pending` and `running` schedules as active work instead of looking for nonexistent `status: 'active'` rows.
 - [x] ~~**Session-scoped metrics/export cleanup**~~ — ✅ DONE. `/api/metrics` now accepts optional `sessionId` and scopes messages/objectives/files accordingly; `/api/agent-export` also accepts `sessionId` and exports session-scoped messages/objectives/files with scope metadata.
 - [x] ~~**Surface session-scoped metrics in UI**~~ — ✅ DONE. `app/lib/metrics-ui.ts` now sends `sessionId` to `/api/metrics` using `getActiveSessionId()`, and `sessions-ui.ts` emits `geeksy:session-changed` so the metrics bar refreshes immediately on session switch.
-- [ ] **Session-aware schedule persistence** — Schedules themselves are still only agent-scoped. Add optional `sessionId` to schedules so recurring jobs can belong to a specific conversation.
-- [ ] **Session-scoped schedule view/filtering** — Once schedules gain `sessionId`, filter the schedule pane by active session too.
+- [x] ~~**Session-aware schedule persistence**~~ — ✅ DONE. Added optional `sessionId` to `schedules`, threaded it through schedule creation/listing/cancellation, wired chat + Telegram schedule tools to the active session, and persisted scheduler output back into the correct session chat.
+- [x] ~~**Session-scoped schedule view/filtering**~~ — ✅ DONE. `fetchSchedules()` now requests `/api/schedule?sessionId=...` for the active session and scheduler-pushed chat polling uses session-scoped `/api/state` reads.
+- [ ] **Immediate metrics refresh after send completion** — Metrics are session-scoped now, but the top bar still waits for the poll interval after chat sends. Refresh metrics immediately on message completion.
+- [ ] **Scheduled chat execution reliability on restart** — Older one-off chat schedules failed during server restarts with connection errors. Add a regression test or retry guard so scheduled chat tasks survive dev restarts more gracefully.
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (Bun-native, file-based routing)

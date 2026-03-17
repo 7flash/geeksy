@@ -125,6 +125,7 @@ Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` an
                     scriptPath,
                     message,
                     agentId: agentId ?? undefined,
+                    sessionId: sessionId ?? undefined,
                     intervalSec,
                     cron,
                     nextRun,
@@ -139,7 +140,7 @@ Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` an
 
                 return {
                     success: true,
-                    output: `Task scheduled! ID=${inserted.id}, name="${name}", type="${type}"${intervalSec ? `, every ${intervalSec}s` : ''}${cron ? `, cron="${cron}"` : ''}\n${target}\nAgent: ${agentId || 'global'}`,
+                    output: `Task scheduled! ID=${inserted.id}, name="${name}", type="${type}"${intervalSec ? `, every ${intervalSec}s` : ''}${cron ? `, cron="${cron}"` : ''}\n${target}\nAgent: ${agentId || 'global'}${sessionId != null ? `\nSession: ${sessionId}` : ''}`,
                 }
             }
 

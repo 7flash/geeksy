@@ -149,7 +149,7 @@ export async function POST(req: Request) {
         maxIterations: 10,
         safeMode,
         systemPrompt,
-        tools: [createScheduleTool(body.agentId)],
+        tools: [createScheduleTool(body.agentId, body.dbSessionId)],
     }
 
     // Get or create session

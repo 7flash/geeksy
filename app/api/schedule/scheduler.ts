@@ -410,6 +410,7 @@ class Scheduler {
         try {
             db.messages.insert({
                 agentId: schedule.agentId,
+                sessionId: schedule.sessionId,
                 role: 'assistant',
                 content: `📋 **${schedule.name}**\n${output.trim()}`,
             })
