@@ -1,0 +1,31 @@
+/* nav-demote.css — keep the rail focused on the core product */
+
+.nav-rail-minimal {
+    justify-content: space-between;
+}
+
+.nav-rail-more-group {
+    gap: 6px;
+    padding-bottom: 8px;
+}
+
+.nav-rail-more-label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    opacity: 0.75;
+    margin-bottom: 2px;
+}
+
+.nav-rail-btn-secondary {
+    opacity: 0.72;
+}
+
+.nav-rail-btn-secondary:hover {
+    opacity: 0.96;
+}
+
+.nav-rail-btn-secondary.active {
+    opacity: 1;
+}

@@ -39,8 +39,9 @@
 - [x] ~~**Immediate metrics refresh after send completion**~~ — ✅ DONE. Added a `geeksy:refresh-metrics` event; `sendMessage()` dispatches it after completion and `metrics-ui.ts` refreshes immediately. Verified live in the browser: session message count updated from 4 → 6 without waiting for the 20s poll.
 - [x] ~~**Scheduled chat execution reliability on restart**~~ — ✅ DONE. `scheduler.ts` now retries chat-based schedule execution on transient server/network failures and sends `dbSessionId` through scheduled chat runs so they land in the correct conversation.
 - [x] ~~**Continue UX pruning in header/sidebar**~~ — ✅ DONE. Applied a calmer chrome pass: quieter header, lighter metrics strip, clearer session copy, and cleaner session row presentation so the main workspace reads as one focused product.
-- [ ] **Prune or hide low-value nav destinations** — The main screen is cleaner, but Models / Skills / Plugins in the rail may still be too much for the core product and need consolidation or demotion.
+- [x] ~~**Prune or hide low-value nav destinations**~~ — ✅ DONE. Demoted side-system destinations in the rail into a calmer `More` group and kept `Main` as the obvious primary destination.
 - [ ] **Simplify session list actions** — Session rows still expose delete-heavy controls and feel dense. Reduce action noise and move destructive actions behind a calmer affordance.
+- [ ] **Unify session creation language** — The product is calmer now, but labels like “Chat Session”, “Telegram Bot”, and sidebar/session wording still need one consistent product voice.
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (Bun-native, file-based routing)

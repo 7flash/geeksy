@@ -27,8 +27,9 @@
 - [x] ~~**Immediate metrics refresh after send completion**~~ — ✅ DONE. Added a `geeksy:refresh-metrics` event; `sendMessage()` dispatches it after completion and `metrics-ui.ts` refreshes the top bar immediately. Verified live in the browser.
 - [x] ~~**Scheduled chat execution reliability on restart**~~ — ✅ DONE. `scheduler.ts` now retries chat-based schedule execution on transient server/network failures and includes `dbSessionId` when scheduled chats run.
 - [x] ~~**Continue visual cleanup of nav + sessions list**~~ — ✅ DONE. Applied a calmer header/sidebar pass with lighter chrome, clearer session-first copy, and a quieter metrics strip so the main workspace feels less noisy.
-- [ ] **Prune or hide low-value nav destinations** — Models / Skills / Plugins may still be too prominent for the core product and should probably be consolidated or demoted.
+- [x] ~~**Prune or hide low-value nav destinations**~~ — ✅ DONE. Demoted side-system destinations in the rail into a calmer `More` group and kept `Main` as the obvious primary destination.
 - [ ] **Simplify session list actions** — Session rows still feel busy and destructive actions are too exposed.
+- [ ] **Unify session creation language** — Labels like “Chat Session”, “Telegram Bot”, and related sidebar copy still need one consistent product voice.
 
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)
