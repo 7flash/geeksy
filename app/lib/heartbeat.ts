@@ -6,6 +6,7 @@ import { createScheduleTool } from './schedule-tool'
 import { sessions } from './session-store'
 import '../api/models/route'
 import { skillsDir } from './paths'
+import { createSkillDiscoveryTools } from './skill-discovery-tool'
 
 let isHeartbeatRunning = false;
 

@@ -12,6 +12,7 @@ import { readdirSync } from "fs"
 import '../models/route'
 
 import { searchSemanticMemory, addSemanticMemory } from '../../lib/embeddings'
+import { createSkillDiscoveryTools } from '../../lib/skill-discovery-tool'
 import { skillsDir } from '../../lib/paths'
 
 import { sessions } from '../../lib/session-store'
@@ -39,7 +40,13 @@ BEHAVIOR:
 - When asked to create files, just create them — don't explain what you'll do first
 - When running commands, show what you're doing, don't narrate it
 - If a command fails, try a different approach — don't repeat the same failing command
-- Never output raw JSON tool calls in your response text — use tools properly`
+- Never output raw JSON tool calls in your response text — use tools properly
+
+SKILL DISCOVERY:
+- When a user asks for something that might need a specialized capability (YouTube, trading, Discord, browser automation, etc.), use search_skills FIRST to check what's available
+- If a useful skill or plugin is found but not installed, tell the user what it does and offer to install it
+- Only use install_skill AFTER the user confirms they want it installed
+- After installing, proceed with objective planning as normal`
 
 /** DELETE /api/chat?sessionId=x — abort a running session */
 export async function DELETE(req: Request) {
@@ -148,7 +155,7 @@ export async function POST(req: Request) {
         maxIterations: 10,
         safeMode,
         systemPrompt,
-        tools: [createScheduleTool(body.agentId, body.dbSessionId)],
+        tools: [createScheduleTool(body.agentId, body.dbSessionId), ...createSkillDiscoveryTools()],
     }
 
     // Get or create session

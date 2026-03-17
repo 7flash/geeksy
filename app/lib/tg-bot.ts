@@ -6,6 +6,7 @@ import { createScheduleTool } from './schedule-tool'
 import { sessions } from './session-store'
 import '../api/models/route'
 import { skillsDir } from './paths'
+import { createSkillDiscoveryTools } from './skill-discovery-tool'
 
 let isTgPollingActive = false;
 let lastUpdateId = 0;
@@ -222,7 +223,7 @@ async function handleUserMessage(chatId: number, text: string, username: string,
         skills: skillPaths.length > 0 ? skillPaths : undefined,
         maxIterations: 10,
         safeMode,
-        tools: [createScheduleTool(agent.id, dbSessionId)],
+        tools: [createScheduleTool(agent.id, dbSessionId), ...createSkillDiscoveryTools()],
     };
 
     // Per-chat sessions — each Telegram user gets their own isolated conversation
