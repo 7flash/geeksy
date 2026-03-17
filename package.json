@@ -1,33 +1,47 @@
 {
-    "name": "geeksy",
-    "version": "1.0.0",
-    "description": "Personal OS for autonomous AI agents",
-    "type": "module",
-    "scripts": {
-        "dev": "bun run app/server.ts",
-        "start": "bun run app/server.ts",
-        "test": "bun test app/lib/",
-        "build:css": "bun run build-css.ts"
-    },
-    "dependencies": {
-        "@tauri-apps/plugin-notification": "~2",
-        "bgrun": "^3.4.0",
-        "js-yaml": "^4.1.0",
-        "jsx-ai": "../jsx-ai",
-        "measure-fn": "latest",
-        "melina": "latest",
-        "react": "^19.2.4",
-        "react-dom": "^19.2.4",
-        "satidb": "latest",
-        "smart-agent-ai": "../smart-agent",
-        "sqlite-zod-orm": "^3.26.0",
-        "zod": "^3.22.0"
-    },
-    "devDependencies": {
-        "@tauri-apps/api": "^2.10.1",
-        "@tauri-apps/cli": "^2.10.1",
-        "@types/bun": "latest",
-        "@types/react": "^19.2.14",
-        "@types/react-dom": "^19.2.3"
-    }
+  "name": "geeksy",
+  "version": "1.0.0",
+  "description": "Personal OS for autonomous AI agents",
+  "type": "module",
+  "bin": {
+    "geeksy": "./bin/geeksy.js"
+  },
+  "scripts": {
+    "dev": "bun run app/server.ts",
+    "start": "bun run app/server.ts",
+    "test": "bun test app/lib/",
+    "build:css": "bun run build-css.ts"
+  },
+  "files": [
+    "app",
+    "bin",
+    "scripts",
+    "skills",
+    "src-tauri",
+    "README.md",
+    "build-css.ts",
+    "tsconfig.json",
+    "bun.lock"
+  ],
+  "dependencies": {
+    "@tauri-apps/plugin-notification": "~2",
+    "bgrun": "^3.4.0",
+    "js-yaml": "^4.1.0",
+    "jsx-ai": "^0.1.5",
+    "measure-fn": "latest",
+    "melina": "latest",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "satidb": "latest",
+    "smart-agent-ai": "^2.4.0",
+    "sqlite-zod-orm": "^3.26.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/cli": "^2.10.1",
+    "@types/bun": "latest",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3"
+  }
 }

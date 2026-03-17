@@ -44,6 +44,9 @@
 - [x] ~~**Unify session creation language**~~ — ✅ DONE. Standardized the main product voice around conversations instead of mixed session/chat/bot wording across the sidebar, composer, empty states, and creation flow.
 - [ ] **Tighten session empty/loading states** — Session rows are calmer now, but the empty state and first-load experience still need the same polished product voice.
 - [x] ~~**Prepare production deployment runbook**~~ — ✅ DONE. Added `docs/DEPLOY.md` with the fastest repeatable `bgrun` + Caddy + env-based deployment flow.
+- [x] ~~**Make Geeksy runnable via npx/bunx**~~ — ✅ DONE. Added a real `geeksy` bin, switched local dependency paths to published package versions, and verified the package tarball is CLI-ready.
+- [ ] **Publish updated Geeksy npm release** — `npx geeksy` will only use this new CLI after the updated package version is published to npm.
+- [ ] **Trim npm package contents** — The tarball still includes tests/backups and other extra files that should likely be excluded before release.
 - [ ] **Move production secrets out of tracked local config** — Do not rely on repo-local config for deployment secrets; production should use env vars or server-local secret files.
 - [ ] **Deploy Geeksy to the target server** — Needs the actual server/domain access details to execute the runbook.
 

@@ -26,6 +26,24 @@ bun run dev
 # → http://localhost:3737
 ```
 
+## CLI
+
+After publishing to npm, Geeksy can be started with:
+
+```bash
+npx geeksy
+# or
+bunx geeksy
+```
+
+Optional port override:
+
+```bash
+npx geeksy --port 4000
+```
+
+Geeksy requires Bun to be installed locally because the server runs on Bun.
+
 Set an API key in Settings or via environment:
 
 ```bash

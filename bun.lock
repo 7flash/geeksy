@@ -8,13 +8,13 @@
         "@tauri-apps/plugin-notification": "~2",
         "bgrun": "^3.4.0",
         "js-yaml": "^4.1.0",
-        "jsx-ai": "../jsx-ai",
+        "jsx-ai": "^0.1.5",
         "measure-fn": "latest",
         "melina": "latest",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "satidb": "latest",
-        "smart-agent-ai": "../smart-agent",
+        "smart-agent-ai": "^2.4.0",
         "sqlite-zod-orm": "^3.26.0",
         "zod": "^3.22.0",
       },
@@ -191,8 +191,6 @@
     "@types/bun": ["@types/bun@1.3.9", "", { "dependencies": { "bun-types": "1.3.9" } }, "sha512-KQ571yULOdWJiMH+RIWIOZ7B2RXQGpL1YQrBtLIV3FqDcCu6FsbFUBwhdKUlCKUpS3PJDsHlJ1QKlpxoVR+xtw=="],
 
     "@types/connect": ["@types/connect@3.4.38", "", { "dependencies": { "@types/node": "*" } }, "sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug=="],
-
-    "@types/js-yaml": ["@types/js-yaml@4.0.9", "", {}, "sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg=="],
 
     "@types/node": ["@types/node@25.1.0", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-t7frlewr6+cbx+9Ohpl0NOTKXZNV9xHRmNOvql47BFJKcEG1CxtxlPEEe+gR9uhVWM4DwhnvTF110mIL4yP9RA=="],
 
@@ -400,7 +398,7 @@
 
     "json-stringify-safe": ["json-stringify-safe@5.0.1", "", {}, "sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA=="],
 
-    "jsx-ai": ["jsx-ai@file:../jsx-ai", { "dependencies": { "gx402": "^1.5.1", "measure-fn": "^3.11.0" }, "devDependencies": { "@types/bun": "^1.3.9" } }],
+    "jsx-ai": ["jsx-ai@0.1.5", "", { "dependencies": { "gx402": "^1.5.1", "measure-fn": "3.10.2" } }, "sha512-aNoQa7RLVmYbrMWneYtbsLtDW1rOTSZ4pLzRCpMh8y/Pcjqod+PmChIqNNht2SrBCYJU88Wp85vu2q3A8qUapA=="],
 
     "lightningcss": ["lightningcss@1.30.2", "", { "dependencies": { "detect-libc": "^2.0.3" }, "optionalDependencies": { "lightningcss-android-arm64": "1.30.2", "lightningcss-darwin-arm64": "1.30.2", "lightningcss-darwin-x64": "1.30.2", "lightningcss-freebsd-x64": "1.30.2", "lightningcss-linux-arm-gnueabihf": "1.30.2", "lightningcss-linux-arm64-gnu": "1.30.2", "lightningcss-linux-arm64-musl": "1.30.2", "lightningcss-linux-x64-gnu": "1.30.2", "lightningcss-linux-x64-musl": "1.30.2", "lightningcss-win32-arm64-msvc": "1.30.2", "lightningcss-win32-x64-msvc": "1.30.2" } }, "sha512-utfs7Pr5uJyyvDETitgsaqSyjCb2qNRAtuqUeWIAKztsOYdcACf2KtARYXg2pSvhkt+9NfoaNY7fxjl6nuMjIQ=="],
 
@@ -520,7 +518,7 @@
 
     "side-channel-weakmap": ["side-channel-weakmap@1.0.2", "", { "dependencies": { "call-bound": "^1.0.2", "es-errors": "^1.3.0", "get-intrinsic": "^1.2.5", "object-inspect": "^1.13.3", "side-channel-map": "^1.0.1" } }, "sha512-WPS/HvHQTYnHisLo9McqBHOJk2FkHO/tlpvldyrnem4aeQp4hai3gythswg6p01oSoTl58rcpiFAjF2br2Ak2A=="],
 
-    "smart-agent-ai": ["smart-agent-ai@file:../smart-agent", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "0.1.5", "measure-fn": "^3.10.2" }, "devDependencies": { "@types/bun": "latest", "@types/js-yaml": "^4.0.9" } }],
+    "smart-agent-ai": ["smart-agent-ai@2.4.0", "", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "0.1.5", "measure-fn": "^3.10.2" } }, "sha512-TAuPCJFRaRSJ89oHCfEVYe50Yrl9QShULaDn3SVC6o8i5toLclZqXpR1N3Dit75opxBBGGrag/y4kgdBaBsjOw=="],
 
     "source-map-js": ["source-map-js@1.2.1", "", {}, "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="],
 
@@ -612,7 +610,7 @@
 
     "jayson/commander": ["commander@2.20.3", "", {}, "sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ=="],
 
-    "jsx-ai/measure-fn": ["measure-fn@3.11.0", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-4qo1VSx6UxaLoSW1IspDhj9SbcNCFCVSJQVUQkxbVUoHwgiSY/9I0ARJ6myoC8uWTnyeGc67EuQ5QEfiX9WwXg=="],
+    "jsx-ai/measure-fn": ["measure-fn@3.10.2", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-wNDbSwDn3gDMI1sizFyr/31rt546cGcM4utSQt8ruiUKNJ/134bSN0okOqjzZw/AE5AYGB6QJTShlYXAzddmiQ=="],
 
     "melina/measure-fn": ["measure-fn@3.5.0", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-z65cmJMhgaaYXV21YZM106Lsv1CnHVEwxt+9doAVBs3ARj6D3cYMlhBMaI14/jGTYiOJYJE7BELHQq6s1D0RnQ=="],
 
@@ -622,19 +620,11 @@
 
     "rpc-websockets/ws": ["ws@8.19.0", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg=="],
 
-    "smart-agent-ai/@types/bun": ["@types/bun@1.3.10", "", { "dependencies": { "bun-types": "1.3.10" } }, "sha512-0+rlrUrOrTSskibryHbvQkDOWRJwJZqZlxrUs1u4oOoTln8+WIXBPmAuCF35SWB2z4Zl3E84Nl/D0P7803nigQ=="],
-
-    "smart-agent-ai/jsx-ai": ["jsx-ai@0.1.5", "", { "dependencies": { "gx402": "^1.5.1", "measure-fn": "3.10.2" } }, "sha512-aNoQa7RLVmYbrMWneYtbsLtDW1rOTSZ4pLzRCpMh8y/Pcjqod+PmChIqNNht2SrBCYJU88Wp85vu2q3A8qUapA=="],
-
     "smart-agent-ai/measure-fn": ["measure-fn@3.11.0", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-4qo1VSx6UxaLoSW1IspDhj9SbcNCFCVSJQVUQkxbVUoHwgiSY/9I0ARJ6myoC8uWTnyeGc67EuQ5QEfiX9WwXg=="],
 
     "ansi-align/string-width/emoji-regex": ["emoji-regex@8.0.0", "", {}, "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A=="],
 
     "ansi-align/string-width/strip-ansi": ["strip-ansi@6.0.1", "", { "dependencies": { "ansi-regex": "^5.0.1" } }, "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A=="],
-
-    "smart-agent-ai/@types/bun/bun-types": ["bun-types@1.3.10", "", { "dependencies": { "@types/node": "*" } }, "sha512-tcpfCCl6XWo6nCVnpcVrxQ+9AYN1iqMIzgrSKYMB/fjLtV2eyAVEg7AxQJuCq/26R6HpKWykQXuSOq/21RYcbg=="],
-
-    "smart-agent-ai/jsx-ai/measure-fn": ["measure-fn@3.10.2", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-wNDbSwDn3gDMI1sizFyr/31rt546cGcM4utSQt8ruiUKNJ/134bSN0okOqjzZw/AE5AYGB6QJTShlYXAzddmiQ=="],
 
     "ansi-align/string-width/strip-ansi/ansi-regex": ["ansi-regex@5.0.1", "", {}, "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ=="],
   }
