@@ -9,9 +9,12 @@ export default function Page() {
     return (
         <div className="gateway-page">
             <div id="session-sidebar" className="session-sidebar">
-                <div className="sidebar-header">
-                    <span className="sidebar-title">⚡ Sessions</span>
-                    <button id="new-session-btn" className="sidebar-new-btn">+ New</button>
+                <div className="sidebar-header sidebar-header-minimal">
+                    <div>
+                        <span className="sidebar-title">Sessions</span>
+                        <div className="sidebar-subtitle">Focused conversations with memory, files, and schedules.</div>
+                    </div>
+                    <button id="new-session-btn" className="sidebar-new-btn">New</button>
                 </div>
                 <div id="session-list" className="session-list">
                     {sessions.length === 0 ? (
@@ -23,16 +26,16 @@ export default function Page() {
                     ) : (
                         sessions.map((s: any) => (
                             <div className="session-item" key={s.id} data-id={s.id} data-type={s.type}>
-                                <div className="session-item-icon">
+                                <div className="session-item-icon session-item-icon-minimal">
                                     {s.type === 'telegram_bot' ? '📱' : s.type === 'api' ? '⚡' : '💬'}
                                 </div>
                                 <div className="session-item-info">
                                     <div className="session-item-name">{s.name}</div>
-                                    <div className="session-item-meta">
+                                    <div className="session-item-meta session-item-meta-minimal">
                                         <span className={`session-type-badge session-type-${s.type}`}>
                                             {s.type === 'telegram_bot' ? 'Telegram' : s.type === 'api' ? 'API' : 'Chat'}
                                         </span>
-                                        <span className="session-item-msgs">{s.messageCount || 0} msgs</span>
+                                        <span className="session-item-msgs">{s.messageCount || 0} messages</span>
                                     </div>
                                 </div>
                                 <div className="session-item-actions">
@@ -45,48 +48,42 @@ export default function Page() {
             </div>
 
             <div className="main-area">
-                <header className="agent-header" id="agent-header">
-                    <div className="agent-header-accent" />
+                <header className="agent-header agent-header-minimal" id="agent-header">
                     <div className="agent-header-content">
                         <div className="agent-header-left">
                             <button className="mobile-menu-btn" id="mobile-menu-btn" title="Open sidebar">☰</button>
                             <div className="agent-identity">
                                 <span className="agent-status-dot active" id="agent-status-dot" />
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <div className="agent-identity-copy">
                                     <span className="agent-header-name" id="agent-header-name">Geeksy</span>
-                                    <span style={{ fontSize: '12px', color: 'var(--text-2)' }}>One session, one conversation, one place for tasks.</span>
+                                    <span className="agent-header-subtitle">Stay in one session and let the work accumulate there.</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="agent-header-actions">
-                            <button className="header-icon-btn" id="heartbeat-toggle-btn" title="Toggle heartbeat">❤</button>
-                            <button className="header-icon-btn" id="export-chat-btn" title="Export chat as Markdown">⬇</button>
-                            <button className="header-icon-btn" id="clear-chat-btn" title="Clear chat (Ctrl+L)">🗑</button>
-                        </div>
-                        <div className="agent-header-right">
+                        <div className="agent-header-right compact-actions">
                             <div className="model-select-wrapper">
                                 <span className="model-select-icon">🧠</span>
                                 <select className="model-select" id="model-select">
                                     <option value="gemini-2.5-flash">gemini-2.5-flash</option>
                                 </select>
                             </div>
+                            <button className="header-icon-btn subtle" id="heartbeat-toggle-btn" title="Toggle heartbeat">❤</button>
+                            <button className="header-icon-btn subtle" id="export-chat-btn" title="Export chat as Markdown">⬇</button>
+                            <button className="header-icon-btn subtle" id="clear-chat-btn" title="Clear chat (Ctrl+L)">🗑</button>
                         </div>
                     </div>
                 </header>
 
-                <div className="agent-metrics-bar" id="agent-metrics-bar">
+                <div className="agent-metrics-bar agent-metrics-bar-minimal" id="agent-metrics-bar">
                     <div className="metric-item" id="metric-messages" title="Messages in this session">
-                        <span className="metric-icon">💬</span>
                         <span className="metric-value" id="metric-val-messages">—</span>
                         <span className="metric-label">messages</span>
                     </div>
                     <div className="metric-item" id="metric-objectives" title="Objective progress">
-                        <span className="metric-icon">✅</span>
                         <span className="metric-value" id="metric-val-objectives">—</span>
                         <span className="metric-label">progress</span>
                     </div>
                     <div className="metric-item" id="metric-schedules" title="Scheduled runs for this session">
-                        <span className="metric-icon">⏱</span>
                         <span className="metric-value" id="metric-val-schedules">—</span>
                         <span className="metric-label">schedules</span>
                     </div>

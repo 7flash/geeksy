@@ -1,0 +1,91 @@
+/* gateway-polish.css — calmer session-first chrome */
+
+.sidebar-header-minimal {
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.sidebar-subtitle {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.4;
+    max-width: 180px;
+}
+
+.session-item-icon-minimal {
+    background: transparent;
+    font-size: 16px;
+}
+
+.session-item-meta-minimal {
+    gap: 8px;
+}
+
+.agent-header-minimal {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.agent-header-minimal .agent-header-accent {
+    display: none;
+}
+
+.agent-identity-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.agent-header-subtitle {
+    font-size: 12px;
+    color: var(--text-2);
+}
+
+.compact-actions {
+    gap: 8px;
+}
+
+.header-icon-btn.subtle {
+    opacity: 0.82;
+}
+
+.header-icon-btn.subtle:hover {
+    opacity: 1;
+}
+
+.agent-metrics-bar-minimal {
+    gap: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.agent-metrics-bar-minimal .metric-item {
+    min-width: 0;
+    padding: 8px 10px;
+}
+
+.agent-metrics-bar-minimal .metric-icon {
+    display: none;
+}
+
+.agent-metrics-bar-minimal .metric-value {
+    font-size: 14px;
+}
+
+.agent-metrics-bar-minimal .metric-label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+}
+
+#session-list .session-item {
+    border: 1px solid transparent;
+}
+
+#session-list .session-item.active {
+    background: rgba(99, 102, 241, 0.10);
+    border-color: rgba(99, 102, 241, 0.22);
+}
+
+#session-list .session-item:hover {
+    background: rgba(255,255,255,0.03);
+}
