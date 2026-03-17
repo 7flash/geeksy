@@ -25,8 +25,9 @@
 - [x] ~~**Session-scoped schedule filtering in UI**~~ — ✅ DONE. `fetchSchedules()` now requests `/api/schedule?sessionId=...` for the active conversation and schedule-related chat polling uses session-scoped `/api/state` reads.
 - [x] ~~**Simplify Geeksy UI around one primary workflow**~~ — ✅ DONE. The main screen is now centered on sessions + chat with only 3 core tabs (Objectives, Files, Schedule), a reduced metrics bar, and clearer session-first copy.
 - [x] ~~**Immediate metrics refresh after send completion**~~ — ✅ DONE. Added a `geeksy:refresh-metrics` event; `sendMessage()` dispatches it after completion and `metrics-ui.ts` refreshes the top bar immediately. Verified live in the browser.
-- [ ] **Scheduled chat execution reliability on restart** — Add a regression test or retry guard for chat-based schedules that can fail during server restarts/dev reloads.
+- [x] ~~**Scheduled chat execution reliability on restart**~~ — ✅ DONE. `scheduler.ts` now retries chat-based schedule execution on transient server/network failures and includes `dbSessionId` when scheduled chats run.
 - [ ] **Continue visual cleanup of nav + sessions list** — The main workflow is clearer now, but the remaining chrome still needs a stronger visual design pass.
+- [ ] **Prune or hide low-value nav destinations** — Models / Skills / Plugins may still be too prominent for the core product and should probably be consolidated or demoted.
 
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)

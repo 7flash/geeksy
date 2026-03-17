@@ -183,41 +183,59 @@ class Scheduler {
     /** Send a message to the chat API */
     private async runChat(schedule: any): Promise<{ success: boolean; output: string; error?: string }> {
         const timeoutMs = (schedule.timeoutSec || 30) * 1000
-        try {
-            const controller = new AbortController()
-            const timer = setTimeout(() => controller.abort(), timeoutMs)
+        const maxAttempts = 4
+        let lastError = ''
 
-            const res = await fetch(`${getBaseUrl()}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: schedule.message,
-                    model: 'gemini-2.5-flash',
-                    agentId: schedule.agentId,
-                }),
-                signal: controller.signal,
-            })
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const controller = new AbortController()
+                const timer = setTimeout(() => controller.abort(), timeoutMs)
 
-            clearTimeout(timer)
+                const res = await fetch(`${getBaseUrl()}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: schedule.message,
+                        model: 'gemini-2.5-flash',
+                        agentId: schedule.agentId,
+                        dbSessionId: schedule.sessionId,
+                    }),
+                    signal: controller.signal,
+                })
 
-            if (res.ok && res.body) {
-                const reader = res.body.getReader()
-                const decoder = new TextDecoder()
-                let output = ''
-                while (true) {
-                    const { done, value } = await reader.read()
-                    if (done) break
-                    output += decoder.decode(value, { stream: true })
+                clearTimeout(timer)
+
+                if (res.ok && res.body) {
+                    const reader = res.body.getReader()
+                    const decoder = new TextDecoder()
+                    let output = ''
+                    while (true) {
+                        const { done, value } = await reader.read()
+                        if (done) break
+                        output += decoder.decode(value, { stream: true })
+                    }
+                    return { success: true, output: output.substring(0, 500) }
                 }
-                return { success: true, output: output.substring(0, 500) }
+
+                lastError = `HTTP ${res.status}`
+                if (attempt < maxAttempts && (res.status >= 500 || res.status === 429)) {
+                    await Bun.sleep(500 * attempt)
+                    continue
+                }
+                return { success: false, output: '', error: lastError }
+            } catch (err: any) {
+                if (err.name === 'AbortError') {
+                    return { success: false, output: '', error: `Chat request timed out after ${timeoutMs / 1000}s` }
+                }
+                lastError = err.message || String(err)
+                if (attempt < maxAttempts) {
+                    await Bun.sleep(500 * attempt)
+                    continue
+                }
             }
-            return { success: false, output: '', error: `HTTP ${res.status}` }
-        } catch (err: any) {
-            if (err.name === 'AbortError') {
-                return { success: false, output: '', error: `Chat request timed out after ${timeoutMs / 1000}s` }
-            }
-            return { success: false, output: '', error: err.message || String(err) }
         }
+
+        return { success: false, output: '', error: lastError || 'Scheduled chat failed' }
     }
 
     /** Run a sequential batch of tasks */
