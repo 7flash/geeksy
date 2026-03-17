@@ -6,3 +6,9 @@ node_modules/
 .config.toml
 data/
 test-*.ts
+out/
+temp.html
+# Test files
+app/**/*.test.ts
+.geeksy-keys.json
+*.bak

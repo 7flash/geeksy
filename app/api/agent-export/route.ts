@@ -1,25 +1,37 @@
 // app/api/agent-export/route.ts — Agent state export/import (no auth)
 import { db } from '../../lib/db'
 
-/** GET /api/agent-export?id=1 — Download full agent state as JSON */
+/** GET /api/agent-export?id=1[&sessionId=2] — Download full agent state as JSON */
 export async function GET(req: Request) {
     const url = new URL(req.url)
     const id = parseInt(url.searchParams.get('id') || '0')
+    const sessionId = parseInt(url.searchParams.get('sessionId') || '0') || null
     if (!id) return Response.json({ error: 'Missing agent id' }, { status: 400 })
 
     const agent = db.agents.select().where({ id }).first()
     if (!agent) return Response.json({ error: 'Agent not found' }, { status: 404 })
 
-    const messages = db.messages.select().where({ agentId: id }).all()
-    const objectives = db.objectives.select().where({ agentId: id }).all()
-    const files = db.files.select().where({ agentId: id }).all()
+    const session = sessionId ? db.sessions.select().where({ id: sessionId }).first() : null
+    if (sessionId && !session) return Response.json({ error: 'Session not found' }, { status: 404 })
+
+    const messages = sessionId
+        ? db.messages.select().where({ agentId: id, sessionId }).all()
+        : db.messages.select().where({ agentId: id }).all()
+    const objectives = sessionId
+        ? db.objectives.select().where({ agentId: id, sessionId } as any).all()
+        : db.objectives.select().where({ agentId: id }).all()
+    const files = sessionId
+        ? db.files.select().where({ agentId: id, sessionId } as any).all()
+        : db.files.select().where({ agentId: id }).all()
     const state = db.agentState.select().where({ agentId: id }).all()
     const schedules = db.schedules.select().where({ agentId: id }).all()
 
     const exported = {
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
+        scope: { agentId: id, sessionId },
         agent,
+        session,
         messages,
         objectives,
         files,
@@ -33,10 +45,14 @@ export async function GET(req: Request) {
         }
     }
 
+    const fileLabel = sessionId && session
+        ? `session-${session.name.replace(/\s+/g, '-')}`
+        : `agent-${agent.name.replace(/\s+/g, '-')}`
+
     return new Response(JSON.stringify(exported, null, 2), {
         headers: {
             'Content-Type': 'application/json',
-            'Content-Disposition': `attachment; filename="agent-${agent.name.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.json"`,
+            'Content-Disposition': `attachment; filename="${fileLabel}-${new Date().toISOString().slice(0, 10)}.json"`,
         }
     })
 }

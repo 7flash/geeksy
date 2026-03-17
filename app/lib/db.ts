@@ -30,6 +30,7 @@ export const db = new Database(dbPath, {
     }),
     objectives: z.object({
         agentId: z.number(),
+        sessionId: z.number().optional(),
         name: z.string(),
         description: z.string(),
         type: z.string(),
@@ -38,6 +39,7 @@ export const db = new Database(dbPath, {
     }),
     files: z.object({
         agentId: z.number(),
+        sessionId: z.number().optional(),
         path: z.string(),
         action: z.string().default('read'), // read | write
     }),
@@ -46,6 +48,7 @@ export const db = new Database(dbPath, {
         type: z.string().default('once'),         // sequential | interval | once | cron
         status: z.string().default('pending'),     // pending | running | completed | failed | cancelled
         agentId: z.number().optional(),
+        sessionId: z.number().optional(),
         message: z.string().optional(),            // single prompt (for chat-based tasks)
         scriptPath: z.string().optional(),         // path to script file (for script-based tasks)
         tasks: z.string().optional(),              // JSON array of { id, name, message, status }
@@ -98,10 +101,10 @@ export const db = new Database(dbPath, {
     },
     indexes: {
         messages: ['agentId', 'sessionId'],
-        objectives: ['agentId'],
-        files: ['agentId'],
+        objectives: ['agentId', 'sessionId'],
+        files: ['agentId', 'sessionId'],
         followUps: ['agentId', 'status'],
-        schedules: ['status', 'agentId'],
+        schedules: ['status', 'agentId', 'sessionId'],
         agentState: ['agentId'],
         plugins: ['packageName'],
         sessions: ['type', 'status'],

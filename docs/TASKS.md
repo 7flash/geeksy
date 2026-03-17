@@ -14,9 +14,20 @@
 - [x] ~~**Heartbeat action history**~~ — ✅ DONE. Plumbed `data.lastToolCalls` up to the `heartbeat-ui.ts` floating tooltip to display exactly what the agent did historically (up to 5 events) in a timeline style.
 - [ ] **Heartbeat live scheduling test** — Send a tool-heavy message, verify the framework schedules a 2-minute follow-up tick, and then observe the background bot act on the pending item when the scheduled delay completes.
 
+## 🚧 New Tasks
+- [x] ~~**Chat-native schedule tool for prompts + cron**~~ — ✅ DONE. `app/lib/schedule-tool.ts` now supports both `message`-based schedules and `scriptPath` schedules with `once`, `interval`, and `cron` task types.
+- [x] ~~**Session-scoped objectives/files timeline**~~ — ✅ DONE. Added optional `sessionId` persistence for objectives/files, scoped `/api/state` by session, and rehydrate objectives/files when switching sessions so each conversation has isolated state.
+- [x] ~~**Fix heartbeat schedule visibility**~~ — ✅ DONE. `heartbeat.ts` now treats agent-scoped `pending` and `running` schedule rows as active work, so scheduled jobs are visible to heartbeat reasoning.
+- [x] ~~**Show next-run details after schedule creation**~~ — ✅ DONE. Created schedules now get a clean `Schedule Created` chat card with cadence, target, cancel info, and exact next-run timestamp from scheduler state.
+- [x] ~~**Decide global vs session metrics/export behavior**~~ — ✅ DONE. `/api/metrics` and `/api/agent-export` now support optional `sessionId`, keeping global behavior by default while allowing session-scoped messages/objectives/files when requested.
+- [x] ~~**Surface session-scoped metrics in UI**~~ — ✅ DONE. `metrics-ui.ts` now sends `sessionId` to `/api/metrics` using `getActiveSessionId()`, and `sessions-ui.ts` emits `geeksy:session-changed` so counters refresh immediately when you switch conversations.
+- [ ] **Session-aware schedule persistence** — Schedules are still agent-scoped. Add optional `sessionId` so recurring jobs can belong to a specific conversation.
+- [ ] **Session-scoped schedule filtering in UI** — Once schedules gain `sessionId`, filter the Schedule pane to the active conversation instead of the whole agent.
+
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)
 - **Heartbeat**: Adaptive 30s–5min interval, circuit breaker, follow-up queue
 - **Dashboard**: `app/page.client.tsx` → modules: heartbeat-ui, metrics-ui, sessions-ui, agents, search-ui, panels
+- **CSS**: modular app/css files compiled into globals.css
 - **Plugins**: geeksy-plugin.json manifest, Telegram gateway, Pumpfun Trading
-- **Tests**: 16 passing (heartbeat stats + follow-up system) — `bun test`
+- **Tests**: 21 passing (heartbeat stats + follow-up system + drain lifecycle) — `bun test`

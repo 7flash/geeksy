@@ -180,7 +180,13 @@ export async function runHeartbeat() {
         let activePlugins: any[] = [];
         let pendingSchedules: any[] = [];
         try { activePlugins = db.plugins?.select().where({ status: 'running' }).all() || []; } catch (e) { console.warn('[heartbeat] plugins query failed:', e); }
-        try { pendingSchedules = db.schedules?.select().where({ status: 'active' }).all() || []; } catch (e) { console.warn('[heartbeat] schedules query failed:', e); }
+        try {
+            pendingSchedules = (db.schedules?.select().all() || []).filter((s: any) => {
+                const isForAgent = !s.agentId || s.agentId === agent.id;
+                const isActiveStatus = s.status === 'pending' || s.status === 'running';
+                return isForAgent && isActiveStatus;
+            });
+        } catch (e) { console.warn('[heartbeat] schedules query failed:', e); }
 
         // Drain ready follow-ups
         const followUps = drainFollowUps(agent.id);

@@ -58,6 +58,17 @@ const PROVIDERS: ProviderDef[] = [
             { id: 'deepseek-chat', name: 'DeepSeek Chat', description: 'Open-weight model. Strong coding and reasoning at lower cost.', tier: 'stable' },
         ],
     },
+    {
+        id: 'qwen',
+        name: 'Qwen (DashScope)',
+        envKey: 'QWEN_API_KEY',
+        envKeyAlt: 'DASHSCOPE_API_KEY',
+        models: [
+            { id: 'qwen3.5-plus', name: 'Qwen 3.5 Plus', description: 'Latest Qwen model with strong coding and reasoning. OpenAI-compatible API.', tier: 'recommended' },
+            { id: 'qwen-plus', name: 'Qwen Plus', description: 'Balanced Qwen model for general tasks.', tier: 'stable' },
+            { id: 'qwen-turbo', name: 'Qwen Turbo', description: 'Fast and cost-effective Qwen model.', tier: 'stable' },
+        ],
+    },
 ]
 
 // ── Persistent key storage ──

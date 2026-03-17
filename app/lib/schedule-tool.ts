@@ -1,7 +1,7 @@
 // app/lib/schedule-tool.ts — Schedule tool for the agent
 // Creates scheduled tasks that execute scripts or chat messages on intervals
 import { db } from './db'
-import { scheduler } from '../api/schedule/scheduler'
+import { scheduler, getNextCronRun } from '../api/schedule/scheduler'
 import type { Tool, ToolResult } from 'smart-agent-ai'
 
 function parseIntervalStr(str: string): number {
@@ -15,27 +15,31 @@ function parseIntervalStr(str: string): number {
     return num
 }
 
-export function createScheduleTool(agentId?: number): Tool {
+export function createScheduleTool(agentId?: number, sessionId?: number): Tool {
     return {
         name: 'schedule',
-        description: `Create, list, or cancel scheduled tasks that run scripts on intervals.
-Use action="create" with scriptPath to schedule a script file for execution.
-The scheduler runs "bun run <scriptPath>" with env vars AGENT_ID and STATE_URL injected.
-Scripts can persist state via STATE_URL (GET/POST to /api/agent-state).
-Schedules are scoped to the current agent (agentId=${agentId}).`,
+        description: `Create, list, or cancel scheduled tasks.
+You can schedule either:
+- scriptPath: run a Bun script file
+- message: send a prompt back into Geeksy later
+Supported types: once, interval, cron.
+Use interval for repeating tasks like every 5m.
+Use cron for calendar schedules like "0 9 * * *".
+Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` and session (sessionId=${sessionId})` : ''}.`,
         parameters: {
             action: { type: 'string', description: 'One of: create, list, cancel', required: true },
             name: { type: 'string', description: 'Name of the scheduled task (for create/cancel)', required: false },
-            scriptPath: { type: 'string', description: 'Path to the script file to execute (for create). The scheduler runs "bun run <scriptPath>"', required: false },
-            interval: { type: 'string', description: 'How often to run, e.g. "60s", "5m", "1h" (for interval tasks)', required: false },
-            type: { type: 'string', description: 'Task type: "interval" (repeating), "once" (one-time). Default: interval', required: false },
+            scriptPath: { type: 'string', description: 'Path to the Bun script file to execute later', required: false },
+            message: { type: 'string', description: 'A prompt/message for Geeksy to run later as a scheduled chat task', required: false },
+            interval: { type: 'string', description: 'How often to run interval tasks, e.g. "60s", "5m", "1h"', required: false },
+            cron: { type: 'string', description: 'Cron expression for cron tasks, e.g. "0 9 * * *"', required: false },
+            type: { type: 'string', description: 'Task type: "once", "interval", or "cron". Default: once', required: false },
             id: { type: 'string', description: 'Task ID (for cancel)', required: false },
         },
         execute: async (params: Record<string, any>): Promise<ToolResult> => {
             const action = params.action as string
 
             if (action === 'list') {
-                // Show tasks for this agent
                 const rows = db.schedules.select().all()
                     .filter((r: any) => !agentId || r.agentId === agentId)
                 const tasks = rows.map((r: any) => ({
@@ -44,7 +48,10 @@ Schedules are scoped to the current agent (agentId=${agentId}).`,
                     type: r.type,
                     status: r.status,
                     scriptPath: r.scriptPath,
+                    message: r.message,
                     intervalSec: r.intervalSec,
+                    cron: r.cron,
+                    nextRun: r.nextRun,
                     lastRun: r.lastRun ? new Date(r.lastRun).toLocaleTimeString() : null,
                     lastOutput: r.lastOutput?.substring(0, 200),
                     completedCount: r.completedCount || 0,
@@ -52,7 +59,7 @@ Schedules are scoped to the current agent (agentId=${agentId}).`,
                 return {
                     success: true,
                     output: tasks.length > 0
-                        ? `${tasks.length} scheduled tasks:\n${tasks.map(t => `  - [${t.id}] "${t.name}" (${t.type}, ${t.status}) script=${t.scriptPath}${t.intervalSec ? ` every ${t.intervalSec}s` : ''}${t.completedCount ? ` — ran ${t.completedCount}×` : ''}${t.lastOutput ? `\n    Last output: ${t.lastOutput}` : ''}`).join('\n')}`
+                        ? `${tasks.length} scheduled tasks:\n${tasks.map(t => `  - [${t.id}] "${t.name}" (${t.type}, ${t.status})${t.scriptPath ? ` script=${t.scriptPath}` : ''}${t.message ? ` message=${JSON.stringify(t.message).slice(0, 120)}` : ''}${t.intervalSec ? ` every ${t.intervalSec}s` : ''}${t.cron ? ` cron=${t.cron}` : ''}${t.nextRun ? ` next=${new Date(t.nextRun).toLocaleString()}` : ''}${t.completedCount ? ` — ran ${t.completedCount}×` : ''}${t.lastOutput ? `\n    Last output: ${t.lastOutput}` : ''}`).join('\n')}`
                         : 'No scheduled tasks for this agent.',
                 }
             }
@@ -74,41 +81,65 @@ Schedules are scoped to the current agent (agentId=${agentId}).`,
 
             if (action === 'create') {
                 const name = params.name as string
-                const scriptPath = params.scriptPath as string
-                const type = (params.type as string) || 'interval'
+                const scriptPath = params.scriptPath as string | undefined
+                const message = params.message as string | undefined
+                const type = ((params.type as string) || 'once').toLowerCase()
 
                 if (!name) {
                     return { success: false, output: '', error: 'name is required for create.' }
                 }
-                if (!scriptPath) {
-                    return { success: false, output: '', error: 'scriptPath is required. Create a script file first, then schedule it.' }
+                if (!scriptPath && !message) {
+                    return { success: false, output: '', error: 'Provide either scriptPath or message for create.' }
+                }
+                if (scriptPath && message) {
+                    return { success: false, output: '', error: 'Use either scriptPath or message, not both.' }
+                }
+                if (!['once', 'interval', 'cron'].includes(type)) {
+                    return { success: false, output: '', error: `Unsupported type: ${type}. Use once, interval, or cron.` }
                 }
 
-                // Verify script exists
-                const file = Bun.file(scriptPath)
-                if (!await file.exists()) {
-                    return { success: false, output: '', error: `Script file not found: ${scriptPath}. Create the file first.` }
+                if (scriptPath) {
+                    const file = Bun.file(scriptPath)
+                    if (!await file.exists()) {
+                        return { success: false, output: '', error: `Script file not found: ${scriptPath}. Create the file first.` }
+                    }
                 }
 
-                const intervalSec = type === 'interval' ? parseIntervalStr(params.interval || '60s') : undefined
+                const intervalSec = type === 'interval'
+                    ? parseIntervalStr(String(params.interval || '60s'))
+                    : undefined
+
+                const cron = type === 'cron' ? String(params.cron || '').trim() : undefined
+                if (type === 'cron' && !cron) {
+                    return { success: false, output: '', error: 'cron is required when type="cron".' }
+                }
+
+                let nextRun: number | undefined
+                if (type === 'interval') nextRun = Date.now()
+                else if (type === 'cron' && cron) nextRun = getNextCronRun(cron)
 
                 const inserted = db.schedules.insert({
                     name,
                     type: type as any,
                     status: 'pending',
                     scriptPath,
+                    message,
                     agentId: agentId ?? undefined,
                     intervalSec,
-                    nextRun: type === 'interval' ? Date.now() : undefined,
+                    cron,
+                    nextRun,
                     completedCount: 0,
                 })
 
-                // Ensure scheduler is running
                 scheduler.start()
+
+                const target = scriptPath
+                    ? `Script: ${scriptPath}\nThe scheduler will run "bun run ${scriptPath}" with AGENT_ID=${agentId} and STATE_URL injected.`
+                    : `Message: ${message}`
 
                 return {
                     success: true,
-                    output: `Task scheduled! ID=${inserted.id}, name="${name}", type="${type}"${intervalSec ? `, every ${intervalSec}s` : ''}\nScript: ${scriptPath}\nAgent: ${agentId || 'global'}\nThe scheduler will run "bun run ${scriptPath}" with AGENT_ID=${agentId} and STATE_URL injected.`,
+                    output: `Task scheduled! ID=${inserted.id}, name="${name}", type="${type}"${intervalSec ? `, every ${intervalSec}s` : ''}${cron ? `, cron="${cron}"` : ''}\n${target}\nAgent: ${agentId || 'global'}`,
                 }
             }
 

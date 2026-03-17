@@ -258,8 +258,8 @@ async function handleUserMessage(chatId: number, text: string, username: string,
                 for (const obj of objectives) {
                     try {
                         db.objectives.upsert(
-                            { agentId: agent.id, name: obj.name },
-                            { agentId: agent.id, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
+                            { agentId: agent.id, sessionId: dbSessionId, name: obj.name } as any,
+                            { agentId: agent.id, sessionId: dbSessionId, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
                         )
                     } catch { }
                 }
@@ -267,7 +267,7 @@ async function handleUserMessage(chatId: number, text: string, username: string,
             if (event.type === 'objective_check') {
                 const results = (event as any).results || []
                 for (const r of results) {
-                    const existing = db.objectives.select().where({ agentId: agent.id, name: r.name }).first()
+                    const existing = db.objectives.select().where({ agentId: agent.id, sessionId: dbSessionId, name: r.name } as any).first()
                     if (existing) {
                         db.objectives.update(existing.id, {
                             status: r.met ? 'complete' : 'failed',

@@ -3,22 +3,31 @@ import { db } from '../../lib/db'
 import { getHeartbeatStats } from '../../lib/heartbeat'
 
 export async function GET(req: Request) {
+    const url = new URL(req.url)
+    const sessionId = Number(url.searchParams.get('sessionId') || '0') || null
+
     const heartbeat = getHeartbeatStats()
     const heartbeatPaused = db.agentState.select().where({ agentId: 1, key: 'heartbeat_paused' }).first()
 
-    // Message count for global agent
-    const messages = db.messages.select().where({ agentId: 1 }).all()
+    // Message count for global agent or active session
+    const messages = sessionId
+        ? db.messages.select().where({ agentId: 1, sessionId }).all()
+        : db.messages.select().where({ agentId: 1 }).all()
     const userMessages = messages.filter(m => m.role === 'user')
     const assistantMessages = messages.filter(m => m.role === 'assistant')
 
     // Objectives
-    const objectives = db.objectives.select().where({ agentId: 1 }).all()
+    const objectives = sessionId
+        ? db.objectives.select().where({ agentId: 1, sessionId } as any).all()
+        : db.objectives.select().where({ agentId: 1 }).all()
     const completedObj = objectives.filter(o => o.status === 'completed' || o.status === 'complete')
     const pendingObj = objectives.filter(o => o.status === 'pending')
     const failedObj = objectives.filter(o => o.status === 'failed')
 
     // Schedules
-    const schedules = db.schedules.select().all()
+    const schedules = (sessionId
+        ? db.schedules.select().where({ agentId: 1 }).all().filter((s: any) => !s.sessionId || s.sessionId === sessionId)
+        : db.schedules.select().where({ agentId: 1 }).all())
     const runningSchedules = schedules.filter(s => s.status === 'running')
     const pendingSchedules = schedules.filter(s => s.status === 'pending')
     const totalSuccess = schedules.reduce((sum, s) => sum + (s.successCount || 0), 0)
@@ -67,12 +76,18 @@ export async function GET(req: Request) {
     const agents = db.agents.select().all()
 
     // Files touched
-    const files = db.files.select().where({ agentId: 1 }).all()
+    const files = sessionId
+        ? db.files.select().where({ agentId: 1, sessionId } as any).all()
+        : db.files.select().where({ agentId: 1 }).all()
 
     // Uptime
     const uptimeMs = heartbeat.uptimeMs || 0
 
     return Response.json({
+        scope: {
+            agentId: 1,
+            sessionId,
+        },
         heartbeat: {
             paused: heartbeatPaused?.value === 'true',
             totalTicks: heartbeat.totalTicks || 0,

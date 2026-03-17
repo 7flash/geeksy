@@ -1,7 +1,8 @@
 // app/lib/sessions-ui.ts — Session management UI: CRUD, selection, modals, telegram setup
 import { renderMarkdown } from './markdown'
-import { dom } from './state'
+import { dom, state, getActiveAgent } from './state'
 import { appendUserBubble, appendResponseBubble, scrollDown } from './chat-ui'
+import { renderFilesPane, renderObjectivesPane } from './panels'
 
 let activeSessionId: number | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -80,6 +81,7 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
 export async function selectSession(id: number, session?: any) {
     activeSessionId = id
     localStorage.setItem('geeksy:activeSessionId', String(id))
+    window.dispatchEvent(new CustomEvent('geeksy:session-changed', { detail: { sessionId: id } }))
 
     document.querySelectorAll('.session-item').forEach(el => {
         (el as HTMLElement).classList.toggle('active', (el as HTMLElement).dataset.id === String(id))
@@ -93,6 +95,7 @@ export async function selectSession(id: number, session?: any) {
     }
     updateHeaderForSession(session)
     await loadSessionChat(id)
+    await loadSessionState(id)
     startMessagePolling(id)
 
     // ── Telegram sessions: disable chat input ──
@@ -175,6 +178,45 @@ async function loadSessionChat(sessionId: number) {
             </div>
         `
         lastKnownMsgCount = 0
+    }
+}
+
+async function loadSessionState(sessionId: number) {
+    const agent = getActiveAgent()
+    if (!agent?.id) return
+
+    try {
+        const res = await fetch(`/api/state?agentId=${agent.id}&sessionId=${sessionId}`)
+        const data = await res.json()
+
+        const restored = (data.objectives || []).map((o: any) => ({
+            name: o.name,
+            description: o.description,
+            type: o.type,
+            met: o.status === 'complete' ? true : o.status === 'failed' ? false : undefined,
+            reason: o.result,
+        }))
+
+        state.objectives = restored
+        state.objectiveGroups = restored.length > 0 ? [{
+            id: Date.now(),
+            timestamp: Date.now(),
+            label: 'Session State',
+            objectives: restored,
+        }] : []
+        state.files = (data.files || []).map((f: any) => ({
+            path: f.path,
+            action: f.action === 'write' ? 'write' as const : 'read' as const,
+        }))
+
+        renderObjectivesPane()
+        renderFilesPane()
+    } catch {
+        state.objectives = []
+        state.objectiveGroups = []
+        state.files = []
+        renderObjectivesPane()
+        renderFilesPane()
     }
 }
 

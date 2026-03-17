@@ -1,15 +1,21 @@
 // app/api/state/route.ts — Per-agent state API backed by SQLite
 import { db } from '../../lib/db'
 
-/** GET /api/state?agentId=x — full state for an agent */
+/** GET /api/state?agentId=x[&sessionId=y] — full state for an agent or specific session */
 export async function GET(req: Request) {
     const url = new URL(req.url)
     const agentId = Number(url.searchParams.get('agentId'))
+    const sessionIdParam = url.searchParams.get('sessionId')
+    const sessionId = sessionIdParam ? Number(sessionIdParam) : null
     if (!agentId) return Response.json({ error: 'Missing agentId' }, { status: 400 })
 
     const messages = db.messages.select().where({ agentId }).orderBy('id', 'asc').all()
-    const objectives = db.objectives.select().where({ agentId }).orderBy('id', 'asc').all()
-    const files = db.files.select().where({ agentId }).orderBy('id', 'asc').all()
+    const objectives = sessionId
+        ? db.objectives.select().where({ agentId, sessionId } as any).orderBy('id', 'asc').all()
+        : db.objectives.select().where({ agentId }).orderBy('id', 'asc').all()
+    const files = sessionId
+        ? db.files.select().where({ agentId, sessionId } as any).orderBy('id', 'asc').all()
+        : db.files.select().where({ agentId }).orderBy('id', 'asc').all()
 
     return Response.json({ messages, objectives, files })
 }
@@ -18,6 +24,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     const body = await req.json() as {
         agentId: number
+        sessionId?: number
         type: 'message' | 'objective' | 'file'
         data: any
     }
@@ -28,16 +35,16 @@ export async function POST(req: Request) {
 
     switch (body.type) {
         case 'message':
-            db.messages.insert({ agentId: body.agentId, ...body.data })
+            db.messages.insert({ agentId: body.agentId, sessionId: body.sessionId, ...body.data })
             break
         case 'objective':
-            db.objectives.insert({ agentId: body.agentId, ...body.data })
+            db.objectives.insert({ agentId: body.agentId, sessionId: body.sessionId, ...body.data })
             break
         case 'file':
-            // Upsert — don't duplicate file entries
+            // Upsert — don't duplicate file entries within the same session scope
             db.files.upsert(
-                { agentId: body.agentId, path: body.data.path },
-                { agentId: body.agentId, path: body.data.path, action: body.data.action || 'read' },
+                { agentId: body.agentId, sessionId: body.sessionId, path: body.data.path } as any,
+                { agentId: body.agentId, sessionId: body.sessionId, path: body.data.path, action: body.data.action || 'read' },
             )
             break
     }
@@ -49,6 +56,7 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
     const body = await req.json() as {
         agentId: number
+        sessionId?: number
         objectives?: Array<{ name: string; status: string; result?: string }>
     }
 
@@ -56,7 +64,9 @@ export async function PUT(req: Request) {
 
     if (body.objectives) {
         for (const o of body.objectives) {
-            const existing = db.objectives.select().where({ agentId: body.agentId, name: o.name }).first()
+            const existing = body.sessionId
+                ? db.objectives.select().where({ agentId: body.agentId, sessionId: body.sessionId, name: o.name } as any).first()
+                : db.objectives.select().where({ agentId: body.agentId, name: o.name }).first()
             if (existing) {
                 db.objectives.update(existing.id, { status: o.status, result: o.result })
             }

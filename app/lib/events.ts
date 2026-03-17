@@ -36,6 +36,47 @@ function cleanThinkingText(text: string): string {
         .trim()
 }
 
+function parseScheduleSummary(text: string) {
+    if (!text || !text.includes('Task scheduled!')) return null
+
+    const id = text.match(/ID=(\d+)/)?.[1]
+    const name = text.match(/name="([^"]+)"/)?.[1]
+    const type = text.match(/type="([^"]+)"/)?.[1]
+    const intervalSec = text.match(/every (\d+)s/)?.[1]
+    const cron = text.match(/cron="([^"]+)"/)?.[1]
+    const message = text.match(/Message: ([\s\S]*?)(?:\nAgent:|$)/)?.[1]?.trim()
+    const script = text.match(/Script: ([^\n]+)/)?.[1]?.trim()
+
+    let cadence = 'one-time'
+    if (type === 'interval' && intervalSec) cadence = `every ${intervalSec}s`
+    else if (type === 'cron' && cron) cadence = `cron ${cron}`
+    else if (type) cadence = type
+
+    const target = message
+        ? `💬 ${message.slice(0, 160)}${message.length > 160 ? '…' : ''}`
+        : script
+            ? `📄 ${script}`
+            : ''
+
+    return { id, name, cadence, target }
+}
+
+async function enrichScheduleSummary(summary: { id?: string, name?: string, cadence: string, target: string }) {
+    if (!summary.id) return summary
+    try {
+        const res = await fetch('/api/schedule')
+        if (!res.ok) return summary
+        const data = await res.json()
+        const tasks = Array.isArray(data) ? data : data.tasks || []
+        const match = tasks.find((t: any) => String(t.id) === String(summary.id))
+        if (!match) return summary
+        const nextRun = match.nextRun ? new Date(match.nextRun).toLocaleString() : null
+        return { ...summary, nextRun }
+    } catch {
+        return summary
+    }
+}
+
 export function handleEvent(type: string, data: any) {
     const agent = getActiveAgent()
 
@@ -208,6 +249,26 @@ export function handleEvent(type: string, data: any) {
             break
         case 'tool_result':
             updateLastTool(data.result!)
+            if (data.tool === 'schedule' && data.result?.success && data.result?.output) {
+                const parsed = parseScheduleSummary(String(data.result.output))
+                if (parsed) {
+                    enrichScheduleSummary(parsed).then((summary) => {
+                        appendCard(
+                            'info',
+                            'Schedule Created',
+                            [
+                                summary.name ? `• ${summary.name}` : null,
+                                `• cadence: ${summary.cadence}`,
+                                (summary as any).nextRun ? `• next run: ${(summary as any).nextRun}` : null,
+                                summary.target ? `• target: ${summary.target}` : null,
+                                summary.id ? `• cancel later with: schedule cancel id=${summary.id}` : null,
+                            ].filter(Boolean).join('\n')
+                        )
+                        fetchSchedules()
+                        switchTab('schedule')
+                    })
+                }
+            }
             break
         case 'objective_check':
             updateObjectives(data.results || [])

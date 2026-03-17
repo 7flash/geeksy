@@ -1,4 +1,5 @@
 // app/lib/metrics-ui.ts — Metrics bar polling and display
+import { getActiveSessionId } from './sessions-ui'
 
 export function initMetricsUI() {
     const updateMetricsBar = (data: any) => {
@@ -76,7 +77,14 @@ export function initMetricsUI() {
         }
     }
 
-    const fetchMetrics = () => fetch('/api/metrics').then(r => r.json()).then(updateMetricsBar).catch(() => { })
+    const fetchMetrics = () => {
+        const sessionId = getActiveSessionId()
+        const url = sessionId ? `/api/metrics?sessionId=${sessionId}` : '/api/metrics'
+        return fetch(url).then(r => r.json()).then(updateMetricsBar).catch(() => { })
+    }
+
     fetchMetrics()
     setInterval(fetchMetrics, 20_000)
+
+    window.addEventListener('geeksy:session-changed', () => { fetchMetrics() })
 }

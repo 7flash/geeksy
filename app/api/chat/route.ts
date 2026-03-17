@@ -95,7 +95,10 @@ export async function POST(req: Request) {
         process.env.GEMINI_API_KEY ||
         process.env.GOOGLE_API_KEY ||
         process.env.ANTHROPIC_API_KEY ||
-        process.env.OPENAI_API_KEY
+        process.env.OPENAI_API_KEY ||
+        process.env.QWEN_API_KEY ||
+        process.env.DASHSCOPE_API_KEY ||
+        process.env.DEEPSEEK_API_KEY
     )
 
     if (!hasKey) {
@@ -200,8 +203,8 @@ export async function POST(req: Request) {
                         for (const obj of objectives) {
                             try {
                                 db.objectives.upsert(
-                                    { agentId: body.agentId, name: obj.name },
-                                    { agentId: body.agentId, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
+                                    { agentId: body.agentId, sessionId: body.dbSessionId, name: obj.name } as any,
+                                    { agentId: body.agentId, sessionId: body.dbSessionId, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
                                 )
                             } catch { }
                         }
@@ -211,7 +214,7 @@ export async function POST(req: Request) {
                     if (event.type === 'objective_check' && body.agentId) {
                         const results = (event as any).results || []
                         for (const r of results) {
-                            const existing = db.objectives.select().where({ agentId: body.agentId, name: r.name }).first()
+                            const existing = db.objectives.select().where({ agentId: body.agentId, sessionId: body.dbSessionId, name: r.name } as any).first()
                             if (existing) {
                                 db.objectives.update(existing.id, {
                                     status: r.met ? 'complete' : 'failed',
@@ -226,9 +229,9 @@ export async function POST(req: Request) {
                         const tool = (event as any).tool
                         const params = (event as any).params || {}
                         if (tool === 'readFile' && params.path) {
-                            try { db.files.upsert({ agentId: body.agentId, path: params.path }, { agentId: body.agentId, path: params.path, action: 'read' }) } catch { }
+                            try { db.files.upsert({ agentId: body.agentId, sessionId: body.dbSessionId, path: params.path } as any, { agentId: body.agentId, sessionId: body.dbSessionId, path: params.path, action: 'read' }) } catch { }
                         } else if (tool === 'writeFile' && params.path) {
-                            try { db.files.upsert({ agentId: body.agentId, path: params.path }, { agentId: body.agentId, path: params.path, action: 'write' }) } catch { }
+                            try { db.files.upsert({ agentId: body.agentId, sessionId: body.dbSessionId, path: params.path } as any, { agentId: body.agentId, sessionId: body.dbSessionId, path: params.path, action: 'write' }) } catch { }
                         }
                     }
                 }
