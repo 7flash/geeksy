@@ -35,8 +35,10 @@
 - [x] ~~**Surface session-scoped metrics in UI**~~ — ✅ DONE. `app/lib/metrics-ui.ts` now sends `sessionId` to `/api/metrics` using `getActiveSessionId()`, and `sessions-ui.ts` emits `geeksy:session-changed` so the metrics bar refreshes immediately on session switch.
 - [x] ~~**Session-aware schedule persistence**~~ — ✅ DONE. Added optional `sessionId` to `schedules`, threaded it through schedule creation/listing/cancellation, wired chat + Telegram schedule tools to the active session, and persisted scheduler output back into the correct session chat.
 - [x] ~~**Session-scoped schedule view/filtering**~~ — ✅ DONE. `fetchSchedules()` now requests `/api/schedule?sessionId=...` for the active session and scheduler-pushed chat polling uses session-scoped `/api/state` reads.
+- [x] ~~**Simplify Geeksy UI around one primary workflow**~~ — ✅ DONE. Reduced the main screen to sessions + chat + 3 core tabs (Objectives, Files, Schedule), trimmed metrics to the essentials, removed header skill clutter, and rewrote copy so the app reads like one focused session workflow.
 - [ ] **Immediate metrics refresh after send completion** — Metrics are session-scoped now, but the top bar still waits for the poll interval after chat sends. Refresh metrics immediately on message completion.
 - [ ] **Scheduled chat execution reliability on restart** — Older one-off chat schedules failed during server restarts with connection errors. Add a regression test or retry guard so scheduled chat tasks survive dev restarts more gracefully.
+- [ ] **Continue UX pruning in header/sidebar** — The app is simpler now, but the nav rail and session rows still need a visual cleanup pass so the whole product feels intentionally designed.
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (Bun-native, file-based routing)

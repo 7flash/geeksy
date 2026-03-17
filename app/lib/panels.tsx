@@ -2,6 +2,7 @@
 import { render } from 'melina/client'
 import { state, dom, saveState } from './state'
 import { appendResponseBubble } from './chat-ui'
+import { getActiveSessionId } from './sessions-ui'
 import type { ObjectiveEntry, ObjectiveGroup, ScheduleEntry, ScheduleStats, StateEntry, SkillInfo } from './types'
 
 // ══════════════════════════════════════
