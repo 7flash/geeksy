@@ -12,8 +12,7 @@ import { readdirSync } from "fs"
 import '../models/route'
 
 import { searchSemanticMemory, addSemanticMemory } from '../../lib/embeddings'
-
-const skillsDir = join(process.cwd(), "skills")
+import { skillsDir } from '../../lib/paths'
 
 import { sessions } from '../../lib/session-store'
 

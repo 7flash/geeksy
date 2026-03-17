@@ -2,6 +2,7 @@
 // Uses bgrun to start/stop plugin processes with proper supervision
 
 import { db } from '../../lib/db'
+import { configPath, workspaceRoot } from '../../lib/paths'
 
 // Maps packageName → bgrun process name and directory
 interface ProcessSpec {
@@ -23,7 +24,7 @@ interface PluginSpec {
 function resolvePlugin(packageName: string): PluginSpec | null {
     const { resolve, join } = require('path')
     const { existsSync, readFileSync, readdirSync } = require('fs')
-    const codeDir = resolve(process.cwd(), '..')
+    const codeDir = workspaceRoot
 
     // Check sibling directories and nested workspace dirs
     const candidates = [
@@ -129,8 +130,6 @@ function buildPluginEnv(plugin: any, port: number): Record<string, string> {
 
     // Read .config.toml for plugin-specific sections
     try {
-        const { resolve } = require('path')
-        const configPath = resolve(process.cwd(), '.config.toml')
         const configText = require('fs').readFileSync(configPath, 'utf8')
         let currentSection = ''
         for (const line of configText.split('\n')) {

@@ -4,7 +4,8 @@
 - [x] ~~**Fix `npx geeksy` SQLite path**~~ — ✅ DONE. The CLI now uses OS-native writable app-data directories, pre-creates the SQLite file, and passes an explicit `GEEKSY_DB_PATH` so npm-cache installs no longer fail with `unable to open database file`.
 - [x] ~~**Fix models page key-change action**~~ — ✅ DONE. Switched model key actions to explicit delegated button handlers so `Change key`, save, cancel, remove, and Enter-to-save work reliably.
 - [x] ~~**Stop repeated empty-response chat spam**~~ — ✅ DONE. `/api/chat` now stops after the first `LLM returned empty response` error instead of surfacing the same failure across all 10 agent iterations.
-- [ ] **Audit remaining writable paths for npm CLI mode** — Some config/plugin paths still rely on `process.cwd()` semantics and should be reviewed against `GEEKSY_HOME` / `GEEKSY_DB_PATH` packaged CLI usage.
+- [x] ~~**Audit remaining writable paths for npm CLI mode**~~ — ✅ DONE. Added `app/lib/paths.ts` and moved skills, backups, saved model keys, plugin install/update paths, and `.config.toml` lookups onto `GEEKSY_HOME` / `GEEKSY_APP_ROOT` aware locations.
+- [ ] **Verify plugin install/update flows in packaged CLI mode** — After the path cleanup, `bun add` / `bun update` plugin flows should be smoke-tested under `npx geeksy` / macOS app-data paths.
 - [x] ~~**Session auto-load broken**~~ — ✅ DONE. `initSessionUI()` called without `await` in page.client.tsx. Fixed by sequencing `restoreState()` then `initSessionUI()` in async IIFE.
 - [x] ~~**Plugins page rendering "null"**~~ — ✅ DONE. `PluginsPage` was async — the self-fetch to localhost:3737 deadlocked Bun's single-threaded server. Made component sync, removed self-fetch.
 - [x] ~~**Duplicate chat message bubbles**~~ — ✅ DONE. Message polling (3s interval) re-rendered messages that `sendMessage()` already appended. Added `__geeksy_isRunning` window flag to pause polling during active processing.
@@ -65,6 +66,7 @@
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (Bun-native, file-based routing)
+- **CLI/app paths**: `app/lib/paths.ts` centralizes `GEEKSY_HOME`, `GEEKSY_APP_ROOT`, skills, backups, config, and saved-key locations for packaged CLI mode.
 - **Agent runtime**: smart-agent-ai (Session/Agent with Classifier-Planner-Executor pipeline)
 - **Port**: 3737 (configured via BUN_PORT)
 - **DB**: SQLite via sqlite-zod-orm (agents, sessions, messages, objectives, plugins, files, skills, schedules, secrets)

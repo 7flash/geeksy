@@ -1,6 +1,7 @@
 // app/api/plugins/route.ts — Plugin registry CRUD
 // Manages installed plugins: list, install, configure, start/stop, uninstall
 import { db } from '../../lib/db'
+import { appHome, appNodeModulesDir, rootNodeModulesDir, skillsDir, workspaceRoot } from '../../lib/paths'
 
 /** GET /api/plugins — list all installed plugins */
 export async function GET() {
@@ -35,12 +36,14 @@ export async function POST(req: Request) {
 
     // Try to read plugin.json manifest from the package
     let manifest: any = null
-    const { join, resolve } = await import('path')
+    const { join } = await import('path')
     const { readdirSync, existsSync } = await import('fs')
-    const codeDir = resolve(process.cwd(), '..')
+    const codeDir = workspaceRoot
     const manifestPaths = [
-        join(process.cwd(), 'node_modules', body.packageName, 'geeksy-plugin.json'),
-        join(process.cwd(), 'node_modules', body.packageName, 'plugin.json'),
+        join(appNodeModulesDir, body.packageName, 'geeksy-plugin.json'),
+        join(appNodeModulesDir, body.packageName, 'plugin.json'),
+        join(rootNodeModulesDir, body.packageName, 'geeksy-plugin.json'),
+        join(rootNodeModulesDir, body.packageName, 'plugin.json'),
         join(codeDir, body.packageName, 'geeksy-plugin.json'),
         join(codeDir, body.packageName, 'plugin.json'),
     ]
@@ -72,15 +75,15 @@ export async function POST(req: Request) {
         try {
             console.log(`[geeksy] Auto-installing registry plugin: ${body.packageName}...`)
             const proc = Bun.spawn(['bun', 'add', body.packageName], {
-                cwd: process.cwd(),
+                cwd: appHome,
                 stdout: 'pipe',
                 stderr: 'pipe',
             })
             await proc.exited
             didNpmInstall = true
             // Re-add to manifestPaths now that it's downloaded
-            manifestPaths.unshift(join(process.cwd(), 'node_modules', body.packageName, 'geeksy-plugin.json'))
-            manifestPaths.unshift(join(process.cwd(), 'node_modules', body.packageName, 'plugin.json'))
+            manifestPaths.unshift(join(appNodeModulesDir, body.packageName, 'geeksy-plugin.json'))
+            manifestPaths.unshift(join(appNodeModulesDir, body.packageName, 'plugin.json'))
         } catch (e: any) {
             console.error(`[geeksy] Failed to bun add ${body.packageName}:`, e.message)
         }
@@ -129,9 +132,9 @@ export async function POST(req: Request) {
                     registeredSkills.push(skill.name)
 
                     // Copy skill .md file to geeksy's skills directory
-                    const destPath = join(process.cwd(), 'skills', basename(skillPath))
+                    const destPath = join(skillsDir, basename(skillPath))
                     const { mkdirSync, copyFileSync } = await import('fs')
-                    mkdirSync(join(process.cwd(), 'skills'), { recursive: true })
+                    mkdirSync(skillsDir, { recursive: true })
                     copyFileSync(fullPath, destPath)
                 }
             } catch { }

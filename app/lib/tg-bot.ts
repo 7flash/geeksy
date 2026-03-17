@@ -5,8 +5,8 @@ import { db } from './db'
 import { createScheduleTool } from './schedule-tool'
 import { sessions } from './session-store'
 import '../api/models/route'
+import { skillsDir } from './paths'
 
-const skillsDir = join(process.cwd(), "skills");
 let isTgPollingActive = false;
 let lastUpdateId = 0;
 let consecutiveErrors = 0;
@@ -176,9 +176,33 @@ async function handleUserMessage(chatId: number, text: string, username: string,
         return;
     }
 
+    // Resolve/create a DB-backed Telegram conversation for this chat
+    let dbSessionId: number | undefined = undefined;
+    try {
+        const telegramSessions = db.sessions.select().where({ type: 'telegram_bot' } as any).all() as any[];
+        let dbSession = telegramSessions.find((s: any) => {
+            try {
+                const cfg = JSON.parse(s.config || '{}');
+                return Number(cfg.chatId) === chatId;
+            } catch { return false; }
+        });
+        if (!dbSession) {
+            dbSession = db.sessions.insert({
+                name: username ? `Telegram · ${username}` : `Telegram ${chatId}`,
+                type: 'telegram_bot',
+                status: 'active',
+                model: agent.model || 'gemini-2.5-flash',
+                config: JSON.stringify({ chatId, username, botToken: token }),
+                messageCount: 0,
+                lastActiveAt: Date.now(),
+            } as any);
+        }
+        dbSessionId = dbSession?.id;
+    } catch { }
+
     // Persist user message to DB
     const contextualMessage = `[Telegram Message from ${username}]: ${text}`;
-    db.messages.insert({ agentId: agent.id, role: 'user', content: contextualMessage });
+    db.messages.insert({ agentId: agent.id, sessionId: dbSessionId, role: 'user', content: contextualMessage });
 
     const skillPaths: string[] = [];
     try {

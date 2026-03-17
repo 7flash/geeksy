@@ -5,9 +5,9 @@ import { db } from './db'
 import { createScheduleTool } from './schedule-tool'
 import { sessions } from './session-store'
 import '../api/models/route'
+import { skillsDir } from './paths'
 
 let isHeartbeatRunning = false;
-const skillsDir = join(process.cwd(), "skills");
 
 // ── Follow-up queue ──
 // After user interactions, follow-up objectives are queued here.

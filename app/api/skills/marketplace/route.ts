@@ -2,8 +2,7 @@
 // GET: list available community skills | POST: install a skill
 import { join } from 'path'
 import { existsSync, writeFileSync, mkdirSync } from 'fs'
-
-const skillsDir = join(process.cwd(), 'skills')
+import { skillsDir } from '../../../lib/paths'
 
 export interface MarketplaceSkill {
     id: string

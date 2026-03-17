@@ -1,6 +1,6 @@
 // app/src/api/models/route.ts — Provider & model management API
-import { join } from 'path'
 import { measure, measureSync } from 'measure-fn'
+import { keysPath, configPath } from '../../lib/paths'
 
 // ── Provider definitions ──
 
@@ -71,10 +71,7 @@ const PROVIDERS: ProviderDef[] = [
     },
 ]
 
-// ── Persistent key storage ──
-// Store keys in a JSON file alongside the DB
-
-const KEYS_PATH = join(process.cwd(), '.geeksy-keys.json')
+const KEYS_PATH = keysPath
 
 async function loadKeys(): Promise<Record<string, string>> {
     try {
@@ -90,22 +87,16 @@ async function saveKeys(keys: Record<string, string>) {
     await Bun.write(KEYS_PATH, JSON.stringify(keys, null, 2))
 }
 
-// Apply saved keys to process.env on server start
 let _keysApplied = false
 async function applyKeys() {
     if (_keysApplied) return
     _keysApplied = true
     const keys = await loadKeys()
     for (const [envVar, value] of Object.entries(keys)) {
-        if (value && !process.env[envVar]) {
-            process.env[envVar] = value
-        }
+        if (value && !process.env[envVar]) process.env[envVar] = value
     }
 
-    // Load explorer URL from .config.toml [explorer] section
     try {
-        const { resolve } = await import('path')
-        const configPath = resolve(process.cwd(), '.config.toml')
         const configFile = Bun.file(configPath)
         if (await configFile.exists()) {
             const toml = await configFile.text()
@@ -117,10 +108,7 @@ async function applyKeys() {
     } catch { }
 }
 
-// Eagerly apply on module load
 applyKeys()
-
-// ── GET /api/models — List providers + their active status ──
 
 export async function GET() {
     await applyKeys()
@@ -132,7 +120,6 @@ export async function GET() {
             (p.envKeyAlt && process.env[p.envKeyAlt]) ||
             keys[p.envKey]
         )
-        // Mask the key for display — show last 4 chars only
         const rawKey = keys[p.envKey] || process.env[p.envKey] || (p.envKeyAlt && process.env[p.envKeyAlt]) || ''
         const maskedKey = rawKey ? '•'.repeat(Math.max(0, rawKey.length - 4)) + rawKey.slice(-4) : ''
 
@@ -147,8 +134,6 @@ export async function GET() {
     return Response.json(providers)
 }
 
-// ── POST /api/models — Save an API key for a provider ──
-
 export async function POST(req: Request) {
     const body = await req.json() as { providerId: string; apiKey: string }
     if (!body.providerId) return Response.json({ error: 'Missing providerId' }, { status: 400 })
@@ -159,21 +144,16 @@ export async function POST(req: Request) {
     const keys = await loadKeys()
 
     if (body.apiKey) {
-        // Set key
         keys[provider.envKey] = body.apiKey
         process.env[provider.envKey] = body.apiKey
     } else {
-        // Remove key
         delete keys[provider.envKey]
         delete process.env[provider.envKey]
     }
 
     await saveKeys(keys)
-
     return Response.json({ ok: true, active: !!body.apiKey })
 }
-
-// ── DELETE /api/models?providerId=x — Remove an API key ──
 
 export async function DELETE(req: Request) {
     const url = new URL(req.url)

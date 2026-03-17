@@ -1,5 +1,6 @@
 // app/api/plugins/manifest/route.ts — Fetch plugin manifest (config schema)
 import { db } from '../../../lib/db'
+import { workspaceRoot } from '../../../lib/paths'
 
 export async function GET(req: Request) {
     const url = new URL(req.url)

@@ -97,8 +97,9 @@ export async function POST(req: Request) {
 
     // Run bun update for the package
     try {
+        const { appHome } = await import('../../../lib/paths')
         const proc = Bun.spawn(['bun', 'update', plugin.packageName], {
-            cwd: process.cwd(),
+            cwd: appHome,
             stdout: 'pipe',
             stderr: 'pipe',
         })

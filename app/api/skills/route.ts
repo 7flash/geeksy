@@ -4,33 +4,30 @@ import { readdirSync, readFileSync, existsSync } from 'fs'
 import { parseSkillFile } from 'jsx-ai'
 import { measureSync } from 'measure-fn'
 import { db } from '../../lib/db'
-
-const skillsDir = join(process.cwd(), 'skills')
+import { skillsDir, workspaceRoot } from '../../lib/paths'
 
 export interface SkillInfo {
-    id: string         // filename without extension
+    id: string
     name: string
     description: string
-    content: string    // full markdown body
+    content: string
     filePath: string
-    plugin?: {         // source plugin (if skill came from a plugin)
+    plugin?: {
         name: string
         icon: string
         packageName: string
         status: string
-        api?: any      // API endpoints from geeksy-plugin.json
+        api?: any
     }
 }
 
-/** Build a map of skill filename → plugin info by checking which plugins declare each skill */
 function buildSkillPluginMap(): Map<string, SkillInfo['plugin']> {
     const map = new Map<string, SkillInfo['plugin']>()
-    const codeDir = resolve(process.cwd(), '..')
+    const codeDir = workspaceRoot
 
     try {
         const plugins = db.plugins.select().all() as any[]
         for (const plugin of plugins) {
-            // Find the plugin directory — try direct name first, then scan siblings by package.json name
             const candidates = [
                 resolve(codeDir, plugin.packageName),
                 ...(() => {
@@ -84,8 +81,6 @@ function buildSkillPluginMap(): Map<string, SkillInfo['plugin']> {
     return map
 }
 
-// ── GET /api/skills — Discover and return all .md skill files ──
-
 export async function GET() {
     const skills = measureSync('Discover skills', () => {
         const pluginMap = buildSkillPluginMap()
@@ -105,9 +100,9 @@ export async function GET() {
                         filePath,
                         plugin: pluginMap.get(id),
                     })
-                } catch { /* skip unparseable files */ }
+                } catch { }
             }
-        } catch { /* skills dir doesn't exist yet */ }
+        } catch { }
         return result
     })
 

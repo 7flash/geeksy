@@ -14,8 +14,9 @@ import { db } from '../../lib/db'
 import type { MeasureFn } from 'measure-fn'
 import { join } from 'path'
 import { existsSync, mkdirSync, readdirSync, unlinkSync, writeFileSync, readFileSync } from 'fs'
+import { backupsDir } from '../../lib/paths'
 
-const BACKUPS_DIR = join(process.cwd(), 'data', 'backups')
+const BACKUPS_DIR = backupsDir
 const MAX_BACKUPS = 5
 const MAX_SIZE_BYTES = 50 * 1024 * 1024 // 50MB
 

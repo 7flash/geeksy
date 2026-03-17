@@ -4,7 +4,8 @@
 - [x] ~~**Fix `npx geeksy` SQLite path**~~ — ✅ DONE. The CLI now uses OS-native writable app-data directories, pre-creates the SQLite file, and passes an explicit `GEEKSY_DB_PATH` so npm-cache installs no longer fail with `unable to open database file`.
 - [x] ~~**Fix models page key-change action**~~ — ✅ DONE. Switched model key actions to explicit delegated button handlers so `Change key`, save, cancel, remove, and Enter-to-save work reliably.
 - [x] ~~**Stop repeated empty-response chat spam**~~ — ✅ DONE. `/api/chat` now stops after the first `LLM returned empty response` error instead of surfacing the same failure across all 10 agent iterations.
-- [ ] **Audit remaining writable paths for npm CLI mode** — Some config/plugin paths still rely on `process.cwd()` semantics and should be reviewed against `GEEKSY_HOME` / `GEEKSY_DB_PATH` packaged CLI usage.
+- [x] ~~**Audit remaining writable paths for npm CLI mode**~~ — ✅ DONE. Added `app/lib/paths.ts` and moved skills, backups, saved model keys, plugin install/update paths, and `.config.toml` lookups onto `GEEKSY_HOME` / `GEEKSY_APP_ROOT` aware locations.
+- [ ] **Verify plugin install/update flows in packaged CLI mode** — After the path cleanup, `bun add` / `bun update` plugin flows should be smoke-tested under `npx geeksy` / macOS app-data paths.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Show CLI version/commit on startup**~~ — ✅ DONE. `npx geeksy` now prints version, commit (when available), and active home/db/skills paths before launching Bun.
@@ -52,6 +53,7 @@
 
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)
+- **CLI/app paths**: `app/lib/paths.ts` centralizes `GEEKSY_HOME`, `GEEKSY_APP_ROOT`, skills, backups, config, and saved-key locations for packaged CLI mode.
 - **Heartbeat**: Adaptive 30s–5min interval, circuit breaker, follow-up queue
 - **Dashboard**: `app/page.client.tsx` → modules: heartbeat-ui, metrics-ui, sessions-ui, agents, search-ui, panels
 - **CSS**: modular app/css files compiled into globals.css

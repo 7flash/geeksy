@@ -1,11 +1,12 @@
 // app/api/skills/graph/route.ts — Skill Dependency Graph Data
 // GET /api/skills/graph — returns nodes and edges for skill dependency visualization
 
+import { skillsDir } from '../../../lib/paths'
+
 export async function GET() {
     try {
         const fs = require('fs')
         const path = require('path')
-        const skillsDir = path.join(process.cwd(), 'skills')
 
         if (!fs.existsSync(skillsDir)) {
             return Response.json({ nodes: [], edges: [] })
