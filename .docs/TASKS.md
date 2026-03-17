@@ -2,6 +2,8 @@
 
 ## 🔴 Priority: Fix
 - [x] ~~**Fix `npx geeksy` SQLite path**~~ — ✅ DONE. The CLI now uses OS-native writable app-data directories, pre-creates the SQLite file, and passes an explicit `GEEKSY_DB_PATH` so npm-cache installs no longer fail with `unable to open database file`.
+- [x] ~~**Fix models page key-change action**~~ — ✅ DONE. Switched model key actions to explicit delegated button handlers so `Change key`, save, cancel, remove, and Enter-to-save work reliably.
+- [x] ~~**Stop repeated empty-response chat spam**~~ — ✅ DONE. `/api/chat` now stops after the first `LLM returned empty response` error instead of surfacing the same failure across all 10 agent iterations.
 - [ ] **Audit remaining writable paths for npm CLI mode** — Some config/plugin paths still rely on `process.cwd()` semantics and should be reviewed against `GEEKSY_HOME` / `GEEKSY_DB_PATH` packaged CLI usage.
 - [x] ~~**Session auto-load broken**~~ — ✅ DONE. `initSessionUI()` called without `await` in page.client.tsx. Fixed by sequencing `restoreState()` then `initSessionUI()` in async IIFE.
 - [x] ~~**Plugins page rendering "null"**~~ — ✅ DONE. `PluginsPage` was async — the self-fetch to localhost:3737 deadlocked Bun's single-threaded server. Made component sync, removed self-fetch.
@@ -20,6 +22,12 @@
 - [x] ~~**Plugins page: fetch registry client-side**~~ — ✅ DONE. Added `fetchRegistry()` to mount script. Fixed default export (Melina expects `export default`). Shows Discord, GitHub, Browserbase with Install buttons.
 
 ## 🟢 Priority: Features
+- [ ] **Heartbeat-owned objective validation loop** — Objectives should persist as longer-lived items with their own validation scripts/checks; casual conversation should not churn objectives, chat should only propose/update them when needed, new objectives should be shown to the user for review before commit, and heartbeat should execute validations in separate turns and report results back to the user.
+- [ ] **Live tool execution cards with progress + spoilers** — Smart-agent tool usage should show what is happening right now (especially bash/file tools), including the active command/path, running/progress state, a clearer in-progress label, and a collapsible spoiler/details view for command output.
+- [ ] **Clarify objective review UX before commit** — New objectives already pause for confirmation in the session layer, but the web UI should make that review state obvious instead of feeling like silent objective churn.
+- [ ] **Skill-catalog discovery → install → objective-review workflow** — For requests that need a missing capability (e.g. YouTube ingestion/transcripts), Geeksy should first search available skills/plugins, offer the best install option to the user, wait for confirmation, then propose objectives, wait for objective confirmation, and only then begin multi-iteration execution.
+- [ ] **Persist artifact contents, not just filenames** — Files/scripts created by the agent should be visible from the Files tab with readable content previews/full views, not just path names or touch history.
+- [ ] **Heartbeat validation for scheduled automation outputs** — Long-running automations should attach validation checks (e.g. stderr stays empty, expected markdown/transcript artifacts are produced) that heartbeat evaluates and reports back to the user.
 - [x] ~~**Browserbase plugin (registry entry)**~~ — ✅ DONE. Added to curated registry. Shows in Discover Plugins with Install button. Full plugin implementation (CLI, skill, config wizard) still pending.
 - [x] ~~**Session types with gateways**~~ — ✅ DONE. Sessions now identify as `web`, `telegram`, or `telegram_bot`. `tg-bot.ts` handles individual user sessions automatically. Output generated during a `telegram` backend session (e.g. from the web interface) is actively routed to the user's Telegram chat via `enqueueMessage`.
 - [x] ~~**Cross-Device Sync**~~ — ✅ DONE. Implemented `app/lib/p2p-sync.ts` with BroadcastChannel discovery + WebRTC. Syncs pinned sessions and session tags across local browser instances. Device ID stored in localStorage.

@@ -2,6 +2,8 @@
 
 ## 🔴 Priority: Fix
 - [x] ~~**Fix `npx geeksy` SQLite path**~~ — ✅ DONE. The CLI now uses OS-native writable app-data directories, pre-creates the SQLite file, and passes an explicit `GEEKSY_DB_PATH` so npm-cache installs no longer fail with `unable to open database file`.
+- [x] ~~**Fix models page key-change action**~~ — ✅ DONE. Switched model key actions to explicit delegated button handlers so `Change key`, save, cancel, remove, and Enter-to-save work reliably.
+- [x] ~~**Stop repeated empty-response chat spam**~~ — ✅ DONE. `/api/chat` now stops after the first `LLM returned empty response` error instead of surfacing the same failure across all 10 agent iterations.
 - [ ] **Audit remaining writable paths for npm CLI mode** — Some config/plugin paths still rely on `process.cwd()` semantics and should be reviewed against `GEEKSY_HOME` / `GEEKSY_DB_PATH` packaged CLI usage.
 
 ## 🟡 Priority: Improve
@@ -10,6 +12,12 @@
 - [ ] **Heartbeat follow-up live test** — Test with a real user interaction to verify the 2-minute auto-scheduled follow-up flows through correctly.
 
 ## 🟢 Priority: Features
+- [ ] **Heartbeat-owned objective validation loop** — Objectives should persist as longer-lived items with their own validation scripts/checks; casual conversation should not churn objectives, chat should only propose/update them when needed, new objectives should be shown to the user for review before commit, and heartbeat should execute validations in separate turns and report results back to the user.
+- [ ] **Live tool execution cards with progress + spoilers** — Smart-agent tool usage should show what is happening right now (especially bash/file tools), including the active command/path, running/progress state, a clearer in-progress label, and a collapsible spoiler/details view for command output.
+- [ ] **Clarify objective review UX before commit** — New objectives already pause for confirmation in the session layer, but the web UI should make that review state obvious instead of feeling like silent objective churn.
+- [ ] **Skill-catalog discovery → install → objective-review workflow** — For requests that need a missing capability (e.g. YouTube ingestion/transcripts), Geeksy should first search available skills/plugins, offer the best install option to the user, wait for confirmation, then propose objectives, wait for objective confirmation, and only then begin multi-iteration execution.
+- [ ] **Persist artifact contents, not just filenames** — Files/scripts created by the agent should be visible from the Files tab with readable content previews/full views, not just path names or touch history.
+- [ ] **Heartbeat validation for scheduled automation outputs** — Long-running automations should attach validation checks (e.g. stderr stays empty, expected markdown/transcript artifacts are produced) that heartbeat evaluates and reports back to the user.
 - [x] ~~**Heartbeat follow-up system**~~ — ✅ DONE. `scheduleFollowUp()` + `drainFollowUps()` in heartbeat.ts. Chat route auto-schedules 2min follow-up after tool-heavy agent responses. API supports manual scheduling via POST.
 - [x] ~~**Follow-up queue persistence**~~ — ✅ DONE. Added `followUps` table schema to `db.ts`. Refactored `heartbeat.ts` to use SQLite instead of in-memory queue. Survives server restarts. Tested and covered by `heartbeat.test.ts`.
 - [x] ~~**Expose follow-up status via API**~~ — ✅ DONE. Added `GET /api/follow-ups` to fetch all ordered follow-ups and `DELETE /api/follow-ups` to remove by id or clear all. Tested with `route.test.ts`.

@@ -61,11 +61,11 @@ function ProviderCard({ p }: { p: ProviderData }) {
                         <span className="key-masked">{p.maskedKey}</span>
                         {p.fromEnv && <span className="key-source">from .env</span>}
                         <div className="key-actions">
-                            <button className="key-btn key-edit" onClick={() => { editingProvider = p.id; rerender() }}>
-                                Change
+                            <button className="key-btn key-edit" type="button" data-action="edit-key" data-provider-id={p.id}>
+                                Change key
                             </button>
                             {!p.fromEnv && (
-                                <button className="key-btn key-remove" onClick={() => removeKey(p.id)}>
+                                <button className="key-btn key-remove" type="button" data-action="remove-key" data-provider-id={p.id}>
                                     Remove
                                 </button>
                             )}
@@ -82,13 +82,15 @@ function ProviderCard({ p }: { p: ProviderData }) {
                         />
                         <button
                             className={`key-btn key-save ${isSaving ? 'saving' : ''}`}
-                            onClick={() => saveKey(p.id)}
+                            type="button"
+                            data-action="save-key"
+                            data-provider-id={p.id}
                             disabled={isSaving}
                         >
                             {isSaving ? '…' : '✓ Save'}
                         </button>
                         {isEditing && (
-                            <button className="key-btn key-cancel" onClick={() => { editingProvider = null; rerender() }}>
+                            <button className="key-btn key-cancel" type="button" data-action="cancel-edit" data-provider-id={p.id}>
                                 Cancel
                             </button>
                         )}
@@ -176,6 +178,55 @@ function rerender() {
 }
 
 export default function mount() {
+    const onClick = async (e: Event) => {
+        const target = (e.target as HTMLElement).closest('[data-action]') as HTMLElement | null
+        if (!target) return
+
+        const action = target.dataset.action
+        const providerId = target.dataset.providerId
+        if (!providerId) return
+
+        if (action === 'edit-key') {
+            editingProvider = providerId
+            rerender()
+            requestAnimationFrame(() => {
+                const input = document.getElementById(`key-input-${providerId}`) as HTMLInputElement | null
+                input?.focus()
+            })
+            return
+        }
+
+        if (action === 'cancel-edit') {
+            editingProvider = null
+            rerender()
+            return
+        }
+
+        if (action === 'save-key') {
+            await saveKey(providerId)
+            return
+        }
+
+        if (action === 'remove-key') {
+            await removeKey(providerId)
+        }
+    }
+
+    const onKeyDown = async (e: KeyboardEvent) => {
+        if (e.key !== 'Enter') return
+        const input = e.target as HTMLInputElement | null
+        if (!input?.classList.contains('key-input')) return
+        const providerId = input.id.replace('key-input-', '')
+        if (!providerId) return
+        e.preventDefault()
+        await saveKey(providerId)
+    }
+
+    document.addEventListener('click', onClick)
+    document.addEventListener('keydown', onKeyDown)
     loadProviders()
-    return () => { }
+    return () => {
+        document.removeEventListener('click', onClick)
+        document.removeEventListener('keydown', onKeyDown)
+    }
 }

@@ -190,7 +190,15 @@ export async function POST(req: Request) {
             try {
                 let eventCount = 0
                 let assistantText = ''
+                let stoppedOnEmptyResponse = false
                 for await (const event of session.send(body.message)) {
+                    if (event.type === 'error' && (event as any).error === 'LLM returned empty response') {
+                        controller.enqueue(enc.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`))
+                        stoppedOnEmptyResponse = true
+                        try { session.abort() } catch { }
+                        break
+                    }
+
                     eventCount++
                     controller.enqueue(enc.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`))
 
