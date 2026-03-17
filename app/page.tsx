@@ -39,7 +39,10 @@ export default function Page() {
                                     </div>
                                 </div>
                                 <div className="session-item-actions">
-                                    <button className="session-delete-btn" data-id={s.id} title="Delete session">×</button>
+                                    <button className="session-more-btn" type="button" aria-label={`Session actions for ${s.name}`} title="Session actions">⋯</button>
+                                    <div className="session-action-menu" role="menu" aria-label={`Actions for ${s.name}`}>
+                                        <button className="session-delete-btn" type="button" data-id={s.id} title="Delete session">Delete session</button>
+                                    </div>
                                 </div>
                             </div>
                         ))

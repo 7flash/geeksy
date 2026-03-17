@@ -28,8 +28,9 @@
 - [x] ~~**Scheduled chat execution reliability on restart**~~ — ✅ DONE. `scheduler.ts` now retries chat-based schedule execution on transient server/network failures and includes `dbSessionId` when scheduled chats run.
 - [x] ~~**Continue visual cleanup of nav + sessions list**~~ — ✅ DONE. Applied a calmer header/sidebar pass with lighter chrome, clearer session-first copy, and a quieter metrics strip so the main workspace feels less noisy.
 - [x] ~~**Prune or hide low-value nav destinations**~~ — ✅ DONE. Demoted side-system destinations in the rail into a calmer `More` group and kept `Main` as the obvious primary destination.
-- [ ] **Simplify session list actions** — Session rows still feel busy and destructive actions are too exposed.
+- [x] ~~**Simplify session list actions**~~ — ✅ DONE. Replaced always-visible delete controls with a calmer overflow menu so session rows feel selectable first and destructive actions are no longer shouting.
 - [ ] **Unify session creation language** — Labels like “Chat Session”, “Telegram Bot”, and related sidebar copy still need one consistent product voice.
+- [ ] **Tighten session empty/loading states** — The empty and first-load states still need to match the calmer product direction.
 
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)

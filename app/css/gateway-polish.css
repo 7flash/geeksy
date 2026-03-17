@@ -89,3 +89,73 @@
 #session-list .session-item:hover {
     background: rgba(255,255,255,0.03);
 }
+
+#session-list .session-item {
+    padding-right: 12px;
+}
+
+#session-list .session-item-actions {
+    position: relative;
+    opacity: 1;
+}
+
+#session-list .session-more-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-3);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .15s, background .15s, color .15s;
+}
+
+#session-list .session-item:hover .session-more-btn,
+#session-list .session-item.active .session-more-btn,
+#session-list .session-item-actions.menu-open .session-more-btn {
+    opacity: 1;
+}
+
+#session-list .session-more-btn:hover,
+#session-list .session-item-actions.menu-open .session-more-btn {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-1);
+}
+
+#session-list .session-action-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 148px;
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(17, 24, 39, 0.98);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+    display: none;
+    z-index: 20;
+}
+
+#session-list .session-item-actions.menu-open .session-action-menu {
+    display: block;
+}
+
+#session-list .session-delete-btn {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #fca5a5;
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 12px;
+}
+
+#session-list .session-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: #fecaca;
+}

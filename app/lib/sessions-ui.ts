@@ -1,6 +1,5 @@
 // app/lib/sessions-ui.ts — Session management UI: CRUD, selection, modals, telegram setup
-import { renderMarkdown } from './markdown'
-import { dom, state, getActiveAgent } from './state'
+import { state, getActiveAgent } from './state'
 import { appendUserBubble, appendResponseBubble, scrollDown } from './chat-ui'
 import { renderFilesPane, renderObjectivesPane } from './panels'
 
@@ -19,6 +18,67 @@ export async function loadSessions(): Promise<any[]> {
     } catch { return [] }
 }
 
+function renderSessionIcon(type: string) {
+    return type === 'telegram_bot' ? '📱' : type === 'api' ? '⚡' : '💬'
+}
+
+function renderSessionType(type: string) {
+    return type === 'telegram_bot' ? 'Telegram' : type === 'api' ? 'API' : 'Chat'
+}
+
+function wireSessionItem(item: HTMLElement, s: any, onSelect: (id: number, session: any) => void) {
+    item.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('.session-item-actions')) return
+        onSelect(s.id, s)
+    })
+
+    const actions = item.querySelector('.session-item-actions') as HTMLElement | null
+    const moreBtn = item.querySelector('.session-more-btn') as HTMLButtonElement | null
+    moreBtn?.addEventListener('click', (e) => {
+        e.stopPropagation()
+        document.querySelectorAll('.session-item-actions.menu-open').forEach((el) => {
+            if (el !== actions) el.classList.remove('menu-open')
+        })
+        actions?.classList.toggle('menu-open')
+    })
+
+    item.querySelector('.session-delete-btn')?.addEventListener('click', async (e) => {
+        e.stopPropagation()
+        actions?.classList.remove('menu-open')
+        if (!confirm(`Delete session "${s.name}"?`)) return
+        await fetch(`/api/sessions?id=${s.id}`, { method: 'DELETE' })
+        if (activeSessionId === s.id) {
+            activeSessionId = null
+            updateHeaderForSession(null)
+        }
+        await refreshSessions(onSelect)
+    })
+}
+
+function wireExistingSessionList(onSelect: (id: number, session: any) => void) {
+    document.querySelectorAll('.session-item').forEach((el) => {
+        const item = el as HTMLElement
+        const s = {
+            id: Number(item.dataset.id),
+            type: item.dataset.type || 'web',
+            name: item.querySelector('.session-item-name')?.textContent?.trim() || 'Session',
+            messageCount: Number(item.querySelector('.session-item-msgs')?.textContent?.match(/\d+/)?.[0] || 0),
+        }
+
+        const actions = item.querySelector('.session-item-actions') as HTMLElement | null
+        if (actions && !actions.querySelector('.session-more-btn')) {
+            actions.innerHTML = `
+                <button class="session-more-btn" type="button" aria-label="Session actions for ${s.name}" title="Session actions">⋯</button>
+                <div class="session-action-menu" role="menu" aria-label="Actions for ${s.name}">
+                    <button class="session-delete-btn" type="button" data-id="${s.id}" title="Delete session">Delete session</button>
+                </div>
+            `
+        }
+
+        wireSessionItem(item, s, onSelect)
+    })
+}
+
 export function renderSessionList(sessions: any[], onSelect: (id: number, session: any) => void) {
     const list = document.getElementById('session-list')
     if (!list) return
@@ -26,9 +86,9 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
     if (sessions.length === 0) {
         list.innerHTML = `
             <div class="session-empty">
-                <div class="session-empty-icon">🌐</div>
+                <div class="session-empty-icon">💬</div>
                 <p>No sessions yet</p>
-                <p class="session-empty-hint">Create a session to start chatting</p>
+                <p class="session-empty-hint">Create a session and start talking to Geeksy.</p>
             </div>
         `
         return
@@ -41,39 +101,25 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         item.dataset.id = String(s.id)
         item.dataset.type = s.type
         item.innerHTML = `
-            <div class="session-item-icon">
-                ${s.type === 'telegram_bot' ? '📱' : '🌐'}
+            <div class="session-item-icon session-item-icon-minimal">
+                ${renderSessionIcon(s.type)}
             </div>
             <div class="session-item-info">
                 <div class="session-item-name">${s.name}</div>
-                <div class="session-item-meta">
-                    <span class="session-type-badge session-type-${s.type}">
-                        ${s.type === 'telegram_bot' ? 'Telegram' : 'Web'}
-                    </span>
-                    <span class="session-item-msgs">${s.messageCount || 0} msgs</span>
+                <div class="session-item-meta session-item-meta-minimal">
+                    <span class="session-type-badge session-type-${s.type}">${renderSessionType(s.type)}</span>
+                    <span class="session-item-msgs">${s.messageCount || 0} messages</span>
                 </div>
             </div>
             <div class="session-item-actions">
-                <button class="session-delete-btn" data-id="${s.id}" title="Delete session">×</button>
+                <button class="session-more-btn" type="button" aria-label="Session actions for ${s.name}" title="Session actions">⋯</button>
+                <div class="session-action-menu" role="menu" aria-label="Actions for ${s.name}">
+                    <button class="session-delete-btn" type="button" data-id="${s.id}" title="Delete session">Delete session</button>
+                </div>
             </div>
         `
 
-        item.addEventListener('click', (e) => {
-            if ((e.target as HTMLElement).closest('.session-delete-btn')) return
-            onSelect(s.id, s)
-        })
-
-        item.querySelector('.session-delete-btn')?.addEventListener('click', async (e) => {
-            e.stopPropagation()
-            if (!confirm(`Delete session "${s.name}"?`)) return
-            await fetch(`/api/sessions?id=${s.id}`, { method: 'DELETE' })
-            if (activeSessionId === s.id) {
-                activeSessionId = null
-                updateHeaderForSession(null)
-            }
-            refreshSessions(onSelect)
-        })
-
+        wireSessionItem(item, s, onSelect)
         list.appendChild(item)
     }
 }
@@ -93,22 +139,21 @@ export async function selectSession(id: number, session?: any) {
             session = await res.json()
         } catch { }
     }
+
     updateHeaderForSession(session)
     await loadSessionChat(id)
     await loadSessionState(id)
     startMessagePolling(id)
 
-    // ── Telegram sessions: disable chat input ──
     const input = document.getElementById('input') as HTMLTextAreaElement | null
     const sendBtn = document.getElementById('send-btn') as HTMLButtonElement | null
     const isTelegram = session?.type === 'telegram_bot'
 
-    // Remove any existing banner
     document.getElementById('tg-readonly-banner')?.remove()
 
     if (input) {
         input.disabled = isTelegram
-        input.placeholder = isTelegram ? 'This session is managed via Telegram Bot' : 'Message Gateway...'
+        input.placeholder = isTelegram ? 'This session is managed via Telegram Bot' : 'Ask Geeksy to think, create files, or schedule follow-ups...'
         input.style.opacity = isTelegram ? '0.4' : '1'
     }
     if (sendBtn) {
@@ -129,12 +174,8 @@ export async function selectSession(id: number, session?: any) {
 function updateHeaderForSession(session: any | null) {
     const nameEl = document.getElementById('agent-header-name')
     const modelEl = document.getElementById('model-select') as HTMLSelectElement
-    if (nameEl) {
-        nameEl.textContent = session ? session.name : 'Gateway'
-    }
-    if (modelEl && session?.model) {
-        modelEl.value = session.model
-    }
+    if (nameEl) nameEl.textContent = session ? session.name : 'Geeksy'
+    if (modelEl && session?.model) modelEl.value = session.model
 }
 
 async function loadSessionChat(sessionId: number) {
@@ -142,7 +183,6 @@ async function loadSessionChat(sessionId: number) {
     if (!chatArea) return
 
     try {
-        // Fetch messages for this session from the state API
         const res = await fetch(`/api/sessions/messages?sessionId=${sessionId}`)
         const messages = await res.json()
 
@@ -158,14 +198,10 @@ async function loadSessionChat(sessionId: number) {
             return
         }
 
-        // Clear and render all messages
         chatArea.innerHTML = ''
         for (const msg of messages) {
-            if (msg.role === 'user') {
-                appendUserBubble(msg.content)
-            } else if (msg.role === 'assistant' && msg.content) {
-                appendResponseBubble(msg.content)
-            }
+            if (msg.role === 'user') appendUserBubble(msg.content)
+            else if (msg.role === 'assistant' && msg.content) appendResponseBubble(msg.content)
         }
         lastKnownMsgCount = messages.length
         scrollDown()
@@ -220,34 +256,28 @@ async function loadSessionState(sessionId: number) {
     }
 }
 
-/** Poll for new messages from other devices/sessions */
 function startMessagePolling(sessionId: number) {
     if (pollTimer) clearInterval(pollTimer)
     pollTimer = setInterval(async () => {
         if (activeSessionId !== sessionId) return
-        // Skip polling while actively processing — sendMessage handles rendering
         if ((window as any).__geeksy_isRunning) return
         try {
             const res = await fetch(`/api/sessions/messages?sessionId=${sessionId}&count=true`)
             const data = await res.json()
             const serverCount = data.count ?? 0
             if (serverCount > lastKnownMsgCount) {
-                // New messages arrived — fetch only the new ones
                 const newRes = await fetch(`/api/sessions/messages?sessionId=${sessionId}&offset=${lastKnownMsgCount}`)
                 const newMsgs = await newRes.json()
                 if (Array.isArray(newMsgs) && newMsgs.length > 0) {
                     for (const msg of newMsgs) {
-                        if (msg.role === 'user') {
-                            appendUserBubble(msg.content)
-                        } else if (msg.role === 'assistant' && msg.content) {
-                            appendResponseBubble(msg.content)
-                        }
+                        if (msg.role === 'user') appendUserBubble(msg.content)
+                        else if (msg.role === 'assistant' && msg.content) appendResponseBubble(msg.content)
                     }
                     lastKnownMsgCount = serverCount
                     scrollDown()
                 }
             }
-        } catch { /* silent — network hiccup */ }
+        } catch { }
     }, 3000)
 }
 
@@ -259,8 +289,6 @@ export async function refreshSessions(onSelect?: (id: number, session: any) => v
     const sessions = await loadSessions()
     renderSessionList(sessions, onSelect || selectSession)
 }
-
-// ── Modals ──
 
 export function openNewSessionModal() {
     const modal = document.getElementById('new-session-modal')
@@ -361,8 +389,15 @@ export async function createTelegramSession() {
     }
 }
 
-/** Wire up all session-related event listeners */
 export async function initSessionUI() {
+    document.addEventListener('click', (e) => {
+        if (!(e.target as HTMLElement).closest('.session-item-actions')) {
+            document.querySelectorAll('.session-item-actions.menu-open').forEach((el) => el.classList.remove('menu-open'))
+        }
+    })
+
+    wireExistingSessionList(selectSession)
+
     document.getElementById('new-session-btn')?.addEventListener('click', openNewSessionModal)
     document.getElementById('close-session-modal')?.addEventListener('click', closeNewSessionModal)
     document.getElementById('create-web-session')?.addEventListener('click', createWebSession)
@@ -382,11 +417,11 @@ export async function initSessionUI() {
         if ((e.target as HTMLElement).classList.contains('session-modal-overlay')) closeTelegramSetupModal()
     })
 
-    // ── Mobile sidebar drawer ──
     const menuBtn = document.getElementById('mobile-menu-btn')
-    const sidebar = document.querySelector('.session-sidebar') as HTMLElement
+    const sidebar = document.querySelector('.session-sidebar') as HTMLElement | null
+    let mobileSelectHandler = selectSession
+
     if (menuBtn && sidebar) {
-        // Create overlay
         const overlay = document.createElement('div')
         overlay.className = 'mobile-sidebar-overlay'
         document.body.appendChild(overlay)
@@ -402,29 +437,21 @@ export async function initSessionUI() {
 
         overlay.addEventListener('click', () => toggleSidebar(false))
 
-        // Auto-close on session select (mobile)
-        const origSelect = selectSession
-        const wrappedSelect = async (id: number, session?: any) => {
-            await origSelect(id, session)
+        mobileSelectHandler = async (id: number, session?: any) => {
+            await selectSession(id, session)
             if (window.innerWidth <= 768) toggleSidebar(false)
         }
-        // Re-render session list with wrapped handler
-        refreshSessions(wrappedSelect)
     }
 
-    // Restore last session and load its messages
-    // Sessions are the primary concept — this is where messages get loaded
     const savedSessionId = localStorage.getItem('geeksy:activeSessionId')
-
     const sessions = await loadSessions()
     if (savedSessionId) {
         activeSessionId = Number(savedSessionId)
         const session = sessions.find((s: any) => s.id === activeSessionId)
-        await selectSession(activeSessionId, session)
+        if (session) await selectSession(activeSessionId, session)
     } else if (sessions.length > 0) {
-        // Auto-select the first (most recent) session
         await selectSession(sessions[0].id, sessions[0])
     }
 
-    refreshSessions()
+    await refreshSessions(mobileSelectHandler)
 }
