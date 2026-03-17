@@ -2,6 +2,7 @@
   "name": "geeksy",
   "version": "1.0.2",
   "description": "Personal OS for autonomous AI agents",
+  "geeksyCommit": "8804646",
   "type": "module",
   "bin": {
     "geeksy": "./bin/geeksy.js"
