@@ -822,6 +822,58 @@
     color: var(--text-2);
 }
 
+.tool-active {
+    border-left: 2px solid var(--accent);
+    animation: tool-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tool-pulse {
+    0%, 100% { border-left-color: var(--accent); }
+    50% { border-left-color: rgba(99, 102, 241, .3); }
+}
+
+.tool-command {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: #e2e8f0;
+    background: rgba(15, 23, 42, .7);
+    border: 1px solid rgba(99, 102, 241, .12);
+}
+
+.tool-progress {
+    height: 2px;
+    background: var(--bg-3);
+    border-radius: 1px;
+    margin-top: 6px;
+    overflow: hidden;
+}
+
+.tool-progress-bar {
+    width: 40%;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    animation: tool-progress-slide 1.5s ease-in-out infinite;
+}
+
+@keyframes tool-progress-slide {
+    0% { transform: translateX(-100%); width: 40%; }
+    50% { transform: translateX(100%); width: 60%; }
+    100% { transform: translateX(250%); width: 40%; }
+}
+
+.tool-elapsed {
+    font-size: 9px;
+    color: var(--text-3);
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.tool-output-error {
+    color: #fca5a5;
+    border-left: 2px solid rgba(239, 68, 68, .3);
+    padding-left: 8px;
+}
+
 /* ── Dividers ── */
 .divider {
     display: flex;
@@ -1084,4 +1136,4 @@
 
 /* ══════════════════════════════════════
    OVERVIEW PANEL (bottom tabs)
-   ══════════════════════════════════════ */
+   ══════════════════════════════════════ */

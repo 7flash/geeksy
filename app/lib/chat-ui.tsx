@@ -177,59 +177,75 @@ function Card({ type, label, content }: { type: string; label: string; content: 
     )
 }
 
-export function ToolCard({ name, params, result }: {
+export function ToolCard({ name, params, result, startTime }: {
     name: string
     params: Record<string, any>
     result?: { success: boolean; output: string; error?: string }
+    startTime?: number
 }) {
-    const badgeClass = !result ? 'running' : result.success ? 'success' : 'failure'
-    const badgeText = !result ? 'running' : result.success ? 'success' : 'failed'
+    const isRunning = !result
+    const badgeClass = isRunning ? 'running' : result.success ? 'success' : 'failure'
+    const badgeIcon = isRunning ? '⏳' : result.success ? '✓' : '✗'
+    const badgeText = isRunning ? 'running…' : result.success ? 'done' : 'failed'
     const output = result ? (result.output || result.error || '') : ''
 
-    // Human-readable tool labels with icons
     const toolLabels: Record<string, string> = {
         read_file: '📖 Read File',
         write_file: '✏️ Write File',
         edit_file: '✏️ Edit File',
-        execute: '🖥️ Execute',
-        run_command: '🖥️ Run Command',
+        execute: '🖥️ Shell',
+        exec: '🖥️ Shell',
+        run_command: '🖥️ Shell',
         search: '🔍 Search',
         list_files: '📂 List Files',
         schedule: '⏰ Schedule',
     }
     const displayName = toolLabels[name] || name
 
-    // Extract the primary field for compact display
-    const primaryField = params.path || params.file || params.command || params.query || ''
-    const hasExtraParams = Object.keys(params).length > 1 || (!primaryField && Object.keys(params).length > 0)
+    const primaryField = params.command || params.path || params.file || params.query || ''
+    const isShell = ['execute', 'exec', 'run_command'].includes(name)
+    const isFileOp = ['read_file', 'write_file', 'edit_file'].includes(name)
+    const hasExtraParams = Object.keys(params).filter(k => k !== 'command' && k !== 'path' && k !== 'file' && k !== 'query').length > 0
+
+    const elapsed = startTime && result ? `${((Date.now() - startTime) / 1000).toFixed(1)}s` : ''
 
     return (
-        <div className="card card-tool">
+        <div className={`card card-tool ${isRunning ? 'tool-active' : ''}`}>
             <div className="tool-header">
                 <span className="tool-name">{displayName}</span>
-                <span className={`tool-badge ${badgeClass}`}>{badgeText}</span>
+                <span className={`tool-badge ${badgeClass}`}>{badgeIcon} {badgeText}</span>
+                {elapsed && <span className="tool-elapsed">{elapsed}</span>}
             </div>
+
             {primaryField && (
-                <div className="tool-primary-param">{primaryField}</div>
+                <div className={`tool-primary-param ${isShell ? 'tool-command' : ''}`}>
+                    {isShell ? '$ ' : ''}{primaryField}
+                </div>
             )}
+
+            {isRunning && isShell && (
+                <div className="tool-progress">
+                    <div className="tool-progress-bar" />
+                </div>
+            )}
+
             {hasExtraParams && (
                 <details className="tool-params-details">
-                    <summary className="tool-params-summary">Parameters</summary>
-                    <pre className="tool-params">{JSON.stringify(params, null, 2)}</pre>
+                    <summary className="tool-params-summary">▸ Parameters</summary>
+                    <pre className="tool-params">{JSON.stringify(
+                        Object.fromEntries(Object.entries(params).filter(([k]) => k !== 'command' && k !== 'path' && k !== 'file' && k !== 'query')),
+                        null, 2
+                    )}</pre>
                 </details>
             )}
-            {!hasExtraParams && !primaryField && (
-                <pre className="tool-params">{JSON.stringify(params, null, 2)}</pre>
-            )}
-            {output && output.length > 300 ? (
-                <details className="tool-output-details">
+
+            {output ? (
+                <details className="tool-output-details" open={output.length <= 200 && !result.success ? true : undefined}>
                     <summary className="tool-output-summary">
-                        Output ({output.length > 1000 ? `${(output.length / 1024).toFixed(1)}KB` : `${output.length} chars`})
+                        {result.success ? '▸' : '▾'} Output{output.length > 500 ? ` (${output.length > 1000 ? `${(output.length / 1024).toFixed(1)}KB` : `${output.length} chars`})` : ''}
                     </summary>
-                    <pre className="tool-output">{output.substring(0, 2000)}</pre>
+                    <pre className={`tool-output ${!result.success ? 'tool-output-error' : ''}`}>{output.substring(0, 3000)}{output.length > 3000 ? '\n…truncated' : ''}</pre>
                 </details>
-            ) : output ? (
-                <pre className="tool-output">{output}</pre>
             ) : null}
         </div>
     )
@@ -267,8 +283,9 @@ export function appendThinkingCard(text: string): HTMLElement {
 }
 
 export function appendToolCard(name: string, params: Record<string, any>) {
-    const entry = { el: null as any, name, params }
-    entry.el = appendJsx(<ToolCard name={name} params={params} />)
+    const startTime = Date.now()
+    const entry = { el: null as any, name, params, startTime }
+    entry.el = appendJsx(<ToolCard name={name} params={params} startTime={startTime} />)
     toolCards.push(entry)
 }
 
@@ -276,7 +293,7 @@ export function updateLastTool(result: { success: boolean; output: string; error
     const entry = toolCards[toolCards.length - 1]
     if (!entry) return
     entry.result = result
-    render(<ToolCard name={entry.name} params={entry.params} result={result} />, entry.el)
+    render(<ToolCard name={entry.name} params={entry.params} result={result} startTime={entry.startTime} />, entry.el)
     scrollDown()
 }
 
