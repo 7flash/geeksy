@@ -17,6 +17,7 @@
 - [x] ~~**ask_user_for_secret Tool**~~ — ✅ DONE. Delivered `createSecretRequestTool` to LLM context to safely stall and securely request missing env variables from the active user.
 
 ## 🟡 Priority: Improve
+- [x] ~~**Remove objectives timeline tab and show version badge**~~ — ✅ DONE. Removed the Objectives tab and metrics (objectives now live in chat confirmation cards); added a fixed version+commit badge to the bottom-right corner of the page.
 - [x] ~~**Show CLI version/commit on startup**~~ — ✅ DONE. `npx geeksy` now prints version, commit (when available), and active home/db/skills paths before launching Bun.
 - [x] ~~**Default system prompt**~~ — ✅ DONE. Added `DEFAULT_SYSTEM_PROMPT` in chat/route.ts — teaches AI to be concise, use Bun/TypeScript, `Get-Date` for time, use bgrun for processes.
 - [x] ~~**Telegram session read-only in web**~~ — ✅ DONE. `selectSession()` checks `type === 'telegram_bot'`, disables input/send, shows blue banner.

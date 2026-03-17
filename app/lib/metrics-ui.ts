@@ -8,7 +8,6 @@ function updateMetricsBar(data: any) {
     }
 
     set('metric-val-messages', String(data.messages?.total ?? '—'))
-    set('metric-val-objectives', `${data.objectives?.completed ?? 0}/${data.objectives?.total ?? 0}`)
     set('metric-val-schedules', `${data.schedules?.totalSuccess ?? 0}✓ ${data.schedules?.totalFail ?? 0}✗`)
 }
 

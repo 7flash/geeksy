@@ -49,43 +49,9 @@ function TimelineGroup({ group, isLatest }: { group: ObjectiveGroup; isLatest: b
     )
 }
 
+/** @deprecated Objectives tab removed — objectives now live in chat confirmation cards and heartbeat validation */
 export function renderObjectivesPane() {
-    const pane = document.getElementById('pane-objectives')!
-    if (state.objectiveGroups.length === 0 && state.objectives.length === 0) {
-        render(<div className="overview-empty">No objectives yet. Send a message to start planning.</div>, pane)
-    } else {
-        const reversed = [...state.objectiveGroups].reverse()
-
-        // Calculate stats from all known objectives (including restored ones)
-        const total = state.objectives.length
-        const completed = state.objectives.filter(o => o.met === true).length
-        const failed = state.objectives.filter(o => o.met === false).length
-        const pending = total - completed - failed
-
-        render(
-            <div className="objectives-container" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <div className="objectives-stats" style={{
-                    padding: '12px', borderBottom: '1px solid var(--border)',
-                    display: 'flex', gap: '16px', fontSize: '12px', background: 'var(--bg-card)'
-                }}>
-                    <span style={{ color: 'var(--text-dim)' }}><strong>Task History:</strong></span>
-                    <span><span style={{ color: 'var(--text)' }}>{total}</span> Total</span>
-                    {completed > 0 && <span style={{ color: 'var(--green)' }}>✓ {completed} Complete</span>}
-                    {failed > 0 && <span style={{ color: 'var(--red)' }}>✗ {failed} Failed</span>}
-                    {pending > 0 && <span style={{ color: 'var(--blue)' }}>⏳ {pending} Pending</span>}
-                </div>
-                <div className="tl-timeline" style={{ flex: 1, overflowY: 'auto' }}>
-                    {reversed.map((g, i) => (
-                        <TimelineGroup
-                            group={g}
-                            isLatest={i === 0}
-                        />
-                    ))}
-                </div>
-            </div>,
-            pane
-        )
-    }
+    // No-op: objectives tab has been removed from the UI
 }
 
 export function updateObjectives(results: Array<{ name: string; met: boolean; reason: string }>) {
@@ -106,7 +72,6 @@ export function updateObjectives(results: Array<{ name: string; met: boolean; re
             }
         }
     }
-    renderObjectivesPane()
 }
 
 // ══════════════════════════════════════

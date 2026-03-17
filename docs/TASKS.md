@@ -9,6 +9,7 @@
 - [ ] **Smoke-test published npm plugin upgrades in packaged CLI mode** — The local-workspace path is covered now, but a real registry-backed plugin should still be tested through `bun add` / `bun update` in app-home mode.
 
 ## 🟡 Priority: Improve
+- [x] ~~**Remove objectives timeline tab and show version badge**~~ — ✅ DONE. Removed the Objectives tab and metrics (objectives now live in chat confirmation cards); added a fixed version+commit badge to the bottom-right corner of the page.
 - [x] ~~**Show CLI version/commit on startup**~~ — ✅ DONE. `npx geeksy` now prints version, commit (when available), and active home/db/skills paths before launching Bun.
 - [x] ~~**Heartbeat follow-up UI**~~ — ✅ DONE. Tooltip now shows pending follow-ups list with reasons, countdown timers, and context. Purple badge on heartbeat button when follow-ups queued. API returns full follow-up items.
 - [ ] **Heartbeat follow-up live test** — Test with a real user interaction to verify the 2-minute auto-scheduled follow-up flows through correctly.

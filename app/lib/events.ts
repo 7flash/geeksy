@@ -121,12 +121,9 @@ export function handleEvent(type: string, data: any) {
             state.objectives = entries
             renderObjectivesPane()
 
-            // Only show objectives card for task mode (not quick responses)
-            if (!allQuick) {
-                switchTab('objectives')
-                if (newObjectives.length > 0) {
-                    appendCard('planning', 'Planned Objectives', newObjectives.map((o: any) => `• ${o.name} — ${o.description}`).join('\n'))
-                }
+            // Show objectives in chat for task mode (not quick responses)
+            if (!allQuick && newObjectives.length > 0) {
+                appendCard('planning', 'Planned Objectives', newObjectives.map((o: any) => `• ${o.name} — ${o.description}`).join('\n'))
             }
             break
         }
@@ -162,7 +159,6 @@ export function handleEvent(type: string, data: any) {
             `
             dom.chatArea.appendChild(card)
             scrollDown()
-            switchTab('objectives')
 
             const sessionId = agent?.sessionId
             card.querySelector('[data-action="confirm-proceed"]')!.addEventListener('click', async () => {

@@ -760,6 +760,24 @@
     color: var(--red);
 }
 
+.version-badge {
+    position: fixed;
+    bottom: 8px;
+    right: 12px;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-3);
+    opacity: 0.5;
+    z-index: 5;
+    pointer-events: none;
+    user-select: none;
+}
+
+.version-commit {
+    color: var(--text-3);
+    opacity: 0.7;
+}
+
 @keyframes fadeSlideIn {
     from {
         opacity: 0;

@@ -16,7 +16,7 @@ export const state: WorkspaceState = {
     isRunning: false,
     activeSkills: new Set(),
     availableSkills: [],
-    activeTab: 'objectives',
+    activeTab: 'files',
 }
 
 // Per-agent chat + state persistence (in-memory for instant tab switching within session)

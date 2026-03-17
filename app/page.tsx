@@ -1,7 +1,18 @@
 // app/page.tsx — Gateway: Session-first chat interface
 import { db } from './lib/db'
+import { readFileSync } from 'fs'
+import { resolve, dirname } from 'path'
+
+function getVersionInfo() {
+    try {
+        const pkgPath = resolve(process.env.GEEKSY_APP_ROOT || process.cwd(), 'package.json')
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+        return { version: pkg.version || '?', commit: pkg.geeksyCommit || '' }
+    } catch { return { version: '?', commit: '' } }
+}
 
 export default function Page() {
+    const vInfo = getVersionInfo()
     let sessions: any[] = []
     try { sessions = db.sessions.select().all() } catch { }
     sessions.sort((a: any, b: any) => (b.lastActiveAt || b.id) - (a.lastActiveAt || a.id))
@@ -83,10 +94,6 @@ export default function Page() {
                         <span className="metric-value" id="metric-val-messages">—</span>
                         <span className="metric-label">messages</span>
                     </div>
-                    <div className="metric-item" id="metric-objectives" title="Objective progress">
-                        <span className="metric-value" id="metric-val-objectives">—</span>
-                        <span className="metric-label">progress</span>
-                    </div>
                     <div className="metric-item" id="metric-schedules" title="Scheduled runs for this conversation">
                         <span className="metric-value" id="metric-val-schedules">—</span>
                         <span className="metric-label">schedules</span>
@@ -120,21 +127,21 @@ export default function Page() {
                 <div className="overview" id="overview">
                     <div className="overview-resize" id="overview-resize" />
                     <div className="tab-bar" id="tab-bar">
-                        <button className="tab active" data-tab="objectives">Objectives</button>
-                        <button className="tab" data-tab="files">Files</button>
+                        <button className="tab active" data-tab="files">Files</button>
                         <button className="tab" data-tab="schedule">Schedule</button>
                     </div>
                     <div className="tab-content" id="tab-content">
-                        <div className="tab-pane active" id="pane-objectives">
-                            <div className="overview-empty">No objectives yet. Send a task and Geeksy will turn it into a clear plan.</div>
-                        </div>
-                        <div className="tab-pane" id="pane-files">
+                        <div className="tab-pane active" id="pane-files">
                             <div className="overview-empty">No files touched yet.</div>
                         </div>
                         <div className="tab-pane" id="pane-schedule">
                             <div className="overview-empty">No scheduled tasks yet.</div>
                         </div>
                     </div>
+                </div>
+
+                <div className="version-badge" id="version-badge" title={`Geeksy ${vInfo.version}${vInfo.commit ? ` (${vInfo.commit})` : ''}`}>
+                    v{vInfo.version}{vInfo.commit ? <span className="version-commit"> · {vInfo.commit}</span> : null}
                 </div>
             </div>
 
