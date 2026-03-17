@@ -41,8 +41,11 @@
 - [x] ~~**Continue UX pruning in header/sidebar**~~ — ✅ DONE. Applied a calmer chrome pass: quieter header, lighter metrics strip, clearer session copy, and cleaner session row presentation so the main workspace reads as one focused product.
 - [x] ~~**Prune or hide low-value nav destinations**~~ — ✅ DONE. Demoted side-system destinations in the rail into a calmer `More` group and kept `Main` as the obvious primary destination.
 - [x] ~~**Simplify session list actions**~~ — ✅ DONE. Replaced always-visible delete controls with a quieter overflow affordance so rows read as conversations first and destructive actions are revealed only when needed.
-- [ ] **Unify session creation language** — The product is calmer now, but labels like “Chat Session”, “Telegram Bot”, and sidebar/session wording still need one consistent product voice.
+- [x] ~~**Unify session creation language**~~ — ✅ DONE. Standardized the main product voice around conversations instead of mixed session/chat/bot wording across the sidebar, composer, empty states, and creation flow.
 - [ ] **Tighten session empty/loading states** — Session rows are calmer now, but the empty state and first-load experience still need the same polished product voice.
+- [x] ~~**Prepare production deployment runbook**~~ — ✅ DONE. Added `docs/DEPLOY.md` with the fastest repeatable `bgrun` + Caddy + env-based deployment flow.
+- [ ] **Move production secrets out of tracked local config** — Do not rely on repo-local config for deployment secrets; production should use env vars or server-local secret files.
+- [ ] **Deploy Geeksy to the target server** — Needs the actual server/domain access details to execute the runbook.
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (Bun-native, file-based routing)

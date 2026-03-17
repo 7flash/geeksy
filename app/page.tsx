@@ -11,17 +11,17 @@ export default function Page() {
             <div id="session-sidebar" className="session-sidebar">
                 <div className="sidebar-header sidebar-header-minimal">
                     <div>
-                        <span className="sidebar-title">Sessions</span>
-                        <div className="sidebar-subtitle">Focused conversations with memory, files, and schedules.</div>
+                        <span className="sidebar-title">Conversations</span>
+                        <div className="sidebar-subtitle">Each conversation keeps its chat, objectives, files, and schedules together.</div>
                     </div>
-                    <button id="new-session-btn" className="sidebar-new-btn">New</button>
+                    <button id="new-session-btn" className="sidebar-new-btn">New conversation</button>
                 </div>
                 <div id="session-list" className="session-list">
                     {sessions.length === 0 ? (
                         <div className="session-empty">
                             <div className="session-empty-icon">💬</div>
-                            <p>No sessions yet</p>
-                            <p className="session-empty-hint">Create a session and start talking to Geeksy.</p>
+                            <p>No conversations yet</p>
+                            <p className="session-empty-hint">Start a conversation and keep the work in one place.</p>
                         </div>
                     ) : (
                         sessions.map((s: any) => (
@@ -33,7 +33,7 @@ export default function Page() {
                                     <div className="session-item-name">{s.name}</div>
                                     <div className="session-item-meta session-item-meta-minimal">
                                         <span className={`session-type-badge session-type-${s.type}`}>
-                                            {s.type === 'telegram_bot' ? 'Telegram' : s.type === 'api' ? 'API' : 'Chat'}
+                                            {s.type === 'telegram_bot' ? 'Telegram' : s.type === 'api' ? 'API' : 'Conversation'}
                                         </span>
                                         <span className="session-item-msgs">{s.messageCount || 0} messages</span>
                                     </div>
@@ -41,7 +41,7 @@ export default function Page() {
                                 <div className="session-item-actions">
                                     <button className="session-more-btn" type="button" aria-label={`Session actions for ${s.name}`} title="Session actions">⋯</button>
                                     <div className="session-action-menu" role="menu" aria-label={`Actions for ${s.name}`}>
-                                        <button className="session-delete-btn" type="button" data-id={s.id} title="Delete session">Delete session</button>
+                                        <button className="session-delete-btn" type="button" data-id={s.id} title="Delete conversation">Delete conversation</button>
                                     </div>
                                 </div>
                             </div>
@@ -59,7 +59,7 @@ export default function Page() {
                                 <span className="agent-status-dot active" id="agent-status-dot" />
                                 <div className="agent-identity-copy">
                                     <span className="agent-header-name" id="agent-header-name">Geeksy</span>
-                                    <span className="agent-header-subtitle">Stay in one session and let the work accumulate there.</span>
+                                    <span className="agent-header-subtitle">Stay in one conversation and let the work accumulate there.</span>
                                 </div>
                             </div>
                         </div>
@@ -78,7 +78,7 @@ export default function Page() {
                 </header>
 
                 <div className="agent-metrics-bar agent-metrics-bar-minimal" id="agent-metrics-bar">
-                    <div className="metric-item" id="metric-messages" title="Messages in this session">
+                    <div className="metric-item" id="metric-messages" title="Messages in this conversation">
                         <span className="metric-value" id="metric-val-messages">—</span>
                         <span className="metric-label">messages</span>
                     </div>
@@ -86,7 +86,7 @@ export default function Page() {
                         <span className="metric-value" id="metric-val-objectives">—</span>
                         <span className="metric-label">progress</span>
                     </div>
-                    <div className="metric-item" id="metric-schedules" title="Scheduled runs for this session">
+                    <div className="metric-item" id="metric-schedules" title="Scheduled runs for this conversation">
                         <span className="metric-value" id="metric-val-schedules">—</span>
                         <span className="metric-label">schedules</span>
                     </div>
@@ -97,7 +97,7 @@ export default function Page() {
 
                     <div className="input-area">
                         <div className="input-row">
-                            <textarea className="input-field" id="input" rows={1} placeholder="Ask Geeksy to think, create files, or schedule follow-ups..." />
+                            <textarea className="input-field" id="input" rows={1} placeholder="Ask Geeksy to work in this conversation..." />
                             <button className="send-btn" id="send-btn">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M22 2L11 13" /><path d="M22 2L15 22L11 13L2 9L22 2Z" />
@@ -105,7 +105,7 @@ export default function Page() {
                             </button>
                         </div>
                         <div className="input-footer">
-                            <span className="input-hint">Ask naturally — Geeksy can chat, update objectives, create files, and schedule work.</span>
+                            <span className="input-hint">Ask naturally — Geeksy can plan, edit files, track objectives, and schedule follow-ups here.</span>
                         </div>
                     </div>
                 </div>
@@ -134,21 +134,21 @@ export default function Page() {
             <div id="new-session-modal" className="session-modal-overlay" style={{ display: 'none' }}>
                 <div className="session-modal">
                     <div className="session-modal-header">
-                        <h2>Create New Session</h2>
+                        <h2>Start a new conversation</h2>
                         <button className="session-modal-close" id="close-session-modal">✕</button>
                     </div>
                     <div className="session-modal-body">
-                        <p className="session-modal-desc">Choose how you want to interact with Geeksy:</p>
+                        <p className="session-modal-desc">Choose where this conversation should live:</p>
                         <div className="session-type-cards">
                             <button className="session-type-card" id="create-web-session">
                                 <div className="session-type-card-icon">💬</div>
-                                <div className="session-type-card-title">Chat Session</div>
-                                <div className="session-type-card-desc">A focused conversation for planning, files, and follow-up work.</div>
+                                <div className="session-type-card-title">In Geeksy</div>
+                                <div className="session-type-card-desc">Keep the conversation in Geeksy for planning, files, objectives, and follow-up work.</div>
                             </button>
                             <button className="session-type-card" id="create-telegram-session">
                                 <div className="session-type-card-icon">📱</div>
-                                <div className="session-type-card-title">Telegram Bot</div>
-                                <div className="session-type-card-desc">Talk to the same workflow from Telegram.</div>
+                                <div className="session-type-card-title">In Telegram</div>
+                                <div className="session-type-card-desc">Continue the same kind of conversation from Telegram.</div>
                             </button>
                         </div>
                     </div>
@@ -158,7 +158,7 @@ export default function Page() {
             <div id="telegram-setup-modal" className="session-modal-overlay" style={{ display: 'none' }}>
                 <div className="session-modal" style={{ maxWidth: '520px' }}>
                     <div className="session-modal-header">
-                        <h2>📱 Setup Telegram Bot</h2>
+                        <h2>📱 Connect a Telegram conversation</h2>
                         <button className="session-modal-close" id="close-telegram-modal">✕</button>
                     </div>
                     <div className="session-modal-body">
@@ -166,7 +166,7 @@ export default function Page() {
                             <div className="tg-step">
                                 <div className="tg-step-num">1</div>
                                 <div className="tg-step-content">
-                                    <div className="tg-step-title">Create a Bot</div>
+                                    <div className="tg-step-title">Create the Telegram bot</div>
                                     <div className="tg-step-desc">
                                         Open <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> in Telegram and send <code>/newbot</code>.
                                     </div>
@@ -175,7 +175,7 @@ export default function Page() {
                             <div className="tg-step">
                                 <div className="tg-step-num">2</div>
                                 <div className="tg-step-content">
-                                    <div className="tg-step-title">Copy the Bot Token</div>
+                                    <div className="tg-step-title">Copy the bot token</div>
                                     <div className="tg-step-desc">
                                         BotFather will give you an API token. Copy it here.
                                     </div>
@@ -184,7 +184,7 @@ export default function Page() {
                             <div className="tg-step">
                                 <div className="tg-step-num">3</div>
                                 <div className="tg-step-content">
-                                    <div className="tg-step-title">Paste Token Below</div>
+                                    <div className="tg-step-title">Paste the token</div>
                                     <div className="tg-step-desc">
                                         <input type="text" id="tg-bot-token-input" className="input-field" placeholder="Paste your bot token here..." style={{ width: '100%', marginTop: '8px', fontFamily: 'monospace' }} />
                                     </div>
@@ -193,16 +193,16 @@ export default function Page() {
                             <div className="tg-step">
                                 <div className="tg-step-num">4</div>
                                 <div className="tg-step-content">
-                                    <div className="tg-step-title">Name Your Session</div>
+                                    <div className="tg-step-title">Name the conversation</div>
                                     <div className="tg-step-desc">
-                                        <input type="text" id="tg-session-name-input" className="input-field" placeholder="My Telegram Session" style={{ width: '100%', marginTop: '8px' }} />
+                                        <input type="text" id="tg-session-name-input" className="input-field" placeholder="My Telegram Conversation" style={{ width: '100%', marginTop: '8px' }} />
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div className="session-modal-actions" style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                             <button className="btn-ghost" id="tg-setup-back">← Back</button>
-                            <button className="btn-primary" id="tg-setup-connect">Connect Bot</button>
+                            <button className="btn-primary" id="tg-setup-connect">Connect conversation</button>
                         </div>
                     </div>
                 </div>

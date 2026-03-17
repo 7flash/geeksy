@@ -23,7 +23,7 @@ function renderSessionIcon(type: string) {
 }
 
 function renderSessionType(type: string) {
-    return type === 'telegram_bot' ? 'Telegram' : type === 'api' ? 'API' : 'Chat'
+    return type === 'telegram_bot' ? 'Telegram' : type === 'api' ? 'API' : 'Conversation'
 }
 
 function wireSessionItem(item: HTMLElement, s: any, onSelect: (id: number, session: any) => void) {
@@ -45,7 +45,7 @@ function wireSessionItem(item: HTMLElement, s: any, onSelect: (id: number, sessi
     item.querySelector('.session-delete-btn')?.addEventListener('click', async (e) => {
         e.stopPropagation()
         actions?.classList.remove('menu-open')
-        if (!confirm(`Delete session "${s.name}"?`)) return
+        if (!confirm(`Delete conversation "${s.name}"?`)) return
         await fetch(`/api/sessions?id=${s.id}`, { method: 'DELETE' })
         if (activeSessionId === s.id) {
             activeSessionId = null
@@ -61,16 +61,16 @@ function wireExistingSessionList(onSelect: (id: number, session: any) => void) {
         const s = {
             id: Number(item.dataset.id),
             type: item.dataset.type || 'web',
-            name: item.querySelector('.session-item-name')?.textContent?.trim() || 'Session',
+            name: item.querySelector('.session-item-name')?.textContent?.trim() || 'Conversation',
             messageCount: Number(item.querySelector('.session-item-msgs')?.textContent?.match(/\d+/)?.[0] || 0),
         }
 
         const actions = item.querySelector('.session-item-actions') as HTMLElement | null
         if (actions && !actions.querySelector('.session-more-btn')) {
             actions.innerHTML = `
-                <button class="session-more-btn" type="button" aria-label="Session actions for ${s.name}" title="Session actions">⋯</button>
+                <button class="session-more-btn" type="button" aria-label="Conversation actions for ${s.name}" title="Conversation actions">⋯</button>
                 <div class="session-action-menu" role="menu" aria-label="Actions for ${s.name}">
-                    <button class="session-delete-btn" type="button" data-id="${s.id}" title="Delete session">Delete session</button>
+                    <button class="session-delete-btn" type="button" data-id="${s.id}" title="Delete conversation">Delete conversation</button>
                 </div>
             `
         }
@@ -87,8 +87,8 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         list.innerHTML = `
             <div class="session-empty">
                 <div class="session-empty-icon">💬</div>
-                <p>No sessions yet</p>
-                <p class="session-empty-hint">Create a session and start talking to Geeksy.</p>
+                <p>No conversations yet</p>
+                <p class="session-empty-hint">Start a conversation and keep the work in one place.</p>
             </div>
         `
         return
@@ -112,9 +112,9 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
                 </div>
             </div>
             <div class="session-item-actions">
-                <button class="session-more-btn" type="button" aria-label="Session actions for ${s.name}" title="Session actions">⋯</button>
+                <button class="session-more-btn" type="button" aria-label="Conversation actions for ${s.name}" title="Conversation actions">⋯</button>
                 <div class="session-action-menu" role="menu" aria-label="Actions for ${s.name}">
-                    <button class="session-delete-btn" type="button" data-id="${s.id}" title="Delete session">Delete session</button>
+                    <button class="session-delete-btn" type="button" data-id="${s.id}" title="Delete conversation">Delete conversation</button>
                 </div>
             </div>
         `
@@ -153,7 +153,7 @@ export async function selectSession(id: number, session?: any) {
 
     if (input) {
         input.disabled = isTelegram
-        input.placeholder = isTelegram ? 'This session is managed via Telegram Bot' : 'Ask Geeksy to think, create files, or schedule follow-ups...'
+        input.placeholder = isTelegram ? 'This conversation continues in Telegram' : 'Ask Geeksy to work in this conversation...'
         input.style.opacity = isTelegram ? '0.4' : '1'
     }
     if (sendBtn) {
@@ -165,7 +165,7 @@ export async function selectSession(id: number, session?: any) {
         const banner = document.createElement('div')
         banner.id = 'tg-readonly-banner'
         banner.style.cssText = 'padding:8px 16px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:8px;margin:0 16px 8px;font-size:12px;color:#60a5fa;text-align:center;'
-        banner.textContent = '📱 Messages in this session are routed through Telegram. Reply via the bot.'
+        banner.textContent = '📱 This conversation continues in Telegram. Reply there to keep it going.'
         const chatArea = document.getElementById('chat-area')
         chatArea?.parentElement?.insertBefore(banner, chatArea)
     }
@@ -190,8 +190,8 @@ async function loadSessionChat(sessionId: number) {
             chatArea.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">💬</div>
-                    <h3>Ready to chat</h3>
-                    <p>Send a message to start this session</p>
+                    <h3>Ready to work</h3>
+                    <p>Send a message to start this conversation</p>
                 </div>
             `
             lastKnownMsgCount = 0
@@ -209,8 +209,8 @@ async function loadSessionChat(sessionId: number) {
         chatArea.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">💬</div>
-                <h3>Ready to chat</h3>
-                <p>Send a message to start this session</p>
+                <h3>Ready to work</h3>
+                <p>Send a message to start this conversation</p>
             </div>
         `
         lastKnownMsgCount = 0
@@ -317,7 +317,7 @@ export async function createWebSession() {
         const res = await fetch('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'Web Session', type: 'web' })
+            body: JSON.stringify({ name: 'New Conversation', type: 'web' })
         })
         const data = await res.json()
         await refreshSessions()
@@ -331,7 +331,7 @@ export async function createTelegramSession() {
     const tokenInput = document.getElementById('tg-bot-token-input') as HTMLInputElement
     const nameInput = document.getElementById('tg-session-name-input') as HTMLInputElement
     const token = tokenInput?.value.trim()
-    const name = nameInput?.value.trim() || 'Telegram Bot'
+    const name = nameInput?.value.trim() || 'Telegram Conversation'
 
     if (!token) {
         tokenInput?.focus()
@@ -352,7 +352,7 @@ export async function createTelegramSession() {
 
         if (!testData.ok) {
             alert('Invalid bot token. Check the token from BotFather.')
-            if (connectBtn) { connectBtn.textContent = 'Connect Bot'; connectBtn.disabled = false }
+            if (connectBtn) { connectBtn.textContent = 'Connect conversation'; connectBtn.disabled = false }
             return
         }
 
@@ -385,7 +385,7 @@ export async function createTelegramSession() {
         alert('Failed to connect. Check your internet connection.')
         console.error(err)
     } finally {
-        if (connectBtn) { connectBtn.textContent = 'Connect Bot'; connectBtn.disabled = false }
+        if (connectBtn) { connectBtn.textContent = 'Connect conversation'; connectBtn.disabled = false }
     }
 }
 

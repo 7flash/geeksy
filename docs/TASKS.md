@@ -29,8 +29,11 @@
 - [x] ~~**Continue visual cleanup of nav + sessions list**~~ — ✅ DONE. Applied a calmer header/sidebar pass with lighter chrome, clearer session-first copy, and a quieter metrics strip so the main workspace feels less noisy.
 - [x] ~~**Prune or hide low-value nav destinations**~~ — ✅ DONE. Demoted side-system destinations in the rail into a calmer `More` group and kept `Main` as the obvious primary destination.
 - [x] ~~**Simplify session list actions**~~ — ✅ DONE. Replaced always-visible delete controls with a calmer overflow menu so session rows feel selectable first and destructive actions are no longer shouting.
-- [ ] **Unify session creation language** — Labels like “Chat Session”, “Telegram Bot”, and related sidebar copy still need one consistent product voice.
+- [x] ~~**Unify session creation language**~~ — ✅ DONE. Standardized the UI around conversations instead of mixed session/chat/bot wording across the main workflow and creation flow.
 - [ ] **Tighten session empty/loading states** — The empty and first-load states still need to match the calmer product direction.
+- [x] ~~**Prepare production deployment runbook**~~ — ✅ DONE. Added `docs/DEPLOY.md` with the fastest reliable bgrun + env + Caddy deployment path.
+- [ ] **Move production secrets out of tracked local config** — Production secrets should live in env vars or server-local files, not repo-local config.
+- [ ] **Deploy Geeksy to the target server** — Needs the actual server/domain access details to run the deployment.
 
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)
