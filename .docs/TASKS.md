@@ -1,8 +1,8 @@
 # Geeksy — Tasks & Ideas
 
 ## 🔴 Priority: Fix
-- [x] ~~**Fix `npx geeksy` SQLite path**~~ — ✅ DONE. The CLI now launches from a stable writable `~/.geeksy` home, creates `data/agents.db` automatically, and seeds bundled skills there so npm-cache installs no longer fail with `unable to open database file`.
-- [ ] **Audit remaining writable paths for npm CLI mode** — Some config/plugin paths still rely on `process.cwd()` semantics and should be reviewed against `GEEKSY_HOME` / packaged CLI usage.
+- [x] ~~**Fix `npx geeksy` SQLite path**~~ — ✅ DONE. The CLI now uses OS-native writable app-data directories, pre-creates the SQLite file, and passes an explicit `GEEKSY_DB_PATH` so npm-cache installs no longer fail with `unable to open database file`.
+- [ ] **Audit remaining writable paths for npm CLI mode** — Some config/plugin paths still rely on `process.cwd()` semantics and should be reviewed against `GEEKSY_HOME` / `GEEKSY_DB_PATH` packaged CLI usage.
 - [x] ~~**Session auto-load broken**~~ — ✅ DONE. `initSessionUI()` called without `await` in page.client.tsx. Fixed by sequencing `restoreState()` then `initSessionUI()` in async IIFE.
 - [x] ~~**Plugins page rendering "null"**~~ — ✅ DONE. `PluginsPage` was async — the self-fetch to localhost:3737 deadlocked Bun's single-threaded server. Made component sync, removed self-fetch.
 - [x] ~~**Duplicate chat message bubbles**~~ — ✅ DONE. Message polling (3s interval) re-rendered messages that `sendMessage()` already appended. Added `__geeksy_isRunning` window flag to pause polling during active processing.
@@ -13,6 +13,7 @@
 - [x] ~~**ask_user_for_secret Tool**~~ — ✅ DONE. Delivered `createSecretRequestTool` to LLM context to safely stall and securely request missing env variables from the active user.
 
 ## 🟡 Priority: Improve
+- [x] ~~**Show CLI version/commit on startup**~~ — ✅ DONE. `npx geeksy` now prints version, commit (when available), and active home/db/skills paths before launching Bun.
 - [x] ~~**Default system prompt**~~ — ✅ DONE. Added `DEFAULT_SYSTEM_PROMPT` in chat/route.ts — teaches AI to be concise, use Bun/TypeScript, `Get-Date` for time, use bgrun for processes.
 - [x] ~~**Telegram session read-only in web**~~ — ✅ DONE. `selectSession()` checks `type === 'telegram_bot'`, disables input/send, shows blue banner.
 - [x] ~~**Timeline tab: newest objectives on top**~~ — ✅ Already implemented. `renderObjectivesPane()` reverses `objectiveGroups` before rendering.

@@ -3,7 +3,7 @@ import { Database, z } from 'sqlite-zod-orm'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 
-const dbPath = join(process.env.GEEKSY_HOME || process.cwd(), 'data', 'agents.db')
+const dbPath = process.env.GEEKSY_DB_PATH || join(process.env.GEEKSY_HOME || process.cwd(), 'data', 'agents.db')
 mkdirSync(dirname(dbPath), { recursive: true })
 
 export const db = new Database(dbPath, {
