@@ -113,6 +113,90 @@ export function updateObjectives(results: Array<{ name: string; met: boolean; re
 // FILES
 // ══════════════════════════════════════
 
+const fileContentCache = new Map<string, { content: string; size: number; truncated: boolean; modifiedAt?: number }>()
+let expandedFilePath: string | null = null
+
+function FileItem({ f }: { f: { path: string; action: string } }) {
+    const isExpanded = expandedFilePath === f.path
+    const cached = fileContentCache.get(f.path)
+    const ext = f.path.split('.').pop()?.toLowerCase() || ''
+    const langHint = ['ts', 'tsx', 'js', 'jsx'].includes(ext) ? 'typescript'
+        : ['py'].includes(ext) ? 'python'
+        : ['md'].includes(ext) ? 'markdown'
+        : ['json'].includes(ext) ? 'json'
+        : ['css'].includes(ext) ? 'css'
+        : ['html'].includes(ext) ? 'html'
+        : ['sh', 'bash'].includes(ext) ? 'bash'
+        : 'text'
+
+    return (
+        <div className={`file-item ${isExpanded ? 'file-expanded' : ''}`}>
+            <div className="file-item-row" data-file-path={f.path}>
+                <span className="file-icon">{f.action === 'write' ? '📝' : '📄'}</span>
+                <span className="file-path">{f.path}</span>
+                <span className={`file-action ${f.action}`}>{f.action}</span>
+                <span className="file-expand-arrow">{isExpanded ? '▾' : '▸'}</span>
+            </div>
+            {isExpanded && cached && (
+                <div className="file-preview">
+                    <div className="file-preview-meta">
+                        <span className="file-preview-lang">{langHint}</span>
+                        <span className="file-preview-size">{cached.size > 1024 ? `${(cached.size / 1024).toFixed(1)}KB` : `${cached.size}B`}</span>
+                        {cached.truncated && <span className="file-preview-truncated">truncated</span>}
+                    </div>
+                    <pre className="file-preview-content">{cached.content}</pre>
+                </div>
+            )}
+            {isExpanded && !cached && (
+                <div className="file-preview">
+                    <div className="file-preview-loading">Loading…</div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+async function toggleFilePreview(path: string) {
+    if (expandedFilePath === path) {
+        expandedFilePath = null
+        renderFilesPane()
+        return
+    }
+
+    expandedFilePath = path
+
+    if (!fileContentCache.has(path)) {
+        renderFilesPane() // show loading state
+        try {
+            const res = await fetch(`/api/files?path=${encodeURIComponent(path)}`)
+            if (res.ok) {
+                const data = await res.json()
+                fileContentCache.set(path, {
+                    content: data.content || '',
+                    size: data.size || 0,
+                    truncated: data.truncated || false,
+                    modifiedAt: data.modifiedAt,
+                })
+            } else {
+                const err = await res.json().catch(() => ({ error: 'Failed to load' }))
+                fileContentCache.set(path, {
+                    content: `Error: ${err.error || 'Could not read file'}`,
+                    size: 0,
+                    truncated: false,
+                })
+            }
+        } catch {
+            fileContentCache.set(path, {
+                content: 'Error: Network request failed',
+                size: 0,
+                truncated: false,
+            })
+        }
+    }
+
+    renderFilesPane()
+}
+
 export function renderFilesPane() {
     const pane = document.getElementById('pane-files')!
     if (state.files.length === 0) {
@@ -120,16 +204,17 @@ export function renderFilesPane() {
     } else {
         render(
             <div className="file-list">
-                {state.files.map(f => (
-                    <div className="file-item">
-                        <span className="file-icon">{f.action === 'write' ? '📝' : '📄'}</span>
-                        <span className="file-path">{f.path}</span>
-                        <span className={`file-action ${f.action}`}>{f.action}</span>
-                    </div>
-                ))}
+                {state.files.map(f => <FileItem f={f} />)}
             </div>,
             pane
         )
+        // Wire click handlers via delegation
+        pane.querySelectorAll('.file-item-row[data-file-path]').forEach(el => {
+            el.addEventListener('click', () => {
+                const path = (el as HTMLElement).dataset.filePath
+                if (path) toggleFilePreview(path)
+            })
+        })
     }
 }
 

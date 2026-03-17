@@ -266,15 +266,92 @@
 
 .file-item {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    flex-direction: column;
     background: var(--bg-0);
     border-radius: var(--r-sm);
     border: 1px solid var(--border);
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     color: var(--text-2);
+    overflow: hidden;
+}
+
+.file-item-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.file-item-row:hover {
+    background: rgba(99, 102, 241, .06);
+}
+
+.file-expand-arrow {
+    font-size: 10px;
+    color: var(--text-3);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.file-expanded {
+    border-color: rgba(99, 102, 241, .2);
+}
+
+.file-preview {
+    border-top: 1px solid var(--border);
+    padding: 8px 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.file-preview-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.file-preview-lang {
+    font-size: 9px;
+    color: var(--accent);
+    background: rgba(99, 102, 241, .1);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.file-preview-size {
+    font-size: 9px;
+    color: var(--text-3);
+}
+
+.file-preview-truncated {
+    font-size: 9px;
+    color: var(--amber, #f59e0b);
+    background: rgba(245, 158, 11, .1);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.file-preview-content {
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--text-2);
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.file-preview-loading {
+    font-size: 10px;
+    color: var(--text-3);
+    padding: 8px 0;
 }
 
 .file-icon {
@@ -1487,4 +1564,4 @@
 /* ══════════════════════════════════════
    PLUGINS PAGE
    ══════════════════════════════════════ */
-
+
