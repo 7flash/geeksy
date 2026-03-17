@@ -132,26 +132,42 @@ export function handleEvent(type: string, data: any) {
         }
         case 'awaiting_confirmation': {
             clearLoading()
-            // Show confirmation card with Proceed / Cancel buttons
+            const objectives = (data.objectives || []).filter((o: any) => !o.completed)
+
             const card = document.createElement('div')
             card.className = 'confirmation-card'
+
+            const objListHtml = objectives.length > 0
+                ? `<div class="confirmation-objectives">${objectives.map((o: any) =>
+                    `<div class="confirmation-obj">
+                        <span class="confirmation-obj-icon">${o.type === 'respond' ? '💬' : o.type === 'task_scheduled' ? '⏰' : '🎯'}</span>
+                        <div class="confirmation-obj-body">
+                            <div class="confirmation-obj-name">${o.name || 'Unnamed'}</div>
+                            ${o.description ? `<div class="confirmation-obj-desc">${o.description}</div>` : ''}
+                        </div>
+                    </div>`
+                ).join('')}</div>`
+                : ''
+
             card.innerHTML = `
                 <div class="confirmation-header">
                     <span class="confirmation-icon">⏸</span>
-                    <span>Review objectives before proceeding</span>
+                    <span>Review ${objectives.length} objective${objectives.length !== 1 ? 's' : ''} before proceeding</span>
                 </div>
+                ${objListHtml}
                 <div class="confirmation-actions">
-                    <button class="confirm-btn proceed" id="confirm-proceed">▶ Proceed</button>
-                    <button class="confirm-btn cancel" id="confirm-cancel">✕ Cancel</button>
+                    <button class="confirm-btn proceed" data-action="confirm-proceed">▶ Proceed</button>
+                    <button class="confirm-btn cancel" data-action="confirm-cancel">✕ Reject</button>
                 </div>
             `
             dom.chatArea.appendChild(card)
             scrollDown()
+            switchTab('objectives')
 
             const sessionId = agent?.sessionId
-            card.querySelector('#confirm-proceed')!.addEventListener('click', async () => {
+            card.querySelector('[data-action="confirm-proceed"]')!.addEventListener('click', async () => {
                 card.remove()
-                appendCard('info', 'Confirmed', 'Proceeding with objectives...')
+                appendCard('info', '✓ Confirmed', `Proceeding with ${objectives.length} objective${objectives.length !== 1 ? 's' : ''}`)
                 if (sessionId) {
                     await fetch('/api/chat', {
                         method: 'PUT',
@@ -160,9 +176,9 @@ export function handleEvent(type: string, data: any) {
                     })
                 }
             })
-            card.querySelector('#confirm-cancel')!.addEventListener('click', async () => {
+            card.querySelector('[data-action="confirm-cancel"]')!.addEventListener('click', async () => {
                 card.remove()
-                appendCard('cancelled', 'Cancelled', 'Objectives rejected — agent will not execute.')
+                appendCard('cancelled', '✕ Rejected', 'Objectives rejected — agent will not execute.')
                 if (sessionId) {
                     await fetch('/api/chat', {
                         method: 'PUT',
