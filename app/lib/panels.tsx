@@ -1,6 +1,6 @@
 // app/src/lib/panels.tsx — Overview panes: Objectives Timeline, Files, Schedule, Memory
 import { render } from 'melina/client'
-import { state, dom, saveState } from './state'
+import { state, dom, saveState, debugLog } from './state'
 import { appendResponseBubble } from './chat-ui'
 import { getActiveSessionId } from './sessions-ui'
 import type { ObjectiveEntry, ObjectiveGroup, ScheduleEntry, ScheduleStats, StateEntry, SkillInfo } from './types'
@@ -1147,6 +1147,9 @@ export function switchTab(tab: 'objectives' | 'files' | 'schedule' | 'processes'
     if (tab === 'prompt') {
         renderPromptPane()
     }
+    if (tab === 'debug') {
+        renderDebugPane()
+    }
 }
 
 // ══════════════════════════════════════
@@ -1213,6 +1216,94 @@ export function renderPromptPane() {
         </div>,
         pane
     )
+}
+
+// ══════════════════════════════════════
+// DEBUG LOG (raw SSE events, planner output, tool traffic)
+// ══════════════════════════════════════
+
+const DEBUG_TYPE_COLORS: Record<string, string> = {
+    planning: '#4ade80',
+    replanning: '#facc15',
+    awaiting_confirmation: '#f59e0b',
+    tool_start: '#60a5fa',
+    tool_result: '#818cf8',
+    thinking: '#94a3b8',
+    streaming: '#64748b',
+    iteration_start: '#a78bfa',
+    objective_check: '#34d399',
+    complete: '#22d3ee',
+    error: '#f87171',
+    session: '#c084fc',
+}
+
+function renderDebugPane() {
+    const pane = document.getElementById('pane-debug')
+    if (!pane) return
+
+    if (debugLog.length === 0) {
+        pane.innerHTML = '<div class="overview-empty">No debug events yet. Send a message to start capturing.</div>'
+        return
+    }
+
+    const entries = [...debugLog].reverse()
+
+    render(
+        <div className="debug-log">
+            <div className="debug-log-header">
+                <span className="debug-log-count">{debugLog.length} events</span>
+                <button className="debug-log-clear" onClick={() => { debugLog.length = 0; renderDebugPane() }}>Clear</button>
+            </div>
+            <div className="debug-log-entries">
+                {entries.map((entry) => {
+                    const time = new Date(entry.at).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                    const color = DEBUG_TYPE_COLORS[entry.type] || '#888'
+                    const preview = formatDebugPreview(entry)
+                    return (
+                        <details className="debug-entry" key={entry.id}>
+                            <summary className="debug-entry-summary">
+                                <span className="debug-entry-time">{time}</span>
+                                <span className="debug-entry-type" style={{ color }}>{entry.type}</span>
+                                <span className="debug-entry-preview">{preview}</span>
+                            </summary>
+                            <pre className="debug-entry-data">{JSON.stringify(entry.data, null, 2)}</pre>
+                        </details>
+                    )
+                })}
+            </div>
+        </div>,
+        pane,
+    )
+}
+
+function formatDebugPreview(entry: { type: string; data: any }): string {
+    const d = entry.data
+    switch (entry.type) {
+        case 'planning':
+        case 'replanning': {
+            const objs = d.objectives || []
+            return objs.length > 0
+                ? objs.map((o: any) => o.name || o.description || '?').join(', ')
+                : '(empty)'
+        }
+        case 'tool_start':
+            return `${d.tool || '?'}(${Object.keys(d.params || {}).join(', ')})`
+        case 'tool_result':
+            return `${d.tool || '?'} → ${typeof d.result === 'string' ? d.result.slice(0, 80) : JSON.stringify(d.result || '').slice(0, 80)}`
+        case 'thinking':
+        case 'streaming':
+            return (d.message || d.content || '').slice(0, 100)
+        case 'error':
+            return d.error || d.message || '(unknown error)'
+        case 'session':
+            return `sessionId=${d.sessionId}`
+        case 'objective_check':
+            return (d.results || []).map((r: any) => `${r.name}: ${r.met ? '✓' : '✕'}`).join(', ')
+        case 'complete':
+            return ''
+        default:
+            return JSON.stringify(d).slice(0, 80)
+    }
 }
 
 // ══════════════════════════════════════

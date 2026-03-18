@@ -8,6 +8,7 @@ import {
 import { appendUserBubble, appendLoading, appendCard, appendResponseBubble, forceScrollDown } from './chat-ui'
 import { renderFilesPane, renderSchedulePane, resetMessageCount } from './panels'
 import { handleEvent, clearLoading } from './events'
+import { pushDebugLog } from './state'
 import { openPluginConfig } from './plugin-config'
 import { getActiveSessionId, selectSession, refreshSessions, bumpKnownMsgCount } from './sessions-ui'
 import type { AgentEntry, ToolCardEntry } from './types'
@@ -73,9 +74,7 @@ function showEmptyState() {
     el.className = 'empty-state'
     el.id = 'empty-state'
     el.innerHTML = `
-        <div class="empty-icon">💬</div>
-        <h2>Start a conversation</h2>
-        <p>Ask for work in plain language and keep everything in one thread.</p>
+        <h2>What can I help with?</h2>
     `
     dom.chatArea.prepend(el)
 }

@@ -1,0 +1,455 @@
+/* clean.css — Simplified class mappings and visual overhaul
+ * This file overrides the accumulated legacy styles with cleaner equivalents.
+ */
+
+/* ── Nav rail cleanup ── */
+.nav-rail {
+    justify-content: space-between;
+}
+
+.nav-rail-bottom {
+    gap: 4px;
+    padding-bottom: 12px;
+}
+
+/* Remove the old "More" label */
+.nav-rail-more-label { display: none; }
+.nav-rail-more-group { gap: 4px; padding-bottom: 12px; }
+
+/* ── Top bar (replaces agent-header) ── */
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-1);
+    flex-shrink: 0;
+}
+
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.top-bar-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-3);
+    flex-shrink: 0;
+}
+
+.top-bar-status.active {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+}
+
+.top-bar-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Icon buttons ── */
+.icon-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-3);
+    font-size: 13px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+}
+
+.icon-btn:hover {
+    color: var(--text-1);
+    background: var(--bg-3);
+    border-color: var(--border);
+}
+
+/* ── Metrics strip (replaces agent-metrics-bar) ── */
+.metrics-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-1);
+    flex-shrink: 0;
+}
+
+.metric {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+}
+
+.metric-val {
+    font-weight: 700;
+    color: var(--text-1);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.metric-lbl {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ── Sidebar cleanup ── */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+}
+
+.sidebar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+/* Hide the old subtitle */
+.sidebar-subtitle { display: none; }
+
+.btn-new {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: opacity .15s;
+}
+
+.btn-new:hover { opacity: .85; }
+
+/* ── Empty state cleanup ── */
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 40px;
+    text-align: center;
+}
+
+.empty-state h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-1);
+    background: none;
+    -webkit-text-fill-color: initial;
+}
+
+.example-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.chip {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: 'Inter', sans-serif;
+}
+
+.chip:hover {
+    border-color: var(--accent);
+    color: var(--text-1);
+    background: rgba(99, 102, 241, .08);
+}
+
+/* ── Modals ── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, .6);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 420px;
+    max-width: 92vw;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.modal-close:hover {
+    color: var(--text-1);
+    background: var(--bg-3);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.type-cards {
+    display: flex;
+    gap: 12px;
+}
+
+.type-card {
+    flex: 1;
+    padding: 16px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all .15s;
+    text-align: left;
+}
+
+.type-card:hover {
+    border-color: var(--accent);
+    background: rgba(99, 102, 241, .06);
+}
+
+.type-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 4px;
+}
+
+.type-card-desc {
+    font-size: 12px;
+    color: var(--text-2);
+}
+
+.btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btn-ghost:hover { border-color: var(--text-3); color: var(--text-1); }
+
+.btn-primary {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-primary:hover { opacity: .9; }
+
+/* ── Telegram steps ── */
+.tg-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tg-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.5;
+}
+
+.tg-step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tg-step code {
+    background: var(--bg-3);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+}
+
+/* ── Debug pane ── */
+.debug-log {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.debug-log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    margin-bottom: 4px;
+}
+
+.debug-log-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.debug-log-clear {
+    font-size: 11px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-3);
+    padding: 3px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.debug-log-clear:hover {
+    color: var(--text-1);
+    border-color: var(--text-3);
+}
+
+.debug-log-entries {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.debug-entry {
+    border-radius: 4px;
+}
+
+.debug-entry[open] {
+    background: rgba(255, 255, 255, .02);
+}
+
+.debug-entry-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    list-style: none;
+    border-radius: 4px;
+    transition: background .1s;
+}
+
+.debug-entry-summary:hover {
+    background: rgba(255, 255, 255, .03);
+}
+
+.debug-entry-summary::-webkit-details-marker { display: none; }
+
+.debug-entry-time {
+    color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.debug-entry-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+.debug-entry-preview {
+    color: var(--text-2);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.debug-entry-data {
+    margin: 4px 8px 8px;
+    padding: 8px 10px;
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--text-2);
+    overflow-x: auto;
+    max-height: 300px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── Session sidebar item cleanup ── */
+.session-item-icon,
+.session-item-icon-minimal { display: none; }
+
+.session-type-badge { display: none; }

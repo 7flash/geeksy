@@ -4,6 +4,22 @@ import type { WorkspaceState, ToolCardEntry } from './types'
 
 // ── State ──
 
+export interface DebugLogEntry {
+    id: number
+    at: number
+    type: string
+    data: any
+}
+
+let _debugLogId = 0
+export const debugLog: DebugLogEntry[] = []
+const DEBUG_LOG_MAX = 500
+
+export function pushDebugLog(type: string, data: any) {
+    debugLog.push({ id: ++_debugLogId, at: Date.now(), type, data })
+    if (debugLog.length > DEBUG_LOG_MAX) debugLog.splice(0, debugLog.length - DEBUG_LOG_MAX)
+}
+
 export const state: WorkspaceState = {
     agents: [],
     activeAgentId: null,

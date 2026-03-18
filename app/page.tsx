@@ -1,7 +1,7 @@
-// app/page.tsx — Gateway: Session-first chat interface
+// app/page.tsx — Main chat interface
 import { db } from './lib/db'
 import { readFileSync } from 'fs'
-import { resolve, dirname } from 'path'
+import { resolve } from 'path'
 
 function getVersionInfo() {
     try {
@@ -12,48 +12,38 @@ function getVersionInfo() {
 }
 
 export default function Page() {
-    const vInfo = getVersionInfo()
+    const v = getVersionInfo()
     let sessions: any[] = []
     try { sessions = db.sessions.select().all() } catch { }
     sessions.sort((a: any, b: any) => (b.lastActiveAt || b.id) - (a.lastActiveAt || a.id))
 
     return (
         <div className="gateway-page">
+            {/* ── Sidebar ── */}
             <div id="session-sidebar" className="session-sidebar">
-                <div className="sidebar-header sidebar-header-minimal">
-                    <div>
-                        <span className="sidebar-title">Conversations</span>
-                        <div className="sidebar-subtitle">Each conversation keeps its chat, objectives, files, and schedules together.</div>
-                    </div>
-                    <button id="new-session-btn" className="sidebar-new-btn">New conversation</button>
+                <div className="sidebar-header">
+                    <span className="sidebar-title">Conversations</span>
+                    <button id="new-session-btn" className="btn-new">+ New</button>
                 </div>
                 <div id="session-list" className="session-list">
                     {sessions.length === 0 ? (
                         <div className="session-empty">
-                            <div className="session-empty-icon">💬</div>
                             <p className="session-empty-title">No conversations yet</p>
-                            <p className="session-empty-hint">Start one thread for planning, files, objectives, and follow-up work.</p>
-                            <button className="session-empty-cta" type="button">Start your first conversation</button>
+                            <button className="session-empty-cta" type="button">Start a conversation</button>
                         </div>
                     ) : (
                         sessions.map((s: any) => (
                             <div className="session-item" key={s.id} data-id={s.id} data-type={s.type}>
-                                <div className="session-item-icon session-item-icon-minimal">
-                                    {s.type === 'telegram_bot' ? '📱' : s.type === 'api' ? '⚡' : '💬'}
-                                </div>
                                 <div className="session-item-info">
                                     <div className="session-item-name">{s.name}</div>
-                                    <div className="session-item-meta session-item-meta-minimal">
-                                        <span className={`session-type-badge session-type-${s.type}`}>
-                                            {s.type === 'telegram_bot' ? 'Telegram' : s.type === 'api' ? 'API' : 'Conversation'}
-                                        </span>
-                                        <span className="session-item-msgs">{s.messageCount || 0} {(s.messageCount || 0) === 1 ? 'message' : 'messages'}</span>
+                                    <div className="session-item-meta">
+                                        <span className="session-item-msgs">{s.messageCount || 0} msg{(s.messageCount || 0) === 1 ? '' : 's'}</span>
                                     </div>
                                 </div>
                                 <div className="session-item-actions">
-                                    <button className="session-more-btn" type="button" aria-label={`Session actions for ${s.name}`} title="Session actions">⋯</button>
-                                    <div className="session-action-menu" role="menu" aria-label={`Actions for ${s.name}`}>
-                                        <button className="session-delete-btn" type="button" data-id={s.id} title="Delete conversation">Delete conversation</button>
+                                    <button className="session-more-btn" type="button" title="Actions">⋯</button>
+                                    <div className="session-action-menu" role="menu">
+                                        <button className="session-delete-btn" type="button" data-id={s.id}>Delete</button>
                                     </div>
                                 </div>
                             </div>
@@ -62,64 +52,55 @@ export default function Page() {
                 </div>
             </div>
 
+            {/* ── Main ── */}
             <div className="main-area">
-                <header className="agent-header agent-header-minimal" id="agent-header">
-                    <div className="agent-header-content">
-                        <div className="agent-header-left">
-                            <button className="mobile-menu-btn" id="mobile-menu-btn" title="Open sidebar">☰</button>
-                            <div className="agent-identity">
-                                <span className="agent-status-dot active" id="agent-status-dot" />
-                                <div className="agent-identity-copy">
-                                    <span className="agent-header-name" id="agent-header-name">Geeksy</span>
-                                    <span className="agent-header-subtitle">Stay in one conversation and let the work accumulate there.</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="agent-header-right compact-actions">
-                            <div className="model-select-wrapper">
-                                <span className="model-select-icon">🧠</span>
-                                <select className="model-select" id="model-select">
-                                    <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                                </select>
-                            </div>
-                            <button className="header-icon-btn subtle" id="heartbeat-toggle-btn" title="Toggle heartbeat">❤</button>
-                            <button className="header-icon-btn subtle" id="export-chat-btn" title="Export chat as Markdown">⬇</button>
-                            <button className="header-icon-btn subtle" id="clear-chat-btn" title="Clear chat (Ctrl+L)">🗑</button>
-                        </div>
+                <header className="top-bar" id="agent-header">
+                    <div className="top-bar-left">
+                        <button className="mobile-menu-btn" id="mobile-menu-btn" title="Menu">☰</button>
+                        <span className="top-bar-status active" id="agent-status-dot" />
+                        <span className="top-bar-title" id="agent-header-name">Geeksy</span>
+                    </div>
+                    <div className="top-bar-right">
+                        <select className="model-select" id="model-select">
+                            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                        </select>
+                        <button className="icon-btn" id="heartbeat-toggle-btn" title="Heartbeat">♥</button>
+                        <button className="icon-btn" id="export-chat-btn" title="Export">↓</button>
+                        <button className="icon-btn" id="clear-chat-btn" title="Clear">✕</button>
                     </div>
                 </header>
 
-                <div className="agent-metrics-bar agent-metrics-bar-minimal" id="agent-metrics-bar">
-                    <div className="metric-item" id="metric-messages" title="Messages in this conversation">
-                        <span className="metric-value" id="metric-val-messages">—</span>
-                        <span className="metric-label">messages</span>
+                <div className="metrics-strip" id="agent-metrics-bar">
+                    <div className="metric" id="metric-messages" title="Messages">
+                        <span className="metric-val" id="metric-val-messages">—</span>
+                        <span className="metric-lbl">messages</span>
                     </div>
-                    <div className="metric-item" id="metric-schedules" title="Scheduled runs for this conversation">
-                        <span className="metric-value" id="metric-val-schedules">—</span>
-                        <span className="metric-label">schedules</span>
+                    <div className="metric" id="metric-schedules" title="Schedules">
+                        <span className="metric-val" id="metric-val-schedules">—</span>
+                        <span className="metric-lbl">schedules</span>
                     </div>
                 </div>
 
                 <div className="chat-section">
                     <div className="chat-area" id="chat-area">
-                        <div className="empty-state empty-state-loading">
-                            <div className="empty-icon">⏳</div>
-                            <h2>Loading conversations</h2>
-                            <p>Bringing your workspace back into focus…</p>
+                        <div className="empty-state">
+                            <h2>What can I help with?</h2>
+                            <div className="example-chips">
+                                <button className="chip" type="button" data-prompt="Tell me a joke every minute">Schedule a joke</button>
+                                <button className="chip" type="button" data-prompt="What files are in this project?">Explore files</button>
+                                <button className="chip" type="button" data-prompt="Help me plan today">Plan my day</button>
+                            </div>
                         </div>
                     </div>
 
                     <div className="input-area">
                         <div className="input-row">
-                            <textarea className="input-field" id="input" rows={1} placeholder="Ask Geeksy to work in this conversation..." />
+                            <textarea className="input-field" id="input" rows={1} placeholder="Message Geeksy…" />
                             <button className="send-btn" id="send-btn">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M22 2L11 13" /><path d="M22 2L15 22L11 13L2 9L22 2Z" />
                                 </svg>
                             </button>
-                        </div>
-                        <div className="input-footer">
-                            <span className="input-hint">Ask anything, run tasks, or schedule automations.</span>
                         </div>
                     </div>
                 </div>
@@ -129,6 +110,7 @@ export default function Page() {
                     <div className="tab-bar" id="tab-bar">
                         <button className="tab active" data-tab="files">Files</button>
                         <button className="tab" data-tab="schedule">Schedule</button>
+                        <button className="tab" data-tab="debug">Debug</button>
                     </div>
                     <div className="tab-content" id="tab-content">
                         <div className="tab-pane active" id="pane-files">
@@ -137,86 +119,69 @@ export default function Page() {
                         <div className="tab-pane" id="pane-schedule">
                             <div className="overview-empty">No scheduled tasks yet.</div>
                         </div>
+                        <div className="tab-pane" id="pane-debug">
+                            <div className="overview-empty">No debug events yet.</div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="version-badge" id="version-badge" title={`Geeksy ${vInfo.version}${vInfo.commit ? ` (${vInfo.commit})` : ''}`}>
-                    v{vInfo.version}{vInfo.commit ? <span className="version-commit"> · {vInfo.commit}</span> : null}
+                <div className="version-badge" id="version-badge">
+                    v{v.version}{v.commit ? <span className="version-commit"> · {v.commit}</span> : null}
                 </div>
             </div>
 
-            <div id="new-session-modal" className="session-modal-overlay" style={{ display: 'none' }}>
-                <div className="session-modal">
-                    <div className="session-modal-header">
-                        <h2>Start a new conversation</h2>
-                        <button className="session-modal-close" id="close-session-modal">✕</button>
+            {/* ── Modals ── */}
+            <div id="new-session-modal" className="modal-overlay" style={{ display: 'none' }}>
+                <div className="modal">
+                    <div className="modal-header">
+                        <h2>New conversation</h2>
+                        <button className="modal-close" id="close-session-modal">✕</button>
                     </div>
-                    <div className="session-modal-body">
-                        <p className="session-modal-desc">Choose where this conversation should live:</p>
-                        <div className="session-type-cards">
-                            <button className="session-type-card" id="create-web-session">
-                                <div className="session-type-card-icon">💬</div>
-                                <div className="session-type-card-title">In Geeksy</div>
-                                <div className="session-type-card-desc">Keep the conversation in Geeksy for planning, files, objectives, and follow-up work.</div>
+                    <div className="modal-body">
+                        <div className="type-cards">
+                            <button className="type-card" id="create-web-session">
+                                <div className="type-card-title">Chat</div>
+                                <div className="type-card-desc">A new conversation in Geeksy.</div>
                             </button>
-                            <button className="session-type-card" id="create-telegram-session">
-                                <div className="session-type-card-icon">📱</div>
-                                <div className="session-type-card-title">In Telegram</div>
-                                <div className="session-type-card-desc">Continue the same kind of conversation from Telegram.</div>
+                            <button className="type-card" id="create-telegram-session">
+                                <div className="type-card-title">Telegram</div>
+                                <div className="type-card-desc">Connect a Telegram bot.</div>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="telegram-setup-modal" className="session-modal-overlay" style={{ display: 'none' }}>
-                <div className="session-modal" style={{ maxWidth: '520px' }}>
-                    <div className="session-modal-header">
-                        <h2>📱 Connect a Telegram conversation</h2>
-                        <button className="session-modal-close" id="close-telegram-modal">✕</button>
+            <div id="telegram-setup-modal" className="modal-overlay" style={{ display: 'none' }}>
+                <div className="modal" style={{ maxWidth: '480px' }}>
+                    <div className="modal-header">
+                        <h2>Connect Telegram</h2>
+                        <button className="modal-close" id="close-telegram-modal">✕</button>
                     </div>
-                    <div className="session-modal-body">
-                        <div className="telegram-setup-steps">
+                    <div className="modal-body">
+                        <div className="tg-steps">
                             <div className="tg-step">
                                 <div className="tg-step-num">1</div>
-                                <div className="tg-step-content">
-                                    <div className="tg-step-title">Create the Telegram bot</div>
-                                    <div className="tg-step-desc">
-                                        Open <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> in Telegram and send <code>/newbot</code>.
-                                    </div>
-                                </div>
+                                <div>Open <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> → <code>/newbot</code></div>
                             </div>
                             <div className="tg-step">
                                 <div className="tg-step-num">2</div>
-                                <div className="tg-step-content">
-                                    <div className="tg-step-title">Copy the bot token</div>
-                                    <div className="tg-step-desc">
-                                        BotFather will give you an API token. Copy it here.
-                                    </div>
+                                <div>
+                                    Paste the token:
+                                    <input type="text" id="tg-bot-token-input" className="input-field" placeholder="Bot token" style={{ width: '100%', marginTop: '6px', fontFamily: 'monospace' }} />
                                 </div>
                             </div>
                             <div className="tg-step">
                                 <div className="tg-step-num">3</div>
-                                <div className="tg-step-content">
-                                    <div className="tg-step-title">Paste the token</div>
-                                    <div className="tg-step-desc">
-                                        <input type="text" id="tg-bot-token-input" className="input-field" placeholder="Paste your bot token here..." style={{ width: '100%', marginTop: '8px', fontFamily: 'monospace' }} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="tg-step">
-                                <div className="tg-step-num">4</div>
-                                <div className="tg-step-content">
-                                    <div className="tg-step-title">Name the conversation</div>
-                                    <div className="tg-step-desc">
-                                        <input type="text" id="tg-session-name-input" className="input-field" placeholder="My Telegram Conversation" style={{ width: '100%', marginTop: '8px' }} />
-                                    </div>
+                                <div>
+                                    Name this conversation:
+                                    <input type="text" id="tg-session-name-input" className="input-field" placeholder="My Telegram Bot" style={{ width: '100%', marginTop: '6px' }} />
                                 </div>
                             </div>
                         </div>
-                        <div className="session-modal-actions" style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                            <button className="btn-ghost" id="tg-setup-back">← Back</button>
-                            <button className="btn-primary" id="tg-setup-connect">Connect conversation</button>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                            <button className="btn-ghost" id="tg-setup-back">Back</button>
+                            <button className="btn-primary" id="tg-setup-connect">Connect</button>
                         </div>
                     </div>
                 </div>

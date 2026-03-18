@@ -32,10 +32,8 @@ function renderChatPlaceholder(kind: 'loading' | 'no-session' | 'empty-conversat
 
     if (kind === 'loading') {
         chatArea.innerHTML = `
-            <div class="empty-state empty-state-loading">
-                <div class="empty-icon">⏳</div>
-                <h2>Loading conversations</h2>
-                <p>Bringing your workspace back into focus…</p>
+            <div class="empty-state">
+                <h2>Loading…</h2>
             </div>
         `
         return
@@ -43,14 +41,12 @@ function renderChatPlaceholder(kind: 'loading' | 'no-session' | 'empty-conversat
 
     if (kind === 'no-session') {
         chatArea.innerHTML = `
-            <div class="empty-state empty-state-session">
-                <div class="empty-icon">💬</div>
-                <h2>Start your first conversation</h2>
-                <p>Keep planning, files, objectives, and follow-up work together in one calm thread.</p>
+            <div class="empty-state">
+                <h2>Start a conversation</h2>
                 <div class="example-chips">
-                    <button class="example-chip" type="button" data-session-action="new">New conversation</button>
-                    <button class="example-chip" type="button" data-prompt="Help me plan today">🗓 plan today</button>
-                    <button class="example-chip" type="button" data-prompt="Review my project status">📊 review status</button>
+                    <button class="chip" type="button" data-session-action="new">New conversation</button>
+                    <button class="chip" type="button" data-prompt="Help me plan today">Plan today</button>
+                    <button class="chip" type="button" data-prompt="Review my project status">Review status</button>
                 </div>
             </div>
         `
@@ -59,10 +55,8 @@ function renderChatPlaceholder(kind: 'loading' | 'no-session' | 'empty-conversat
     }
 
     chatArea.innerHTML = `
-        <div class="empty-state empty-state-session">
-            <div class="empty-icon">💬</div>
-            <h2>This conversation is ready</h2>
-            <p>Say what you want and Geeksy will handle it here.</p>
+        <div class="empty-state">
+            <h2>What can I help with?</h2>
         </div>
     `
     wireChatPlaceholderActions(chatArea)
@@ -165,10 +159,8 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
     if (sessions.length === 0) {
         list.innerHTML = `
             <div class="session-empty">
-                <div class="session-empty-icon">💬</div>
                 <p class="session-empty-title">No conversations yet</p>
-                <p class="session-empty-hint">Start a conversation to get things done.</p>
-                <button class="session-empty-cta" type="button">Start your first conversation</button>
+                <button class="session-empty-cta" type="button">Start a conversation</button>
             </div>
         `
         list.querySelector('.session-empty-cta')?.addEventListener('click', openNewSessionModal)
@@ -182,20 +174,16 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
         item.dataset.id = String(s.id)
         item.dataset.type = s.type
         item.innerHTML = `
-            <div class="session-item-icon session-item-icon-minimal">
-                ${renderSessionIcon(s.type)}
-            </div>
             <div class="session-item-info">
                 <div class="session-item-name">${s.name}</div>
-                <div class="session-item-meta session-item-meta-minimal">
-                    <span class="session-type-badge session-type-${s.type}">${renderSessionType(s.type)}</span>
-                    <span class="session-item-msgs">${s.messageCount || 0} ${(s.messageCount || 0) === 1 ? 'message' : 'messages'}</span>
+                <div class="session-item-meta">
+                    <span class="session-item-msgs">${s.messageCount || 0} msg${(s.messageCount || 0) === 1 ? '' : 's'}</span>
                 </div>
             </div>
             <div class="session-item-actions">
-                <button class="session-more-btn" type="button" aria-label="Conversation actions for ${s.name}" title="Conversation actions">⋯</button>
-                <div class="session-action-menu" role="menu" aria-label="Actions for ${s.name}">
-                    <button class="session-delete-btn" type="button" data-id="${s.id}" title="Delete conversation">Delete conversation</button>
+                <button class="session-more-btn" type="button" title="Actions">⋯</button>
+                <div class="session-action-menu" role="menu">
+                    <button class="session-delete-btn" type="button" data-id="${s.id}">Delete</button>
                 </div>
             </div>
         `
