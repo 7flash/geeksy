@@ -142,15 +142,23 @@ function getObjectiveStateFingerprint(status: string, reason: string): string {
     return `${status}:${reason}`.slice(0, 500)
 }
 
-function pickHeartbeatSessionId(agentId: number, pendingObjectives: any[], pendingSchedules: any[]): number | undefined {
+export function pickHeartbeatSessionId(agentId: number, pendingObjectives: any[], pendingSchedules: any[]): number | undefined {
     const objectiveSession = [...pendingObjectives]
-        .reverse()
-        .find((o: any) => o.agentId === agentId && typeof o.sessionId === 'number')?.sessionId
+        .filter((o: any) => typeof o.sessionId === 'number')
+        .sort((a: any, b: any) => {
+            const aRank = a.updatedAt || a.createdAt || a.id || 0
+            const bRank = b.updatedAt || b.createdAt || b.id || 0
+            return bRank - aRank
+        })[0]?.sessionId
     if (typeof objectiveSession === 'number') return objectiveSession
 
     const scheduleSession = [...pendingSchedules]
-        .reverse()
-        .find((s: any) => (!s.agentId || s.agentId === agentId) && typeof s.sessionId === 'number')?.sessionId
+        .filter((s: any) => (!s.agentId || s.agentId === agentId) && typeof s.sessionId === 'number')
+        .sort((a: any, b: any) => {
+            const aRank = a.lastRun || a.nextRun || a.updatedAt || a.createdAt || a.id || 0
+            const bRank = b.lastRun || b.nextRun || b.updatedAt || b.createdAt || b.id || 0
+            return bRank - aRank
+        })[0]?.sessionId
     if (typeof scheduleSession === 'number') return scheduleSession
 
     const recentMessageSession = [...db.messages.select().where({ agentId }).orderBy('id', 'asc').all()]
@@ -470,7 +478,9 @@ export async function runHeartbeat() {
             db.agents.update(agent.id, { sessionId: session.id });
         }
 
-        const messages = db.messages.select().where({ agentId: agent.id }).all();
+        const messages = heartbeatSessionId
+            ? db.messages.select().where({ agentId: agent.id, sessionId: heartbeatSessionId } as any).all()
+            : db.messages.select().where({ agentId: agent.id }).all();
         if (messages.length > 200) {
             console.log(`[heartbeat] Agent ${agent.id} reached ${messages.length} messages. Triggering auto-pruning...`);
             const prunePrompt = "MEMORY PRUNING TICK: Your conversation history has exceeded 200 messages. You MUST immediately analyze all your previous interactions. Summarize your previous context into a memory artifact (e.g. using the setState tool under the key 'core_memory'), capturing ongoing state, preferences, and pending items. Once you have successfully saved it, reply EXACTLY with 'PRUNED'.";
@@ -540,7 +550,10 @@ export async function runHeartbeat() {
                 }],
             })
 
-            const recentMessages = db.messages.select().where({ agentId: agent.id }).orderBy('id', 'asc').all().slice(-20)
+            const recentMessages = (heartbeatSessionId
+                ? db.messages.select().where({ agentId: agent.id, sessionId: heartbeatSessionId } as any).orderBy('id', 'asc').all()
+                : db.messages.select().where({ agentId: agent.id }).orderBy('id', 'asc').all()
+            ).slice(-20)
             const input = [
                 ...recentMessages.map((m: any) => ({ role: m.role, content: m.content })),
                 { role: 'user' as const, content: prompt },

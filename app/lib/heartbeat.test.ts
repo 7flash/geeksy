@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { auditFailedSchedules, auditPendingObjectives, getHeartbeatStats, getHeartbeatPauseReason, normalizeHeartbeatPauseStateOnStartup, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { auditFailedSchedules, auditPendingObjectives, getHeartbeatStats, getHeartbeatPauseReason, normalizeHeartbeatPauseStateOnStartup, pickHeartbeatSessionId, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
 import { db } from './db'
 
 describe('heartbeat stats', () => {

@@ -166,6 +166,10 @@ export async function POST(req: Request) {
 
     // Get or create session
     const session = measureSync('Resolve session', () => {
+        const boundSessionId = getBoundSmartSessionId(body.dbSessionId)
+        if (boundSessionId && sessions.has(boundSessionId)) {
+            return sessions.get(boundSessionId)!
+        }
         if (body.sessionId && sessions.has(body.sessionId)) {
             return sessions.get(body.sessionId)!
         }
@@ -340,14 +344,6 @@ export async function GET() {
             for (const f of readdirSync(skillsDir)) {
                 if (f.endsWith(".md")) {
                     result.push(f.replace(/\.md$/, ""))
-                }
-            }
-        } catch { }
-        return result
-    })
-    return Response.json(skills)
-}
-place(/\.md$/, ""))
                 }
             }
         } catch { }
