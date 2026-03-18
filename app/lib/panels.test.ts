@@ -29,5 +29,21 @@ describe('resolveCoreMemoryEntries', () => {
         expect(resolved.coreMemoryEntry?.value).toBe('global summary')
         expect(resolved.coreMemorySessionId).toBe(null)
         expect(resolved.coreMemoryUpdatedAt).toBe(100)
+        expect(resolved.isAgentWideFallback).toBe(true)
+        expect(resolved.hasSessionCoreMemory).toBe(false)
+    })
+
+    test('does not mark fallback when a matching session memory exists', () => {
+        const entries: StateEntry[] = [
+            { id: 1, agentId: 1, key: 'core_memory', value: 'global summary' },
+            { id: 2, agentId: 1, key: 'core_memory_updated_at', value: '100' },
+            { id: 3, agentId: 1, key: 'core_memory.session.42', value: 'session summary' },
+            { id: 4, agentId: 1, key: 'core_memory_updated_at.session.42', value: '200' },
+        ]
+
+        const resolved = resolveCoreMemoryEntries(entries, 42)
+        expect(resolved.coreMemoryEntry?.value).toBe('session summary')
+        expect(resolved.isAgentWideFallback).toBe(false)
+        expect(resolved.hasSessionCoreMemory).toBe(true)
     })
 })

@@ -2,7 +2,7 @@
 import { configure } from 'measure-fn'
 import { state, dom, initDom } from './lib/state'
 import { openSettings, closeSettings } from './lib/settings'
-import { switchTab } from './lib/panels'
+import { switchTab, renderDebugPane, fetchMemoryEntries, renderMemoryPane } from './lib/panels'
 import {
     clearCurrentChat, exportChatAsMarkdown,
     sendMessage, stopAgent, loadSkills, loadModels, restoreState, setupResizeHandle,
@@ -112,6 +112,12 @@ export default function mount() {
         // Bootstrap: ensure agent exists, then load session + messages
         ; (async () => {
             await restoreState()    // Ensure global agent exists in DB
+            await initSessionUI()   // Load sessions, select saved/first, render messages
+        })()
+
+    return () => { }
+}
+exists in DB
             await initSessionUI()   // Load sessions, select saved/first, render messages
         })()
 

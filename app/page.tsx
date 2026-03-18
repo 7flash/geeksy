@@ -110,6 +110,7 @@ export default function Page() {
                     <div className="tab-bar" id="tab-bar">
                         <button className="tab active" data-tab="files">Files</button>
                         <button className="tab" data-tab="schedule">Schedule</button>
+                        <button className="tab" data-tab="memory">Memory</button>
                         <button className="tab" data-tab="debug">Debug</button>
                     </div>
                     <div className="tab-content" id="tab-content">
@@ -118,6 +119,9 @@ export default function Page() {
                         </div>
                         <div className="tab-pane" id="pane-schedule">
                             <div className="overview-empty">No scheduled tasks yet.</div>
+                        </div>
+                        <div className="tab-pane" id="pane-memory">
+                            <div className="overview-empty">Select a conversation to inspect retained memory.</div>
                         </div>
                         <div className="tab-pane" id="pane-debug">
                             <div className="overview-empty">No debug events yet.</div>

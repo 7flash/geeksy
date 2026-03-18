@@ -2,6 +2,101 @@
  * This file overrides the accumulated legacy styles with cleaner equivalents.
  */
 
+:root {
+    --bg-0: #fff8fc;
+    --bg-1: #fff4fb;
+    --bg-2: #fff0f8;
+    --bg-3: #f6e7f4;
+    --bg-input: #fffafc;
+    --border: #ead7e9;
+    --border-focus: #c79ad9;
+    --text-1: #4f3b59;
+    --text-2: #7d6588;
+    --text-3: #a48eb0;
+    --accent: #b88ad6;
+    --accent-glow: rgba(184, 138, 214, .18);
+    --green: #7bbf9a;
+    --red: #d88aa0;
+    --amber: #d8b16c;
+    --blue: #8caed8;
+    --purple: #b88ad6;
+    --purple-light: #d6b7ea;
+}
+
+html, body {
+    background:
+        radial-gradient(circle at top left, rgba(255, 214, 236, .8), transparent 30%),
+        radial-gradient(circle at top right, rgba(224, 215, 255, .75), transparent 32%),
+        linear-gradient(180deg, #fffafc 0%, #fff5fb 100%);
+}
+
+.main-area,
+.session-sidebar,
+.overview,
+.top-bar,
+.metrics-strip,
+.input-area {
+    background: rgba(255, 252, 255, 0.76);
+    backdrop-filter: blur(14px);
+}
+
+.nav-rail {
+    background: rgba(255, 247, 252, 0.82);
+    border-right-color: rgba(190, 160, 205, 0.28);
+}
+
+.msg-user .bubble {
+    background: linear-gradient(135deg, #d8b4f0, #f2b7d8);
+    color: #4f3558;
+}
+
+.msg-agent .bubble,
+.card,
+.type-card,
+.skill-panel-card,
+.memory-core-card,
+.memory-item,
+.schedule-item,
+.file-item {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(205, 176, 218, 0.32);
+    box-shadow: 0 6px 20px rgba(205, 176, 218, 0.08);
+}
+
+.send-btn,
+.btn-primary,
+.btn-new {
+    background: linear-gradient(135deg, #d4a5ea, #f0b6cf);
+    color: #4f3558;
+}
+
+.send-btn:hover,
+.btn-primary:hover,
+.btn-new:hover {
+    opacity: 1;
+    filter: brightness(1.03);
+}
+
+.chip,
+.tab,
+.icon-btn,
+.model-select,
+.model-select-wrapper,
+.input-field,
+.debug-log-clear,
+.confirm-btn.cancel,
+.btn-ghost {
+    background: rgba(255, 255, 255, 0.65);
+}
+
+.empty-state h2,
+.top-bar-title,
+.sidebar-title,
+.memory-core-title,
+.debug-trace-title {
+    color: #5b4266;
+}
+
 /* ── Nav rail cleanup ── */
 .nav-rail {
     justify-content: space-between;

@@ -1,0 +1,28 @@
+# Test artifacts
+tmp/
+*.test.ts
+*.test.js
+app/lib/*.test.ts
+app/api/**/route.test.ts
+
+# Dev / local files
+.docs/
+.git/
+.gitignore
+backups/
+.geeksy-secrets.json
+*.sqlite
+*.db
+
+# Build artifacts not needed
+node_modules/
+bun.lock
+
+# Docs (shipped separately)
+docs/TASKS.md
+docs/DEPLOY.md
+CLAUDE.md
+
+# Config
+.config.toml
+.vscode/

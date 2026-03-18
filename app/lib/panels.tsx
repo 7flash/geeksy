@@ -532,19 +532,32 @@ function truncateValue(v: string, maxLen = 200): string {
 }
 
 export function resolveCoreMemoryEntries(entries: StateEntry[], activeSessionId?: number | null) {
-    const activeCoreMemoryKey = typeof activeSessionId === 'number' ? `core_memory.session.${activeSessionId}` : 'core_memory'
-    const activeCoreMemoryUpdatedAtKey = typeof activeSessionId === 'number' ? `core_memory_updated_at.session.${activeSessionId}` : 'core_memory_updated_at'
+    const sessionCoreMemoryEntry = typeof activeSessionId === 'number'
+        ? entries.find((entry) => entry.key === `core_memory.session.${activeSessionId}`)
+        : undefined
+    const sessionCoreMemoryUpdatedAtEntry = typeof activeSessionId === 'number'
+        ? entries.find((entry) => entry.key === `core_memory_updated_at.session.${activeSessionId}`)
+        : undefined
+    const agentWideCoreMemoryEntry = entries.find((entry) => entry.key === 'core_memory')
+    const agentWideCoreMemoryUpdatedAtEntry = entries.find((entry) => entry.key === 'core_memory_updated_at')
 
-    const coreMemoryEntry = entries.find((entry) => entry.key === activeCoreMemoryKey)
-        || entries.find((entry) => entry.key === 'core_memory')
-    const coreMemoryUpdatedAtEntry = entries.find((entry) => entry.key === activeCoreMemoryUpdatedAtKey)
-        || entries.find((entry) => entry.key === 'core_memory_updated_at')
+    const coreMemoryEntry = sessionCoreMemoryEntry || agentWideCoreMemoryEntry
+    const coreMemoryUpdatedAtEntry = sessionCoreMemoryUpdatedAtEntry || agentWideCoreMemoryUpdatedAtEntry
     const otherEntries = entries.filter((entry) => !entry.key.startsWith('core_memory'))
     const coreMemoryUpdatedAt = coreMemoryUpdatedAtEntry?.value ? Number(coreMemoryUpdatedAtEntry.value) : null
     const coreMemorySessionMatch = coreMemoryEntry?.key.match(/^core_memory\.session\.(\d+)$/)
     const coreMemorySessionId = coreMemorySessionMatch ? Number(coreMemorySessionMatch[1]) : null
+    const isAgentWideFallback = !!coreMemoryEntry && !sessionCoreMemoryEntry && !!agentWideCoreMemoryEntry && typeof activeSessionId === 'number'
 
-    return { coreMemoryEntry, coreMemoryUpdatedAtEntry, otherEntries, coreMemoryUpdatedAt, coreMemorySessionId }
+    return {
+        coreMemoryEntry,
+        coreMemoryUpdatedAtEntry,
+        otherEntries,
+        coreMemoryUpdatedAt,
+        coreMemorySessionId,
+        isAgentWideFallback,
+        hasSessionCoreMemory: !!sessionCoreMemoryEntry,
+    }
 }
 
 export function renderMemoryPane() {
@@ -575,10 +588,6 @@ export function renderMemoryPane() {
             groups.get(prefix)!.push(entry)
         }
 
-        const coreMemoryUpdatedAt = coreMemoryUpdatedAtEntry?.value ? Number(coreMemoryUpdatedAtEntry.value) : null
-        const coreMemorySessionMatch = coreMemoryEntry?.key.match(/^core_memory\.session\.(\d+)$/)
-        const coreMemorySessionId = coreMemorySessionMatch ? Number(coreMemorySessionMatch[1]) : null
-
         render(
             <div className="memory-list">
                 {coreMemoryEntry ? (
@@ -588,7 +597,11 @@ export function renderMemoryPane() {
                                 <div className="memory-core-title">Heartbeat Core Memory</div>
                                 <div className="memory-core-subtitle">
                                     {[
-                                        coreMemorySessionId ? `Session ${coreMemorySessionId}` : 'Agent-wide',
+                                        coreMemorySessionId
+                                            ? `Session ${coreMemorySessionId}`
+                                            : isAgentWideFallback
+                                                ? 'Agent-wide fallback'
+                                                : 'Agent-wide',
                                         coreMemoryUpdatedAt && Number.isFinite(coreMemoryUpdatedAt)
                                             ? `Updated ${new Date(coreMemoryUpdatedAt).toLocaleString()}`
                                             : 'Persisted during heartbeat pruning',
@@ -608,7 +621,11 @@ export function renderMemoryPane() {
                         <div className="memory-core-header">
                             <div>
                                 <div className="memory-core-title">Heartbeat Core Memory</div>
-                                <div className="memory-core-subtitle">No retained summary for this conversation yet.</div>
+                                <div className="memory-core-subtitle">
+                                    {typeof activeSessionId === 'number'
+                                        ? `No retained summary for Session ${activeSessionId} yet.`
+                                        : 'No retained summary for this conversation yet.'}
+                                </div>
                             </div>
                             <button
                                 className="memory-capture-btn"
@@ -801,15 +818,19 @@ export function renderSkillsPane() {
                 <div
                     className="skill-panel-header"
                     style={{ cursor: 'pointer', padding: '8px 0' }}
-                    onClick={() => { marketplaceOpen = !marketplaceOpen; renderSkillsPane(); if (marketplaceOpen && !marketplaceData) loadMarketplace() }}
+                    onClick={() => {
+                        marketplaceOpen = !marketplaceOpen
+                        renderSkillsPane()
+                        if (marketplaceOpen && !marketplaceData) loadMarketplace()
+                    }}
                 >
-                    <span style={{ fontSize: '13px', fontWeight: 600 }}>🏪 Marketplace</span>
-                    <span style={{ fontSize: '11px', color: '#666', marginLeft: '8px' }}>{marketplaceOpen ? '▾' : '▸'} Community Skills</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600 }}>Marketplace</span>
+                    <span style={{ fontSize: '11px', color: '#666', marginLeft: '8px' }}>{marketplaceOpen ? 'Hide' : 'Show'} community skills</span>
                 </div>
                 {marketplaceOpen && (
                     <div className="skills-marketplace-items">
                         {!marketplaceData ? (
-                            <div className="overview-empty" style={{ padding: '12px', fontSize: '11px' }}>Loading marketplace...</div>
+                            <div className="overview-empty" style={{ padding: '12px', fontSize: '11px' }}>Loading marketplace…</div>
                         ) : marketplaceData.skills.length === 0 ? (
                             <div className="overview-empty" style={{ padding: '12px' }}>No marketplace skills available</div>
                         ) : marketplaceData.skills.map((ms: any) => (
@@ -820,17 +841,12 @@ export function renderSkillsPane() {
                                         <div>
                                             <div className="skill-panel-name">{ms.name}</div>
                                             <div className="skill-panel-desc">{ms.description}</div>
-                                            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
-                                                by {ms.author} · v{ms.version}
-                                                {ms.tags?.map((t: string) => (
-                                                    <span key={t} style={{ background: 'rgba(128,90,255,0.15)', color: '#a78bfa', padding: '1px 6px', borderRadius: '8px', marginLeft: '4px', fontSize: '9px' }}>{t}</span>
-                                                ))}
-                                            </div>
+                                            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>by {ms.author} · v{ms.version}</div>
                                         </div>
                                     </div>
                                     <div className="skill-panel-actions">
                                         {ms.installed ? (
-                                            <span style={{ fontSize: '10px', color: '#4ade80' }}>✓ Installed</span>
+                                            <span style={{ fontSize: '10px', color: '#4ade80' }}>Installed</span>
                                         ) : (
                                             <button
                                                 className="skill-toggle-btn on"
@@ -844,11 +860,8 @@ export function renderSkillsPane() {
                                                         })
                                                         if (res.ok) {
                                                             ms.installed = true
-                                                            // Refresh skills list
                                                             const skillsRes = await fetch('/api/skills')
-                                                            if (skillsRes.ok) {
-                                                                state.availableSkills = await skillsRes.json()
-                                                            }
+                                                            if (skillsRes.ok) state.availableSkills = await skillsRes.json()
                                                             renderSkillsPane()
                                                         }
                                                     } catch { }
@@ -862,30 +875,6 @@ export function renderSkillsPane() {
                             </div>
                         ))}
                     </div>
-                )}
-            </div>
-
-            {/* Dependency Graph Section */}
-            <div style={{ borderTop: '1px solid rgba(128,90,255,0.15)', marginTop: 8 }}>
-                <div
-                    className="marketplace-header"
-                    style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#a78bfa', fontWeight: 600 }}
-                    onClick={() => {
-                        skillGraphOpen = !skillGraphOpen
-                        renderSkillsPane()
-                        if (skillGraphOpen) {
-                            setTimeout(() => {
-                                const graphContainer = document.getElementById('skill-graph-container')
-                                if (graphContainer) renderSkillGraph(graphContainer)
-                            }, 50)
-                        }
-                    }}
-                >
-                    <span style={{ transition: 'transform 0.2s', transform: skillGraphOpen ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block' }}>▶</span>
-                    🔗 Dependency Graph
-                </div>
-                {skillGraphOpen && (
-                    <div id="skill-graph-container" style={{ padding: '0 8px 8px' }} />
                 )}
             </div>
         </div>,
@@ -913,126 +902,7 @@ async function loadMarketplace() {
 let skillGraphOpen = false
 
 async function renderSkillGraph(container: HTMLElement) {
-    container.innerHTML = '<div style="color:#888;font-size:11px;padding:8px">Loading graph…</div>'
-
-    try {
-        const res = await fetch('/api/skills/graph')
-        const data = await res.json()
-        const { nodes, edges }: { nodes: Array<{ id: string; name: string }>; edges: Array<{ source: string; target: string }> } = data
-
-        if (nodes.length === 0) {
-            container.innerHTML = '<div style="color:#888;font-size:11px;padding:8px">No skills found.</div>'
-            return
-        }
-
-        const canvas = document.createElement('canvas')
-        const W = container.clientWidth || 400
-        const H = Math.max(200, nodes.length * 30)
-        canvas.width = W
-        canvas.height = H
-        canvas.style.cssText = 'width:100%;border-radius:8px;background:rgba(0,0,0,0.2)'
-        container.innerHTML = ''
-        container.appendChild(canvas)
-
-        const ctx = canvas.getContext('2d')!
-
-        // Initialize positions randomly
-        const positions = new Map<string, { x: number; y: number }>()
-        for (const node of nodes) {
-            positions.set(node.id, {
-                x: 40 + Math.random() * (W - 80),
-                y: 40 + Math.random() * (H - 80),
-            })
-        }
-
-        // Simple force-directed layout (100 iterations)
-        for (let iter = 0; iter < 100; iter++) {
-            const forces = new Map<string, { fx: number; fy: number }>()
-            for (const n of nodes) forces.set(n.id, { fx: 0, fy: 0 })
-
-            // Repulsion between all nodes
-            for (let i = 0; i < nodes.length; i++) {
-                for (let j = i + 1; j < nodes.length; j++) {
-                    const a = positions.get(nodes[i]!.id)!
-                    const b = positions.get(nodes[j]!.id)!
-                    const dx = a.x - b.x
-                    const dy = a.y - b.y
-                    const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1)
-                    const force = 2000 / (dist * dist)
-                    const fx = (dx / dist) * force
-                    const fy = (dy / dist) * force
-                    forces.get(nodes[i]!.id)!.fx += fx
-                    forces.get(nodes[i]!.id)!.fy += fy
-                    forces.get(nodes[j]!.id)!.fx -= fx
-                    forces.get(nodes[j]!.id)!.fy -= fy
-                }
-            }
-
-            // Attraction along edges
-            for (const edge of edges) {
-                const a = positions.get(edge.source)
-                const b = positions.get(edge.target)
-                if (!a || !b) continue
-                const dx = b.x - a.x
-                const dy = b.y - a.y
-                const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1)
-                const force = dist * 0.01
-                const fx = (dx / dist) * force
-                const fy = (dy / dist) * force
-                forces.get(edge.source)!.fx += fx
-                forces.get(edge.source)!.fy += fy
-                forces.get(edge.target)!.fx -= fx
-                forces.get(edge.target)!.fy -= fy
-            }
-
-            // Apply forces
-            for (const node of nodes) {
-                const pos = positions.get(node.id)!
-                const f = forces.get(node.id)!
-                pos.x = Math.max(30, Math.min(W - 30, pos.x + f.fx * 0.5))
-                pos.y = Math.max(20, Math.min(H - 20, pos.y + f.fy * 0.5))
-            }
-        }
-
-        // Draw edges
-        ctx.strokeStyle = 'rgba(128,90,255,0.3)'
-        ctx.lineWidth = 1.5
-        for (const edge of edges) {
-            const a = positions.get(edge.source)
-            const b = positions.get(edge.target)
-            if (!a || !b) continue
-            ctx.beginPath()
-            ctx.moveTo(a.x, a.y)
-            ctx.lineTo(b.x, b.y)
-            ctx.stroke()
-        }
-
-        // Draw nodes
-        for (const node of nodes) {
-            const pos = positions.get(node.id)!
-            // Circle
-            ctx.beginPath()
-            ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2)
-            ctx.fillStyle = '#a78bfa'
-            ctx.fill()
-            ctx.strokeStyle = '#7c3aed'
-            ctx.lineWidth = 1.5
-            ctx.stroke()
-            // Label
-            ctx.fillStyle = '#e8e8f0'
-            ctx.font = '10px Inter, sans-serif'
-            ctx.textAlign = 'center'
-            ctx.fillText(node.name.substring(0, 16), pos.x, pos.y + 18)
-        }
-
-        // Stats
-        const statsEl = document.createElement('div')
-        statsEl.style.cssText = 'color:#888;font-size:10px;padding:4px 8px'
-        statsEl.textContent = `${nodes.length} skills · ${edges.length} dependencies`
-        container.appendChild(statsEl)
-    } catch {
-        container.innerHTML = '<div style="color:#888;font-size:11px;padding:8px">Failed to load graph.</div>'
-    }
+    container.innerHTML = '<div style="color:#888;font-size:11px;padding:8px">Dependency graph unavailable in this build.</div>'
 }
 
 export { renderSkillGraph, skillGraphOpen }
@@ -1067,7 +937,7 @@ async function renderTimelinePane() {
         const events = data.events || []
 
         if (events.length === 0) {
-            pane.innerHTML = '<div class="overview-empty">No activity yet. Send a message to start!</div>'
+            pane.innerHTML = '<div class="overview-empty">No activity yet.</div>'
             return
         }
 
@@ -1084,22 +954,13 @@ async function renderTimelinePane() {
 
         for (const ev of events) {
             const item = document.createElement('div')
-            item.style.cssText = `
-                display:flex;align-items:flex-start;gap:8px;padding:6px 8px;
-                border-left:3px solid ${borderColors[ev.type] || '#666'};
-                background:rgba(255,255,255,0.02);border-radius:0 6px 6px 0;
-                font-size:12px;font-family:'Inter',sans-serif;transition:background 0.1s;
-            `
-            item.addEventListener('mouseenter', () => { item.style.background = 'rgba(255,255,255,0.05)' })
-            item.addEventListener('mouseleave', () => { item.style.background = 'rgba(255,255,255,0.02)' })
-
+            item.style.cssText = `display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-left:3px solid ${borderColors[ev.type] || '#666'};background:rgba(255,255,255,0.02);border-radius:0 6px 6px 0;font-size:12px;font-family:'Inter',sans-serif;`
             item.innerHTML = `
-                <span style="font-size:14px;line-height:1.4;flex-shrink:0">${ev.icon}</span>
-                <div style="flex:1;min-width:0">
-                    <div style="font-weight:500;color:#e8e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.title}</div>
-                    ${ev.detail ? `<div style="color:#888;font-size:11px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.detail.replace(/</g, '&lt;')}</div>` : ''}
-                </div>
                 <span style="color:#666;font-size:10px;white-space:nowrap;flex-shrink:0">${relativeTime(ev.timestamp)}</span>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:500;color:#e8e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${String(ev.title || '').replace(/</g, '&lt;')}</div>
+                    ${ev.detail ? `<div style="color:#888;font-size:11px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${String(ev.detail).replace(/</g, '&lt;')}</div>` : ''}
+                </div>
             `
             list.appendChild(item)
         }
@@ -1364,6 +1225,8 @@ export function formatDebugPreview(entry: { type: string; data: any }): string {
     }
 }
 
+// ══════════════════════════════════════
+// PROCESSES (bgrun process list)
 // ══════════════════════════════════════
 // PROCESSES (bgrun process list)
 // ══════════════════════════════════════
