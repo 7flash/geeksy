@@ -1239,6 +1239,40 @@ const DEBUG_TYPE_COLORS: Record<string, string> = {
     session: '#c084fc',
 }
 
+export interface DebugTraceGroup {
+    traceId: string
+    startedAt: number
+    title: string
+    entries: typeof debugLog
+}
+
+export function groupDebugLogEntries(entries: typeof debugLog): DebugTraceGroup[] {
+    const groups = new Map<string, DebugTraceGroup>()
+    for (const entry of entries) {
+        const traceId = entry.traceId || `ungrouped-${entry.id}`
+        if (!groups.has(traceId)) {
+            groups.set(traceId, {
+                traceId,
+                startedAt: entry.at,
+                title: '',
+                entries: [],
+            })
+        }
+        const group = groups.get(traceId)!
+        group.entries.push(entry)
+        if (!group.title && entry.type === 'request_trace') {
+            group.title = formatDebugPreview(entry)
+        }
+    }
+
+    return [...groups.values()]
+        .sort((a, b) => b.startedAt - a.startedAt)
+        .map((group, index) => ({
+            ...group,
+            title: group.title || formatDebugPreview(group.entries[0]) || `Trace ${index + 1}`,
+        }))
+}
+
 export function renderDebugPane() {
     const pane = document.getElementById('pane-debug')
     if (!pane) return
@@ -1248,27 +1282,41 @@ export function renderDebugPane() {
         return
     }
 
-    const entries = [...debugLog].reverse()
+    const traces = groupDebugLogEntries([...debugLog])
 
     render(
         <div className="debug-log">
             <div className="debug-log-header">
-                <span className="debug-log-count">{debugLog.length} events</span>
+                <span className="debug-log-count">{debugLog.length} events • {traces.length} traces</span>
                 <button className="debug-log-clear" onClick={() => { debugLog.length = 0; renderDebugPane() }}>Clear</button>
             </div>
             <div className="debug-log-entries">
-                {entries.map((entry) => {
-                    const time = new Date(entry.at).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                    const color = DEBUG_TYPE_COLORS[entry.type] || '#888'
-                    const preview = formatDebugPreview(entry)
+                {traces.map((trace) => {
+                    const traceTime = new Date(trace.startedAt).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
                     return (
-                        <details className="debug-entry" key={entry.id}>
-                            <summary className="debug-entry-summary">
-                                <span className="debug-entry-time">{time}</span>
-                                <span className="debug-entry-type" style={{ color }}>{entry.type}</span>
-                                <span className="debug-entry-preview">{preview}</span>
+                        <details className="debug-trace" key={trace.traceId} open>
+                            <summary className="debug-trace-summary">
+                                <span className="debug-entry-time">{traceTime}</span>
+                                <span className="debug-trace-title">{trace.title}</span>
+                                <span className="debug-trace-count">{trace.entries.length} events</span>
                             </summary>
-                            <pre className="debug-entry-data">{JSON.stringify(entry.data, null, 2)}</pre>
+                            <div className="debug-trace-events">
+                                {trace.entries.map((entry) => {
+                                    const time = new Date(entry.at).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                    const color = DEBUG_TYPE_COLORS[entry.type] || '#888'
+                                    const preview = formatDebugPreview(entry)
+                                    return (
+                                        <details className="debug-entry" key={entry.id}>
+                                            <summary className="debug-entry-summary">
+                                                <span className="debug-entry-time">{time}</span>
+                                                <span className="debug-entry-type" style={{ color }}>{entry.type}</span>
+                                                <span className="debug-entry-preview">{preview}</span>
+                                            </summary>
+                                            <pre className="debug-entry-data">{JSON.stringify(entry.data, null, 2)}</pre>
+                                        </details>
+                                    )
+                                })}
+                            </div>
                         </details>
                     )
                 })}

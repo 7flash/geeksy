@@ -361,7 +361,7 @@ export async function sendMessage() {
                         try {
                             const data = JSON.parse(line.slice(6))
                             eventCount++
-                            pushDebugLog(eventType, data)
+                            pushDebugLog(eventType, data, { traceId })
                             handleEvent(eventType, data)
                         } catch { }
                         eventType = ''
@@ -736,6 +736,10 @@ elect = 'none'
         }
 
         document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+    })
+}
+e', onMove)
         document.addEventListener('mouseup', onUp)
     })
 }

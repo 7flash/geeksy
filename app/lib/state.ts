@@ -9,14 +9,21 @@ export interface DebugLogEntry {
     at: number
     type: string
     data: any
+    traceId?: string
 }
 
 let _debugLogId = 0
+let _debugTraceId = 0
 export const debugLog: DebugLogEntry[] = []
 const DEBUG_LOG_MAX = 500
 
-export function pushDebugLog(type: string, data: any) {
-    debugLog.push({ id: ++_debugLogId, at: Date.now(), type, data })
+export function createDebugTraceId() {
+    _debugTraceId += 1
+    return `trace-${Date.now()}-${_debugTraceId}`
+}
+
+export function pushDebugLog(type: string, data: any, options?: { traceId?: string }) {
+    debugLog.push({ id: ++_debugLogId, at: Date.now(), type, data, traceId: options?.traceId })
     if (debugLog.length > DEBUG_LOG_MAX) debugLog.splice(0, debugLog.length - DEBUG_LOG_MAX)
     try {
         window.dispatchEvent(new CustomEvent('geeksy:debug-log'))
