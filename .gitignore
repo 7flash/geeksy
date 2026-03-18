@@ -12,3 +12,4 @@ temp.html
 app/**/*.test.ts
 .geeksy-keys.json
 *.bak
+.docs/decisions/

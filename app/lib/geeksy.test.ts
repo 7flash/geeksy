@@ -8,6 +8,7 @@
  */
 import { describe, expect, test } from 'bun:test'
 import { escapeHtml, inlineFormat, renderMarkdown } from './markdown'
+import { parseIntervalStr } from './schedule-tool'
 
 // ─── escapeHtml ─────────────────────────────────────────
 
@@ -103,22 +104,7 @@ describe('renderMarkdown', () => {
 
 // ─── parseIntervalStr ───────────────────────────────────
 
-// parseIntervalStr is not exported — test it indirectly via import
-// We need to export it first, or test the logic directly
-
-describe('interval parsing (logic)', () => {
-    // Reimplementing the logic for testing since it's not exported
-    function parseIntervalStr(str: string): number {
-        const lower = str.toLowerCase().trim()
-        const match = lower.match(/^(\d+)\s*(s|sec|seconds?|m|min|minutes?|h|hr|hours?)?$/i)
-        if (!match) return 60
-        const num = parseInt(match[1])
-        const unit = (match[2] || 's').charAt(0).toLowerCase()
-        if (unit === 'h') return num * 3600
-        if (unit === 'm') return num * 60
-        return num
-    }
-
+describe('interval parsing', () => {
     test('parses seconds', () => {
         expect(parseIntervalStr('30s')).toBe(30)
         expect(parseIntervalStr('30 seconds')).toBe(30)

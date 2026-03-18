@@ -35,10 +35,15 @@ export async function GET(req: Request) {
         scriptPath: r.scriptPath,
         intervalSec: r.intervalSec,
         cron: (r as any).cron,
+        timeoutSec: (r as any).timeoutSec,
+        expectedOutput: (r as any).expectedOutput,
+        failOnStderr: (r as any).failOnStderr,
         nextRun: r.nextRun,
         lastRun: r.lastRun,
         lastError: r.lastError,
         lastOutput: r.lastOutput,
+        lastReportedStatus: (r as any).lastReportedStatus,
+        lastReportedAt: (r as any).lastReportedAt,
         progress: {
             completed: r.completedCount || 0,
             total: r.totalCount || 1,
@@ -79,6 +84,9 @@ export async function POST(req: Request) {
         tasks?: Array<{ name: string; message: string }>
         intervalSec?: number
         cron?: string
+        timeoutSec?: number
+        expectedOutput?: string
+        failOnStderr?: boolean
         maxRetries?: number
         retryDelayMs?: number
     }
@@ -115,6 +123,9 @@ export async function POST(req: Request) {
         tasks: tasksJson,
         intervalSec: body.intervalSec,
         cron: body.cron,
+        timeoutSec: body.timeoutSec || 60,
+        expectedOutput: body.expectedOutput?.trim() || undefined,
+        failOnStderr: body.failOnStderr || false,
         nextRun,
         totalCount,
         completedCount: 0,

@@ -56,10 +56,13 @@ export const db = new Database(dbPath, {
         tasks: z.string().optional(),              // JSON array of { id, name, message, status }
         intervalSec: z.number().optional(),
         cron: z.string().optional(),               // cron expression e.g. "0 9 * * *"
+        timeoutSec: z.number().default(60),        // max wall time for script/chat execution
+        expectedOutput: z.string().optional(),     // mark run failed if output does not contain this text
+        failOnStderr: z.boolean().default(false),  // mark script run failed when stderr is non-empty
         nextRun: z.number().optional(),
         lastRun: z.number().optional(),
         lastError: z.string().optional(),
-        lastOutput: z.string().optional(),         // last script stdout
+        lastOutput: z.string().optional(),         // last script stdout / normalized output
         completedCount: z.number().default(0),
         totalCount: z.number().default(1),
         currentTask: z.string().optional(),
@@ -69,6 +72,8 @@ export const db = new Database(dbPath, {
         lastDurationMs: z.number().optional(),     // execution time of last run in ms
         successCount: z.number().default(0),       // lifetime successful executions
         failCount: z.number().default(0),          // lifetime failed executions
+        lastReportedStatus: z.string().optional(), // last status surfaced into chat
+        lastReportedAt: z.number().optional(),     // when the last chat report was emitted
     }),
     agentState: z.object({
         agentId: z.number(),

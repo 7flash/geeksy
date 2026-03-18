@@ -465,6 +465,9 @@ export function renderSchedulePane() {
                                         {s.type === 'sequential' && <span className="schedule-type">sequential · </span>}
                                         {s.type === 'interval' && <span className="schedule-type">every {s.intervalSec}s · </span>}
                                         {s.type === 'cron' && s.cron && <span className="schedule-type" title={s.cron}>⏲ cron · </span>}
+                                        {s.timeoutSec && <span className="schedule-type">timeout {s.timeoutSec}s · </span>}
+                                        {s.failOnStderr && <span className="schedule-type" style={{ color: 'var(--amber, #f59e0b)' }}>stderr=fail · </span>}
+                                        {s.expectedOutput && <span className="schedule-type" title={s.expectedOutput}>expects marker · </span>}
                                         {s.retry && s.retry.max > 0 && <span className="schedule-type" style={{ color: 'var(--amber, #f59e0b)' }}>↻ {s.retry.count}/{s.retry.max} retries · </span>}
                                         {s.nextRun && s.status === 'pending' && s.nextRun > Date.now() && <span>next in {formatTimeUntil(s.nextRun)}</span>}
                                         {s.nextRun && s.status === 'pending' && s.nextRun <= Date.now() && <span style={{ color: 'var(--amber)' }}>starting now</span>}

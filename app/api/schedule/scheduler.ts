@@ -57,6 +57,41 @@ function getBaseUrl() {
 let _serverPort: number | null = null
 export function setServerPort(port: number) { _serverPort = port }
 
+export interface ScheduleExecutionResult {
+    success: boolean
+    output: string
+    error?: string
+    stderr?: string
+}
+
+export function applyScheduleValidation(schedule: any, result: ScheduleExecutionResult): ScheduleExecutionResult {
+    const output = result.output || ''
+    const stderr = result.stderr?.trim() || ''
+    const expectedOutput = typeof schedule?.expectedOutput === 'string' ? schedule.expectedOutput.trim() : ''
+    const failOnStderr = schedule?.failOnStderr === true
+
+    if (!result.success) return { ...result, output }
+
+    if (failOnStderr && stderr) {
+        return {
+            success: false,
+            output,
+            error: `Validation failed: stderr was not empty${stderr ? ` (${stderr.slice(0, 160)})` : ''}`,
+            stderr,
+        }
+    }
+
+    if (expectedOutput && !output.includes(expectedOutput)) {
+        return {
+            success: false,
+            output,
+            error: `Validation failed: expected output to contain ${JSON.stringify(expectedOutput)}`,
+            stderr,
+        }
+    }
+
+    return { ...result, output, stderr }
+}
 
 class Scheduler {
     private running = false
@@ -112,22 +147,24 @@ class Scheduler {
     }
 
     /** Execute a task — either run a script or send a chat message */
-    private async executeTask(schedule: any): Promise<{ success: boolean; output: string; error?: string }> {
+    private async executeTask(schedule: any): Promise<ScheduleExecutionResult> {
+        let result: ScheduleExecutionResult
+
         // Script-based execution: run the script file via bun
         if (schedule.scriptPath) {
-            return this.runScript(schedule)
+            result = await this.runScript(schedule)
+        } else if (schedule.message) {
+            // Chat-based execution: send message to chat API
+            result = await this.runChat(schedule)
+        } else {
+            result = { success: false, output: '', error: 'No scriptPath or message configured' }
         }
 
-        // Chat-based execution: send message to chat API
-        if (schedule.message) {
-            return this.runChat(schedule)
-        }
-
-        return { success: false, output: '', error: 'No scriptPath or message configured' }
+        return applyScheduleValidation(schedule, result)
     }
 
     /** Execute a task and measure wall-clock duration */
-    private async executeTaskTimed(schedule: any): Promise<{ success: boolean; output: string; error?: string; durationMs: number }> {
+    private async executeTaskTimed(schedule: any): Promise<ScheduleExecutionResult & { durationMs: number }> {
         const start = performance.now()
         const result = await this.executeTask(schedule)
         const durationMs = Math.round(performance.now() - start)
@@ -135,7 +172,7 @@ class Scheduler {
     }
 
     /** Run a script file via bun */
-    private async runScript(schedule: any): Promise<{ success: boolean; output: string; error?: string }> {
+    private async runScript(schedule: any): Promise<ScheduleExecutionResult> {
         const scriptPath = schedule.scriptPath
         const timeoutMs = (schedule.timeoutSec || 60) * 1000
         console.log(`[scheduler] Running script: ${scriptPath} (timeout: ${timeoutMs / 1000}s)`)
@@ -169,11 +206,22 @@ class Scheduler {
             })()
 
             const { stdout, stderr, exitCode } = await Promise.race([completion, timeout])
+            const trimmedStdout = stdout.trim()
+            const trimmedStderr = stderr.trim()
 
             if (exitCode === 0) {
-                return { success: true, output: stdout.trim() || '(no output)' }
+                return {
+                    success: true,
+                    output: trimmedStdout || (trimmedStderr ? `(stderr only) ${trimmedStderr}` : '(no output)'),
+                    stderr: trimmedStderr || undefined,
+                }
             } else {
-                return { success: false, output: stdout.trim(), error: stderr.trim() || `Exit code: ${exitCode}` }
+                return {
+                    success: false,
+                    output: trimmedStdout,
+                    error: trimmedStderr || `Exit code: ${exitCode}`,
+                    stderr: trimmedStderr || undefined,
+                }
             }
         } catch (err: any) {
             return { success: false, output: '', error: err.message || String(err) }
@@ -181,7 +229,7 @@ class Scheduler {
     }
 
     /** Send a message to the chat API */
-    private async runChat(schedule: any): Promise<{ success: boolean; output: string; error?: string }> {
+    private async runChat(schedule: any): Promise<ScheduleExecutionResult> {
         const timeoutMs = (schedule.timeoutSec || 30) * 1000
         const maxAttempts = 4
         let lastError = ''
@@ -285,6 +333,13 @@ class Scheduler {
             currentTask: undefined,
         })
 
+        if (allPassed) {
+            this.pushResultToChat(schedule, 'success', `Sequential batch complete: ${completedCount}/${tasks.length} tasks passed.`)
+        } else {
+            const failedTask = tasks.find((t: any) => t.status === 'failed')
+            this.pushResultToChat(schedule, 'failed', failedTask?.result || '', `Sequential batch stopped on "${failedTask?.name || 'unknown task'}"`)
+        }
+
         console.log(`[scheduler] Sequential batch complete: ${completedCount}/${tasks.length} tasks (Status: ${allPassed ? 'Passed' : 'Failed'})`)
     }
 
@@ -308,7 +363,7 @@ class Scheduler {
                 successCount: (schedule.successCount || 0) + 1,
             })
             if (result.output.trim()) {
-                this.pushOutputToChat(schedule, result.output)
+                this.pushResultToChat(schedule, 'success', result.output)
             }
             return
         }
@@ -338,16 +393,20 @@ class Scheduler {
         }
 
         // All retries exhausted — mark as permanently failed
+        const finalError = maxRetries > 0
+            ? `Failed after ${retryCount - 1} retries: ${result.error}`
+            : result.error
+
         db.schedules.update(schedule.id, {
             status: 'failed',
             lastRun: Date.now(),
             lastOutput: result.output.substring(0, 2000),
-            lastError: maxRetries > 0
-                ? `Failed after ${retryCount - 1} retries: ${result.error}`
-                : result.error,
+            lastError: finalError,
             lastDurationMs: result.durationMs,
             failCount: (schedule.failCount || 0) + 1,
         })
+
+        this.pushResultToChat(schedule, 'failed', result.output, finalError)
 
         if (maxRetries > 0) {
             console.log(`[scheduler] Task "${schedule.name}" permanently failed after ${retryCount - 1} retries`)
@@ -379,9 +438,10 @@ class Scheduler {
             failCount: result.success ? schedule.failCount || 0 : (schedule.failCount || 0) + 1,
         })
 
-        // Push successful output to chat
         if (result.success && result.output.trim()) {
-            this.pushOutputToChat(schedule, result.output)
+            this.pushResultToChat(schedule, 'success', result.output)
+        } else if (!result.success) {
+            this.pushResultToChat(schedule, 'failed', result.output, result.error)
         }
 
         const status = result.success ? '✓' : '✗'
@@ -414,7 +474,9 @@ class Scheduler {
         })
 
         if (result.success && result.output.trim()) {
-            this.pushOutputToChat(schedule, result.output)
+            this.pushResultToChat(schedule, 'success', result.output)
+        } else if (!result.success) {
+            this.pushResultToChat(schedule, 'failed', result.output, result.error)
         }
 
         const status = result.success ? '✓' : '✗'
@@ -422,15 +484,41 @@ class Scheduler {
         console.log(`[scheduler] Cron task "${schedule.name}" ${status} (${result.durationMs}ms, next: ${nextDate}): ${result.output.substring(0, 80)}`)
     }
 
-    /** Insert script output as a chat message so the user sees it */
-    private pushOutputToChat(schedule: any, output: string) {
+    private buildChatReport(schedule: any, status: 'success' | 'failed', output: string, error?: string) {
+        const header = status === 'success' ? `📋 **${schedule.name}**` : `⚠️ **${schedule.name} failed**`
+        const lines = [header]
+        if (status === 'failed') {
+            if (error) lines.push(error)
+            if (output?.trim()) lines.push(output.trim())
+        } else if (output?.trim()) {
+            lines.push(output.trim())
+        }
+        return lines.filter(Boolean).join('\n')
+    }
+
+    private shouldReportToChat(schedule: any, status: 'success' | 'failed', output: string, error?: string) {
+        const normalized = `${status}:${(error || output || '').trim().slice(0, 240)}`
+        return schedule.lastReportedStatus !== normalized
+    }
+
+    /** Insert schedule result into chat so the user sees background activity */
+    private pushResultToChat(schedule: any, status: 'success' | 'failed', output: string, error?: string) {
         if (!schedule.agentId) return
+        if (!this.shouldReportToChat(schedule, status, output, error)) return
+
+        const content = this.buildChatReport(schedule, status, output, error)
+        const normalized = `${status}:${(error || output || '').trim().slice(0, 240)}`
+
         try {
             db.messages.insert({
                 agentId: schedule.agentId,
                 sessionId: schedule.sessionId,
                 role: 'assistant',
-                content: `📋 **${schedule.name}**\n${output.trim()}`,
+                content,
+            })
+            db.schedules.update(schedule.id, {
+                lastReportedStatus: normalized,
+                lastReportedAt: Date.now(),
             })
         } catch (err) {
             console.error('[scheduler] Failed to persist output to chat:', err)

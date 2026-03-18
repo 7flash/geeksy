@@ -7,6 +7,7 @@
 - [x] ~~**Audit remaining writable paths for npm CLI mode**~~ — ✅ DONE. Added `app/lib/paths.ts` and moved skills, backups, saved model keys, plugin install/update paths, and `.config.toml` lookups onto `GEEKSY_HOME` / `GEEKSY_APP_ROOT` aware locations.
 - [x] ~~**Verify plugin install/update flows in packaged CLI mode**~~ — ✅ DONE. Smoke-tested plugin install, manifest/config reads, config save, and update handling under a custom `GEEKSY_HOME`; local/unpublished plugins now degrade gracefully when no npm registry version exists.
 - [ ] **Smoke-test published npm plugin upgrades in packaged CLI mode** — The local-workspace path is covered now, but a real registry-backed plugin should still be tested through `bun add` / `bun update` in app-home mode.
+- [ ] **Heartbeat paused state blocks queued follow-ups** — Browser smoke test proved tool-heavy chat runs enqueue session follow-ups, but the heartbeat was paused in the live app so those queued checks would never execute until manually resumed.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Remove objectives timeline tab and show version badge**~~ — ✅ DONE. Removed the Objectives tab and metrics (objectives now live in chat confirmation cards); added a fixed version+commit badge to the bottom-right corner of the page.
@@ -21,6 +22,8 @@
 - [x] ~~**Skill-catalog discovery → install → objective-review workflow**~~ — ✅ DONE. Added `search_skills` and `install_skill` agent tools that search installed skills, marketplace, and plugin registry; wired into chat, heartbeat, and Telegram; system prompt instructs agent to discover before executing.
 - [x] ~~**Persist artifact contents, not just filenames**~~ — ✅ DONE. Files tab now has clickable items that expand to show full file content via `/api/files`, with language hints, size info, truncation badges, and scrollable preview panes.
 - [ ] **Heartbeat validation for scheduled automation outputs** — Long-running automations should attach validation checks (e.g. stderr stays empty, expected markdown/transcript artifacts are produced) that heartbeat evaluates and reports back to the user.
+- [x] ~~**Persist schedule execution policy + output validation**~~ — ✅ DONE. Schedules now persist timeout/retry/output-validation policy, the scheduler enforces expected-output + fail-on-stderr checks centrally, and the API/UI/tooling expose that policy back to the user.
+- [x] ~~**Report scheduled failures back into chat**~~ — ✅ DONE. Scheduler now persists last reported state and emits chat alerts for failed one-off, interval, cron, and sequential tasks without endlessly repeating the same failure.
 - [x] ~~**Heartbeat follow-up system**~~ — ✅ DONE. `scheduleFollowUp()` + `drainFollowUps()` in heartbeat.ts. Chat route auto-schedules 2min follow-up after tool-heavy agent responses. API supports manual scheduling via POST.
 - [x] ~~**Follow-up queue persistence**~~ — ✅ DONE. Added `followUps` table schema to `db.ts`. Refactored `heartbeat.ts` to use SQLite instead of in-memory queue. Survives server restarts. Tested and covered by `heartbeat.test.ts`.
 - [x] ~~**Expose follow-up status via API**~~ — ✅ DONE. Added `GET /api/follow-ups` to fetch all ordered follow-ups and `DELETE /api/follow-ups` to remove by id or clear all. Tested with `route.test.ts`.

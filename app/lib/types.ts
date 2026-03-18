@@ -32,10 +32,15 @@ export interface ScheduleEntry {
     scriptPath?: string
     intervalSec?: number
     cron?: string
+    timeoutSec?: number
+    expectedOutput?: string
+    failOnStderr?: boolean
     nextRun?: number
     lastRun?: number
     lastError?: string
     lastOutput?: string
+    lastReportedStatus?: string
+    lastReportedAt?: number
     progress?: {
         completed: number
         total: number
