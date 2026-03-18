@@ -142,6 +142,23 @@ function getObjectiveStateFingerprint(status: string, reason: string): string {
     return `${status}:${reason}`.slice(0, 500)
 }
 
+function pickHeartbeatSessionId(agentId: number, pendingObjectives: any[], pendingSchedules: any[]): number | undefined {
+    const objectiveSession = [...pendingObjectives]
+        .reverse()
+        .find((o: any) => o.agentId === agentId && typeof o.sessionId === 'number')?.sessionId
+    if (typeof objectiveSession === 'number') return objectiveSession
+
+    const scheduleSession = [...pendingSchedules]
+        .reverse()
+        .find((s: any) => (!s.agentId || s.agentId === agentId) && typeof s.sessionId === 'number')?.sessionId
+    if (typeof scheduleSession === 'number') return scheduleSession
+
+    const recentMessageSession = [...db.messages.select().where({ agentId }).orderBy('id', 'asc').all()]
+        .reverse()
+        .find((m: any) => typeof m.sessionId === 'number')?.sessionId
+    return typeof recentMessageSession === 'number' ? recentMessageSession : undefined
+}
+
 async function validateObjectiveRow(objective: any): Promise<{ met: boolean; reason: string }> {
     const params = parseObjectiveParams(objective.params)
 
@@ -434,6 +451,7 @@ export async function runHeartbeat() {
 
         const safeModeRow = db.agentState.select().where({ agentId: 1, key: 'safe_mode' }).first();
         const safeMode = safeModeRow?.value === 'true';
+        const heartbeatSessionId = pickHeartbeatSessionId(agent.id, pendingObjectives as any[], pendingSchedules as any[])
 
         const config = {
             model: agent.model || "gemini-2.5-flash",
@@ -441,7 +459,7 @@ export async function runHeartbeat() {
             skills: skillPaths.length > 0 ? skillPaths : undefined,
             maxIterations: 5,
             safeMode,
-            tools: [createScheduleTool(agent.id)],
+            tools: [createScheduleTool(agent.id, heartbeatSessionId)],
         };
 
         // Reuse the active session to maintain memory
@@ -464,7 +482,6 @@ export async function runHeartbeat() {
 
             console.log(`[heartbeat] Agent ${agent.id} pruned response:`, pruneText.substring(0, 100));
 
-            // Wipe legacy rows using proper ORM delete
             for (const m of messages) {
                 try { db.messages.delete(m.id); } catch { }
             }
@@ -475,7 +492,6 @@ export async function runHeartbeat() {
                 try { db.files.delete(f.id); } catch { }
             }
 
-            // Re-initialize session to clear its internal short-term memory
             session = new Session(config);
             sessions.set(session.id, session);
             db.agents.update(agent.id, { sessionId: session.id });
@@ -568,7 +584,7 @@ export async function runHeartbeat() {
 
         if (withoutThoughts && withoutThoughts.toUpperCase() !== "IDLE") {
             console.log(`[heartbeat] Agent acted (${withoutThoughts.length} chars):`, withoutThoughts.substring(0, 120));
-            db.messages.insert({ agentId: agent.id, role: 'assistant', content: fullText });
+            db.messages.insert({ agentId: agent.id, sessionId: heartbeatSessionId, role: 'assistant', content: fullText });
             heartbeatStats.lastTickResult = 'acted';
         } else {
             console.log("[heartbeat] Nothing to report (IDLE).");

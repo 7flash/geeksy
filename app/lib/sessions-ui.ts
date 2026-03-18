@@ -212,6 +212,8 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
 
 export async function selectSession(id: number, session?: any) {
     activeSessionId = id
+    const agent = getActiveAgent()
+    if (agent) agent.sessionId = null
     localStorage.setItem('geeksy:activeSessionId', String(id))
     window.dispatchEvent(new CustomEvent('geeksy:session-changed', { detail: { sessionId: id } }))
 

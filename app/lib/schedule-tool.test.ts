@@ -44,4 +44,25 @@ describe('schedule tool guardrails', () => {
         expect(row).toBeUndefined()
         try { await Bun.file(scriptPath).delete() } catch { }
     })
+
+    test('rejects scheduled scripts with declared placeholder state helpers', async () => {
+        const scriptPath = 'scripts/test-declare-state-schedule.ts'
+        await Bun.write(scriptPath, 'declare function getState(key: string, fallback: any): Promise<any>\ndeclare function setState(key: string, value: any): Promise<void>\nconsole.log(await getState("x", []))\n')
+
+        const tool = createScheduleTool(1, 1)
+        const result = await tool.execute({
+            action: 'create',
+            name: 'declare-state-schedule',
+            scriptPath,
+            interval: '60s',
+            type: 'interval',
+        })
+
+        expect(result.success).toBe(false)
+        expect(result.error).toContain('placeholder getState/setState')
+
+        const row = db.schedules.select().all().find((s: any) => s.name === 'declare-state-schedule')
+        expect(row).toBeUndefined()
+        try { await Bun.file(scriptPath).delete() } catch { }
+    })
 })

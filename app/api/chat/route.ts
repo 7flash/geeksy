@@ -15,7 +15,7 @@ import { searchSemanticMemory, addSemanticMemory } from '../../lib/embeddings'
 import { createSkillDiscoveryTools } from '../../lib/skill-discovery-tool'
 import { skillsDir } from '../../lib/paths'
 
-import { sessions } from '../../lib/session-store'
+import { sessions, getBoundSmartSessionId, bindDbSessionToSmartSession } from '../../lib/session-store'
 
 /** Default system prompt — personality and behavior for Geeksy sessions */
 const DEFAULT_SYSTEM_PROMPT = `You are Geeksy, a personal AI assistant. Be concise, friendly, and proactive.
@@ -36,6 +36,7 @@ TECHNICAL RULES:
 - Install packages with: bun add <package>
 - For non-trivial scheduled automations, first write a Bun/TypeScript script file, then use the schedule tool to run it with explicit timeout/retry/validation settings
 - Scheduled scripts must NEVER import app internals like @geeky/core; they must be self-contained or use inline fetch helpers for STATE_URL when persistence is needed
+- Never use placeholder declarations like "declare function getState(...)" or "declare function setState(...)" in scheduled scripts; if state is needed, inline the real helper functions that call STATE_URL
 
 BEHAVIOR:
 - When asked "what time is it" or similar, use the exec tool: Get-Date
@@ -141,7 +142,10 @@ export async function POST(req: Request) {
     // RAG: Query local vector memory for context injection
     let augmentedMessage = body.message
     try {
-        const memories = await searchSemanticMemory(body.message, 3, 0.4)
+        const memories = await searchSemanticMemory(body.message, 3, 0.4, {
+            agentId: body.agentId,
+            sessionId: body.dbSessionId,
+        })
         if (memories.length > 0) {
             const contextText = memories.map(m => `- ${m.text}`).join('\n')
             systemPrompt = (systemPrompt || '') + `\n\n[System Auto-Context]: Relevant past conversation memories retrieved from Local Vector Database:\n${contextText}\n\nUse this context to answer the user's latest message if applicable.`
@@ -278,11 +282,18 @@ export async function POST(req: Request) {
                         } catch { }
                     }
                     try {
-                        addSemanticMemory(`User: ${body.message}\nAgent: ${assistantText}`, { agentId: body.agentId })
+                        addSemanticMemory(`User: ${body.message}\nAgent: ${assistantText}`, {
+                            agentId: body.agentId,
+                            sessionId: body.dbSessionId,
+                        })
                     } catch { }
                 }
 
                 // Save sessionId to agent record
+                if (body.dbSessionId) {
+                    bindDbSessionToSmartSession(body.dbSessionId, session.id)
+                }
+
                 if (body.agentId) {
                     db.agents.update(body.agentId, { sessionId: session.id })
 
@@ -329,6 +340,14 @@ export async function GET() {
             for (const f of readdirSync(skillsDir)) {
                 if (f.endsWith(".md")) {
                     result.push(f.replace(/\.md$/, ""))
+                }
+            }
+        } catch { }
+        return result
+    })
+    return Response.json(skills)
+}
+place(/\.md$/, ""))
                 }
             }
         } catch { }

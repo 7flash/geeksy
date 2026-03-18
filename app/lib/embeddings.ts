@@ -97,23 +97,34 @@ export async function addSemanticMemory(text: string, meta?: any) {
     memoryCache.push({ id: res.id, text, vector, meta: meta ? JSON.stringify(meta) : undefined })
 }
 
-export async function searchSemanticMemory(query: string, limit = 5, threshold = 0.3): Promise<SemanticSearchResult[]> {
+export async function searchSemanticMemory(
+    query: string,
+    limit = 5,
+    threshold = 0.3,
+    filter?: SemanticMemoryFilter,
+): Promise<SemanticSearchResult[]> {
     initVectorCache()
     if (memoryCache.length === 0) return []
 
     const queryVec = await generateEmbedding(query)
 
-    // Exact in-memory cosine sweep
-    // For personal knowledge bases up to 10k items, JS arrays run this in roughly < 5ms.
-    const scored = memoryCache.map(mem => ({
-        id: mem.id,
-        text: mem.text,
-        similarity: cosineSimilarity(queryVec, mem.vector),
-        metadata: mem.meta ? JSON.parse(mem.meta) : undefined
-    }))
+    const scored = memoryCache.map(mem => {
+        const metadata = mem.meta ? JSON.parse(mem.meta) : undefined
+        return {
+            id: mem.id,
+            text: mem.text,
+            similarity: cosineSimilarity(queryVec, mem.vector),
+            metadata,
+        }
+    })
 
     return scored
-        .filter(s => s.similarity >= threshold)
+        .filter(s => {
+            if (s.similarity < threshold) return false
+            if (filter?.sessionId != null && s.metadata?.sessionId !== filter.sessionId) return false
+            if (filter?.agentId != null && s.metadata?.agentId !== filter.agentId) return false
+            return true
+        })
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, limit)
 }

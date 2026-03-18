@@ -19,6 +19,21 @@ function validateScheduledScriptContent(scriptPath: string, content: string): st
     if (content.includes('@geeky/core')) {
         return `Scheduled scripts must not import @geeky/core. Use plain Bun/TypeScript and inline fetch helpers when state is needed. Fix: ${scriptPath}`
     }
+
+    const declaresStateHelpers = /declare\s+function\s+getState\s*\(/.test(content) || /declare\s+function\s+setState\s*\(/.test(content)
+    if (declaresStateHelpers) {
+        return `Scheduled scripts must not use declared placeholder getState/setState helpers. Inline real STATE_URL fetch helpers in the script instead. Fix: ${scriptPath}`
+    }
+
+    const referencesStateHelpers = /\bgetState\s*\(/.test(content) || /\bsetState\s*\(/.test(content)
+    const hasInlineStateHelpers = content.includes('const STATE_URL = process.env.STATE_URL')
+        && content.includes('async function getState(')
+        && content.includes('async function setState(')
+
+    if (referencesStateHelpers && !hasInlineStateHelpers) {
+        return `Scheduled scripts that use getState/setState must define the inline STATE_URL fetch helpers in the file. Fix: ${scriptPath}`
+    }
+
     return null
 }
 
