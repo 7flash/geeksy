@@ -11,7 +11,7 @@ import {
     appendCard, appendDivider, appendToolCard, updateLastTool,
     appendResponseBubble, appendThinkingCard, scrollDown,
 } from './chat-ui'
-import { renderObjectivesPane, updateObjectives, renderFilesPane, switchTab, fetchSchedules } from './panels'
+import { renderFilesPane, switchTab, fetchSchedules } from './panels'
 import { bumpKnownMsgCount } from './sessions-ui'
 
 export function clearLoading() {
@@ -129,32 +129,18 @@ export function handleEvent(type: string, data: any) {
         }
         case 'awaiting_confirmation': {
             clearLoading()
-            const objectives = (data.objectives || []).filter((o: any) => !o.completed)
 
             const card = document.createElement('div')
             card.className = 'confirmation-card'
 
-            const objListHtml = objectives.length > 0
-                ? `<div class="confirmation-objectives">${objectives.map((o: any) =>
-                    `<div class="confirmation-obj">
-                        <span class="confirmation-obj-icon">${o.type === 'respond' ? '💬' : o.type === 'task_scheduled' ? '⏰' : '🎯'}</span>
-                        <div class="confirmation-obj-body">
-                            <div class="confirmation-obj-name">${o.name || 'Unnamed'}</div>
-                            ${o.description ? `<div class="confirmation-obj-desc">${o.description}</div>` : ''}
-                        </div>
-                    </div>`
-                ).join('')}</div>`
-                : ''
-
             card.innerHTML = `
                 <div class="confirmation-header">
                     <span class="confirmation-icon">⏸</span>
-                    <span>Review ${objectives.length} objective${objectives.length !== 1 ? 's' : ''} before proceeding</span>
+                    <span>Ready to proceed?</span>
                 </div>
-                ${objListHtml}
                 <div class="confirmation-actions">
                     <button class="confirm-btn proceed" data-action="confirm-proceed">▶ Proceed</button>
-                    <button class="confirm-btn cancel" data-action="confirm-cancel">✕ Reject</button>
+                    <button class="confirm-btn cancel" data-action="confirm-cancel">✕ Cancel</button>
                 </div>
             `
             dom.chatArea.appendChild(card)
@@ -374,6 +360,34 @@ export function handleEvent(type: string, data: any) {
             appendCard('cancelled', '■ Cancelled', `Stopped after ${(data.iteration || 0) + 1} iteration${data.iteration > 0 ? 's' : ''} · ${elapsed}s`)
             setLastThinking('', null)
             setQuickResponse(false) // reset
+            break
+        }
+    }
+}
+ull)
+            setQuickResponse(false) // reset
+            break
+        }
+        case 'cancelled': {
+            if (streamingEl) {
+                streamingEl.remove()
+                setStreamingEl(null)
+                setStreamingContent('')
+            }
+            if (lastThinkingMessage) {
+                if (lastThinkingEl) lastThinkingEl.remove()
+                const cleaned = cleanThinkingText(lastThinkingMessage)
+                if (cleaned) appendResponseBubble(cleaned)
+            }
+            const elapsed = ((data.elapsed || 0) / 1000).toFixed(1)
+            appendCard('cancelled', '■ Cancelled', `Stopped after ${(data.iteration || 0) + 1} iteration${data.iteration > 0 ? 's' : ''} · ${elapsed}s`)
+            setLastThinking('', null)
+            setQuickResponse(false) // reset
+            break
+        }
+    }
+}
+tQuickResponse(false) // reset
             break
         }
     }

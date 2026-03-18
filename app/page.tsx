@@ -119,7 +119,7 @@ export default function Page() {
                             </button>
                         </div>
                         <div className="input-footer">
-                            <span className="input-hint">Ask naturally — Geeksy can plan, edit files, track objectives, and schedule follow-ups here.</span>
+                            <span className="input-hint">Ask anything, run tasks, or schedule automations.</span>
                         </div>
                     </div>
                 </div>

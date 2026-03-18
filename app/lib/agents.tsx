@@ -6,7 +6,7 @@ import {
     setActiveLoadingEl, restoreActiveSkills,
 } from './state'
 import { appendUserBubble, appendLoading, appendCard, appendResponseBubble, forceScrollDown } from './chat-ui'
-import { renderObjectivesPane, renderFilesPane, renderSchedulePane, resetMessageCount } from './panels'
+import { renderFilesPane, renderSchedulePane, resetMessageCount } from './panels'
 import { handleEvent, clearLoading } from './events'
 import { openPluginConfig } from './plugin-config'
 import { getActiveSessionId, selectSession, refreshSessions, bumpKnownMsgCount } from './sessions-ui'
@@ -145,22 +145,6 @@ export async function selectAgent(id: number) {
                     }
                 }
             }
-            if (data.objectives?.length) {
-                const restored = data.objectives.map((o: any) => ({
-                    name: o.name,
-                    description: o.description,
-                    type: o.type,
-                    met: o.status === 'complete' ? true : o.status === 'failed' ? false : undefined,
-                    reason: o.result,
-                }))
-                state.objectives = restored
-                state.objectiveGroups = [{
-                    id: Date.now(),
-                    timestamp: Date.now(),
-                    label: 'Restored',
-                    objectives: restored,
-                }]
-            }
             if (data.files?.length) {
                 state.files = data.files.map((f: any) => ({
                     path: f.path,
@@ -179,7 +163,6 @@ export async function selectAgent(id: number) {
     }
 
     state.schedules = []
-    renderObjectivesPane()
     renderFilesPane()
     renderSchedulePane()
     renderSidebar()
@@ -716,6 +699,25 @@ export function setupResizeHandle() {
         startH = overview.offsetHeight
         document.body.style.cursor = 'row-resize'
         document.body.style.userSelect = 'none'
+
+        const onMove = (ev: MouseEvent) => {
+            const delta = startY - ev.clientY
+            const newH = Math.max(120, Math.min(window.innerHeight * 0.6, startH + delta))
+            overview.style.height = newH + 'px'
+        }
+
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+            document.body.style.cursor = ''
+            document.body.style.userSelect = ''
+        }
+
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+    })
+}
+elect = 'none'
 
         const onMove = (ev: MouseEvent) => {
             const delta = startY - ev.clientY

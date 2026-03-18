@@ -1,7 +1,7 @@
 // app/lib/sessions-ui.ts — Session management UI: CRUD, selection, modals, telegram setup
 import { state, getActiveAgent } from './state'
 import { appendUserBubble, appendResponseBubble, scrollDown } from './chat-ui'
-import { renderFilesPane, renderObjectivesPane } from './panels'
+import { renderFilesPane } from './panels'
 
 let activeSessionId: number | null = null
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -167,7 +167,7 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
             <div class="session-empty">
                 <div class="session-empty-icon">💬</div>
                 <p class="session-empty-title">No conversations yet</p>
-                <p class="session-empty-hint">Start one thread for planning, files, objectives, and follow-up work.</p>
+                <p class="session-empty-hint">Start a conversation to get things done.</p>
                 <button class="session-empty-cta" type="button">Start your first conversation</button>
             </div>
         `
@@ -318,13 +318,11 @@ async function loadSessionState(sessionId: number) {
             action: f.action === 'write' ? 'write' as const : 'read' as const,
         }))
 
-        renderObjectivesPane()
         renderFilesPane()
     } catch {
         state.objectives = []
         state.objectiveGroups = []
         state.files = []
-        renderObjectivesPane()
         renderFilesPane()
     }
 }
