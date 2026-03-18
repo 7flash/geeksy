@@ -519,33 +519,22 @@ export async function runHeartbeat() {
             ? db.messages.select().where({ agentId: agent.id, sessionId: heartbeatSessionId } as any).all()
             : db.messages.select().where({ agentId: agent.id }).all();
         if (messages.length > 200) {
-            console.log(`[heartbeat] Agent ${agent.id} reached ${messages.length} messages. Triggering auto-pruning...`);
-            const prunePrompt = "MEMORY PRUNING TICK: Your conversation history has exceeded 200 messages. You MUST immediately analyze all your previous interactions. Summarize your previous context into a memory artifact (e.g. using the setState tool under the key 'core_memory'), capturing ongoing state, preferences, and pending items. Once you have successfully saved it, reply EXACTLY with 'PRUNED'.";
+            const keepCount = 120
+            const toDelete = messages.slice(0, Math.max(0, messages.length - keepCount))
+            console.log(`[heartbeat] Agent ${agent.id} reached ${messages.length} messages. Deterministically trimming ${toDelete.length} old messages (keeping ${keepCount}).`)
 
-            let pruneText = "";
-            for await (const event of session.send(prunePrompt)) {
-                if (event.type === 'thinking_delta') pruneText += (event as any).delta || '';
+            for (const m of toDelete) {
+                try { db.messages.delete(m.id) } catch { }
             }
 
-            console.log(`[heartbeat] Agent ${agent.id} pruned response:`, pruneText.substring(0, 100));
-
-            for (const m of messages) {
-                try { db.messages.delete(m.id); } catch { }
-            }
-            for (const o of db.objectives.select().where({ agentId: agent.id }).all()) {
-                try { db.objectives.delete(o.id); } catch { }
-            }
-            for (const f of db.files.select().where({ agentId: agent.id }).all()) {
-                try { db.files.delete(f.id); } catch { }
-            }
-
-            session = new Session(config);
-            sessions.set(session.id, session);
-            db.agents.update(agent.id, { sessionId: session.id });
-
-            console.log(`[heartbeat] Agent ${agent.id} legacy memory wiped.`);
-            heartbeatStats.lastTickResult = 'pruned';
-            return;
+            heartbeatStats.lastTickAt = Date.now()
+            heartbeatStats.lastTickResult = 'pruned'
+            heartbeatStats.lastToolCalls = [{
+                name: 'message_trim',
+                result: `deleted ${toDelete.length} old messages`,
+                at: Date.now(),
+            }]
+            return
         }
 
         // Build dynamic prompt based on actual state
