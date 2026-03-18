@@ -538,6 +538,11 @@ export function renderMemoryPane() {
         render(<div className="overview-empty">Select an agent to view its memory.</div>, pane)
         return
     }
+
+    const coreMemoryEntry = state.stateEntries.find((entry) => entry.key === 'core_memory')
+    const coreMemoryUpdatedAtEntry = state.stateEntries.find((entry) => entry.key === 'core_memory_updated_at')
+    const otherEntries = state.stateEntries.filter((entry) => entry.key !== 'core_memory' && entry.key !== 'core_memory_updated_at')
+
     if (state.stateEntries.length === 0) {
         render(
             <div className="overview-empty">
@@ -548,16 +553,38 @@ export function renderMemoryPane() {
             pane
         )
     } else {
-        // Group entries by key prefix (e.g. "users." → Users collection)
-        const groups = new Map<string, typeof state.stateEntries>()
-        for (const entry of state.stateEntries) {
+        const groups = new Map<string, typeof otherEntries>()
+        for (const entry of otherEntries) {
             const prefix = entry.key.includes('.') ? entry.key.split('.')[0] : '_ungrouped'
             if (!groups.has(prefix)) groups.set(prefix, [])
             groups.get(prefix)!.push(entry)
         }
 
+        const coreMemoryUpdatedAt = coreMemoryUpdatedAtEntry?.value ? Number(coreMemoryUpdatedAtEntry.value) : null
+
         render(
             <div className="memory-list">
+                {coreMemoryEntry ? (
+                    <div className="memory-core-card">
+                        <div className="memory-core-header">
+                            <div>
+                                <div className="memory-core-title">Heartbeat Core Memory</div>
+                                <div className="memory-core-subtitle">
+                                    {coreMemoryUpdatedAt && Number.isFinite(coreMemoryUpdatedAt)
+                                        ? `Updated ${new Date(coreMemoryUpdatedAt).toLocaleString()}`
+                                        : 'Persisted during heartbeat pruning'}
+                                </div>
+                            </div>
+                            <button
+                                className="memory-delete"
+                                onClick={() => deleteMemoryEntry(coreMemoryEntry.agentId, coreMemoryEntry.key)}
+                                title="Delete core memory"
+                            >✕</button>
+                        </div>
+                        <pre className="memory-core-value">{coreMemoryEntry.value}</pre>
+                    </div>
+                ) : null}
+
                 {Array.from(groups.entries()).map(([group, entries]) => (
                     <div className="memory-group" key={group}>
                         {group !== '_ungrouped' && (

@@ -3731,6 +3731,47 @@ body {
     padding: 8px 0;
 }
 
+.memory-core-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(99, 102, 241, 0.22);
+    background: rgba(99, 102, 241, 0.06);
+    margin-bottom: 12px;
+}
+
+.memory-core-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.memory-core-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-1);
+}
+
+.memory-core-subtitle {
+    font-size: 10px;
+    color: var(--text-3);
+    margin-top: 2px;
+}
+
+.memory-core-value {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--text-2);
+    max-height: 260px;
+    overflow: auto;
+}
+
 .memory-group {
     display: flex;
     flex-direction: column;
