@@ -2,8 +2,17 @@
 import { Database, z } from 'sqlite-zod-orm'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
+import { tmpdir } from 'os'
 
-const dbPath = process.env.GEEKSY_DB_PATH || join(process.env.GEEKSY_HOME || process.cwd(), 'data', 'agents.db')
+function isRunningUnderBunTest() {
+    return process.argv.slice(1).some(arg => /\.test\.[cm]?[jt]sx?$/i.test(arg))
+}
+
+export const dbPath = process.env.GEEKSY_DB_PATH || (
+    isRunningUnderBunTest()
+        ? join(tmpdir(), 'geeksy-tests', 'agents.db')
+        : join(process.env.GEEKSY_HOME || process.cwd(), 'data', 'agents.db')
+)
 mkdirSync(dirname(dbPath), { recursive: true })
 
 export const db = new Database(dbPath, {
