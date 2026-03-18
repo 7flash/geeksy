@@ -572,9 +572,12 @@ export function renderMemoryPane() {
                             <div>
                                 <div className="memory-core-title">Heartbeat Core Memory</div>
                                 <div className="memory-core-subtitle">
-                                    {coreMemoryUpdatedAt && Number.isFinite(coreMemoryUpdatedAt)
-                                        ? `Updated ${new Date(coreMemoryUpdatedAt).toLocaleString()}`
-                                        : 'Persisted during heartbeat pruning'}
+                                    {[
+                                        coreMemorySessionId ? `Session ${coreMemorySessionId}` : 'Agent-wide',
+                                        coreMemoryUpdatedAt && Number.isFinite(coreMemoryUpdatedAt)
+                                            ? `Updated ${new Date(coreMemoryUpdatedAt).toLocaleString()}`
+                                            : 'Persisted during heartbeat pruning',
+                                    ].join(' • ')}
                                 </div>
                             </div>
                             <button
@@ -638,6 +641,18 @@ async function deleteMemoryEntry(agentId: number, key: string) {
     await fetch(`/api/agent-state?agentId=${agentId}&key=${encodeURIComponent(key)}`, { method: 'DELETE' })
     state.stateEntries = state.stateEntries.filter(e => e.key !== key)
     renderMemoryPane()
+}
+
+async function captureCoreMemorySnapshot() {
+    const agentId = state.activeAgentId
+    const sessionId = getActiveSessionId()
+    if (!agentId || !sessionId) return
+    await fetch('/api/agent-state/core-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, sessionId }),
+    })
+    await fetchMemoryEntries()
 }
 
 // ══════════════════════════════════════
@@ -1301,6 +1316,25 @@ function renderProcessesPane(processes: BgrunProcess[]) {
 async function stopProcess(name: string) {
     await fetch('/api/processes', {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+    })
+    fetchProcesses()
+}
+
+async function restartProcess(name: string) {
+    await fetch('/api/processes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, action: 'restart' }),
+    })
+    fetchProcesses()
+}
+
+esses()
+}
+
+',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
     })
