@@ -531,6 +531,22 @@ function truncateValue(v: string, maxLen = 200): string {
     return v.substring(0, maxLen) + '…'
 }
 
+export function resolveCoreMemoryEntries(entries: StateEntry[], activeSessionId?: number | null) {
+    const activeCoreMemoryKey = typeof activeSessionId === 'number' ? `core_memory.session.${activeSessionId}` : 'core_memory'
+    const activeCoreMemoryUpdatedAtKey = typeof activeSessionId === 'number' ? `core_memory_updated_at.session.${activeSessionId}` : 'core_memory_updated_at'
+
+    const coreMemoryEntry = entries.find((entry) => entry.key === activeCoreMemoryKey)
+        || entries.find((entry) => entry.key === 'core_memory')
+    const coreMemoryUpdatedAtEntry = entries.find((entry) => entry.key === activeCoreMemoryUpdatedAtKey)
+        || entries.find((entry) => entry.key === 'core_memory_updated_at')
+    const otherEntries = entries.filter((entry) => !entry.key.startsWith('core_memory'))
+    const coreMemoryUpdatedAt = coreMemoryUpdatedAtEntry?.value ? Number(coreMemoryUpdatedAtEntry.value) : null
+    const coreMemorySessionMatch = coreMemoryEntry?.key.match(/^core_memory\.session\.(\d+)$/)
+    const coreMemorySessionId = coreMemorySessionMatch ? Number(coreMemorySessionMatch[1]) : null
+
+    return { coreMemoryEntry, coreMemoryUpdatedAtEntry, otherEntries, coreMemoryUpdatedAt, coreMemorySessionId }
+}
+
 export function renderMemoryPane() {
     const pane = document.getElementById('pane-memory')!
     if (!pane) return
@@ -539,9 +555,8 @@ export function renderMemoryPane() {
         return
     }
 
-    const coreMemoryEntry = state.stateEntries.find((entry) => entry.key === 'core_memory')
-    const coreMemoryUpdatedAtEntry = state.stateEntries.find((entry) => entry.key === 'core_memory_updated_at')
-    const otherEntries = state.stateEntries.filter((entry) => entry.key !== 'core_memory' && entry.key !== 'core_memory_updated_at')
+    const activeSessionId = getActiveSessionId()
+    const { coreMemoryEntry, otherEntries, coreMemoryUpdatedAt, coreMemorySessionId } = resolveCoreMemoryEntries(state.stateEntries, activeSessionId)
 
     if (state.stateEntries.length === 0) {
         render(
@@ -588,7 +603,21 @@ export function renderMemoryPane() {
                         </div>
                         <pre className="memory-core-value">{coreMemoryEntry.value}</pre>
                     </div>
-                ) : null}
+                ) : (
+                    <div className="memory-core-card">
+                        <div className="memory-core-header">
+                            <div>
+                                <div className="memory-core-title">Heartbeat Core Memory</div>
+                                <div className="memory-core-subtitle">No retained summary for this conversation yet.</div>
+                            </div>
+                            <button
+                                className="memory-capture-btn"
+                                onClick={() => captureCoreMemorySnapshot()}
+                                title="Capture current conversation into core memory"
+                            >Capture current conversation</button>
+                        </div>
+                    </div>
+                )}
 
                 {Array.from(groups.entries()).map(([group, entries]) => (
                     <div className="memory-group" key={group}>
@@ -1329,27 +1358,5 @@ async function restartProcess(name: string) {
         body: JSON.stringify({ name, action: 'restart' }),
     })
     fetchProcesses()
-}
-
-esses()
-}
-
-',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-    })
-    fetchProcesses()
-}
-
-async function restartProcess(name: string) {
-    await fetch('/api/processes', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, action: 'restart' }),
-    })
-    fetchProcesses()
-}
-
-esses()
 }
 
