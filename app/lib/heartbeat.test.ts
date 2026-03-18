@@ -260,10 +260,28 @@ describe('heartbeat follow-up system', () => {
         expect(noisy).toBe(true)
     })
 
-    it('isHeartbeatChatNoise keeps normal text summaries', () => {
+    it('isHeartbeatChatNoise suppresses low-signal schedule boilerplate summaries', () => {
         const noisy = isHeartbeatChatNoise(
             'Checked plugins and schedule health. Nothing needs attention.',
-            [{ name: 'exec', at: Date.now(), result: '{"plugin":"ok"}' }],
+            [{ name: 'schedule', at: Date.now(), result: '[object Object]' }],
+        )
+
+        expect(noisy).toBe(true)
+    })
+
+    it('isHeartbeatChatNoise suppresses json-plus-boilerplate chatter', () => {
+        const noisy = isHeartbeatChatNoise(
+            '```json\n[{"tool":"schedule","params":{"action":"list"}}]\n```\nChecked schedules. Nothing needs attention.',
+            [{ name: 'schedule', at: Date.now(), result: '[object Object]' }],
+        )
+
+        expect(noisy).toBe(true)
+    })
+
+    it('isHeartbeatChatNoise keeps meaningful text summaries', () => {
+        const noisy = isHeartbeatChatNoise(
+            'Schedule audit complete. Joke sender failed twice because the target script printed stderr.',
+            [{ name: 'schedule', at: Date.now(), result: '[object Object]' }],
         )
 
         expect(noisy).toBe(false)

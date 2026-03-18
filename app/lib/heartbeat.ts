@@ -63,11 +63,38 @@ interface ToolCall { name: string; result?: string; at: number; }
 export function isHeartbeatChatNoise(content: string, toolCalls: ToolCall[]): boolean {
     const trimmed = content.trim()
     if (!trimmed) return false
+    if (toolCalls.length === 0) return false
 
     const isJsonToolBlock = /^```json\s*\[[\s\S]*\]\s*```$/i.test(trimmed)
-    if (!isJsonToolBlock) return false
+    if (isJsonToolBlock) return true
 
-    return toolCalls.length > 0
+    const normalized = trimmed
+        .replace(/```json\s*[\s\S]*?```/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase()
+
+    const boilerplatePatterns = [
+        /nothing needs attention\.?$/,
+        /^checked (plugins|plugin) and schedule health\.?$/,
+        /^checked schedules?\.?$/,
+        /^listed schedules?\.?$/,
+        /^reviewed schedules?\.?$/,
+        /^checked schedules? and found nothing to do\.?$/,
+    ]
+
+    if (boilerplatePatterns.some((pattern) => pattern.test(normalized))) return true
+
+    const scheduleToolWasUsed = toolCalls.some((call) => call.name === 'schedule')
+    if (!scheduleToolWasUsed) return false
+
+    const lowSignalScheduleSummary = [
+        /^checked .*schedule.* nothing needs attention\.?$/,
+        /^reviewed .*schedule.* nothing needs attention\.?$/,
+        /^listed .*schedule.* nothing needs attention\.?$/,
+    ]
+
+    return lowSignalScheduleSummary.some((pattern) => pattern.test(normalized))
 }
 
 const heartbeatStats = {
