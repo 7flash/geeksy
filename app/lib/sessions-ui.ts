@@ -194,7 +194,7 @@ export function renderSessionList(sessions: any[], onSelect: (id: number, sessio
                 <div class="session-item-name">${s.name}</div>
                 <div class="session-item-meta session-item-meta-minimal">
                     <span class="session-type-badge session-type-${s.type}">${renderSessionType(s.type)}</span>
-                    <span class="session-item-msgs">${s.messageCount || 0} messages</span>
+                    <span class="session-item-msgs">${s.messageCount || 0} ${(s.messageCount || 0) === 1 ? 'message' : 'messages'}</span>
                 </div>
             </div>
             <div class="session-item-actions">

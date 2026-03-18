@@ -47,7 +47,7 @@ export default function Page() {
                                         <span className={`session-type-badge session-type-${s.type}`}>
                                             {s.type === 'telegram_bot' ? 'Telegram' : s.type === 'api' ? 'API' : 'Conversation'}
                                         </span>
-                                        <span className="session-item-msgs">{s.messageCount || 0} messages</span>
+                                        <span className="session-item-msgs">{s.messageCount || 0} {(s.messageCount || 0) === 1 ? 'message' : 'messages'}</span>
                                     </div>
                                 </div>
                                 <div className="session-item-actions">
