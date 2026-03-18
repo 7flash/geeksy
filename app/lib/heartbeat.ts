@@ -129,6 +129,117 @@ function buildHeartbeatScheduleAlert(schedule: any): string {
     return details.join('\n')
 }
 
+function parseObjectiveParams(params: string | undefined): Record<string, string> {
+    if (!params) return {}
+    try {
+        return JSON.parse(params)
+    } catch {
+        return {}
+    }
+}
+
+function getObjectiveStateFingerprint(status: string, reason: string): string {
+    return `${status}:${reason}`.slice(0, 500)
+}
+
+async function validateObjectiveRow(objective: any): Promise<{ met: boolean; reason: string }> {
+    const params = parseObjectiveParams(objective.params)
+
+    switch (objective.type) {
+        case 'file_exists': {
+            const targetPath = params.path
+            if (!targetPath) return { met: false, reason: 'Missing objective param: path' }
+            const file = Bun.file(targetPath)
+            if (!await file.exists()) return { met: false, reason: `File not found: ${targetPath}` }
+            if (params.contains) {
+                const content = await file.text()
+                if (!content.includes(params.contains)) {
+                    return { met: false, reason: `File exists but missing: "${params.contains}"` }
+                }
+            }
+            return { met: true, reason: `File exists: ${targetPath}` }
+        }
+        case 'file_contains': {
+            const targetPath = params.path
+            const text = params.text
+            if (!targetPath || !text) return { met: false, reason: 'Missing objective params: path/text' }
+            const file = Bun.file(targetPath)
+            if (!await file.exists()) return { met: false, reason: `File not found: ${targetPath}` }
+            const content = await file.text()
+            return content.includes(text)
+                ? { met: true, reason: `File contains required content` }
+                : { met: false, reason: `File missing content: "${text}"` }
+        }
+        case 'command_succeeds':
+        case 'command_output_contains': {
+            const command = params.command
+            if (!command) return { met: false, reason: 'Missing objective param: command' }
+            const proc = Bun.spawnSync(process.platform === 'win32' ? ['cmd', '/c', command] : ['sh', '-c', command], {
+                cwd: process.cwd(),
+                stdout: 'pipe',
+                stderr: 'pipe',
+            })
+            const stdout = proc.stdout.toString().trim()
+            const stderr = proc.stderr.toString().trim()
+            if (objective.type === 'command_succeeds') {
+                return proc.exitCode === 0
+                    ? { met: true, reason: 'Command succeeded' }
+                    : { met: false, reason: stderr || `Command failed with exit code ${proc.exitCode}` }
+            }
+            const text = params.text
+            if (proc.exitCode !== 0) return { met: false, reason: stderr || `Command failed with exit code ${proc.exitCode}` }
+            if (!text) return { met: false, reason: 'Missing objective param: text' }
+            return stdout.includes(text)
+                ? { met: true, reason: `Output contains "${text}"` }
+                : { met: false, reason: `Output missing: "${text}"` }
+        }
+        case 'task_scheduled': {
+            const name = params.name || objective.name
+            const match = (db.schedules?.select().all() || []).find((s: any) => {
+                const sameAgent = !s.agentId || s.agentId === objective.agentId
+                return sameAgent && s.name === name && s.status !== 'cancelled'
+            })
+            return match
+                ? { met: true, reason: `Task scheduled: ${name}` }
+                : { met: false, reason: `Scheduled task not found: ${name}` }
+        }
+        case 'respond':
+            return { met: true, reason: 'Response objective handled by conversation flow' }
+        default:
+            return { met: false, reason: `No heartbeat validator for objective type: ${objective.type}` }
+    }
+}
+
+export async function auditPendingObjectives(agentId: number): Promise<number> {
+    const objectives = db.objectives.select().where({ agentId, status: 'pending' }).all() as any[]
+    let changes = 0
+
+    for (const objective of objectives) {
+        const result = await validateObjectiveRow(objective)
+        const nextStatus = result.met ? 'complete' : 'pending'
+        const nextFingerprint = getObjectiveStateFingerprint(nextStatus, result.reason)
+
+        db.objectives.update(objective.id, {
+            status: nextStatus,
+            result: result.reason,
+            lastValidatedAt: Date.now(),
+        })
+
+        if (result.met && objective.lastReportedState !== nextFingerprint) {
+            db.messages.insert({
+                agentId,
+                sessionId: objective.sessionId,
+                role: 'assistant',
+                content: `✅ **Objective validated: ${objective.name}**\n${result.reason}`,
+            })
+            db.objectives.update(objective.id, { lastReportedState: nextFingerprint })
+            changes++
+        }
+    }
+
+    return changes
+}
+
 export function auditFailedSchedules(agentId: number): number {
     const failedSchedules = (db.schedules?.select().all() || []).filter((s: any) => {
         const isForAgent = !s.agentId || s.agentId === agentId
@@ -256,16 +367,20 @@ export async function runHeartbeat() {
         }
 
         const auditedFailures = auditFailedSchedules(agent.id);
-        if (auditedFailures > 0) {
+        const auditedObjectives = await auditPendingObjectives(agent.id);
+        if (auditedFailures > 0 || auditedObjectives > 0) {
             heartbeatStats.lastTickAt = Date.now();
             heartbeatStats.lastTickResult = 'acted';
-            heartbeatStats.lastToolCalls = [{ name: 'schedule_audit', result: `reported ${auditedFailures} failure(s)`, at: Date.now() }];
+            heartbeatStats.lastToolCalls = [
+                ...(auditedFailures > 0 ? [{ name: 'schedule_audit', result: `reported ${auditedFailures} failure(s)`, at: Date.now() }] : []),
+                ...(auditedObjectives > 0 ? [{ name: 'objective_audit', result: `validated ${auditedObjectives} objective(s)`, at: Date.now() }] : []),
+            ];
         }
 
         // Guard: skip if no API key is configured (prevents error spam)
         if (!hasApiKey()) {
             heartbeatStats.lastTickAt = Date.now();
-            if (auditedFailures > 0) return;
+            if (auditedFailures > 0 || auditedObjectives > 0) return;
             heartbeatStats.lastTickResult = 'skipped';
             heartbeatStats.totalSkips++;
             return;
@@ -299,7 +414,7 @@ export async function runHeartbeat() {
 
         if (!hasWork) {
             heartbeatStats.lastTickAt = Date.now();
-            if (auditedFailures > 0) {
+            if (auditedFailures > 0 || auditedObjectives > 0) {
                 heartbeatStats.lastTickResult = 'acted';
                 return;
             }
@@ -410,7 +525,14 @@ export async function runHeartbeat() {
                         try {
                             db.objectives.upsert(
                                 { agentId: agent.id, name: obj.name },
-                                { agentId: agent.id, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
+                                {
+                                    agentId: agent.id,
+                                    name: obj.name,
+                                    description: obj.description || '',
+                                    type: obj.type || 'task',
+                                    params: JSON.stringify(obj.params || {}),
+                                    status: 'pending',
+                                },
                             )
                         } catch (e) { console.warn('[heartbeat] objective upsert failed:', obj.name, e); }
                     }
@@ -423,6 +545,8 @@ export async function runHeartbeat() {
                             db.objectives.update(existing.id, {
                                 status: r.met ? 'complete' : 'failed',
                                 result: r.reason || '',
+                                lastValidatedAt: Date.now(),
+                                lastReportedState: `${r.met ? 'complete' : 'failed'}:${r.reason || ''}`.slice(0, 500),
                             })
                         }
                     }

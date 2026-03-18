@@ -219,7 +219,15 @@ export async function POST(req: Request) {
                             try {
                                 db.objectives.upsert(
                                     { agentId: body.agentId, sessionId: body.dbSessionId, name: obj.name } as any,
-                                    { agentId: body.agentId, sessionId: body.dbSessionId, name: obj.name, description: obj.description || '', type: obj.type || 'task', status: 'pending' },
+                                    {
+                                        agentId: body.agentId,
+                                        sessionId: body.dbSessionId,
+                                        name: obj.name,
+                                        description: obj.description || '',
+                                        type: obj.type || 'task',
+                                        params: JSON.stringify(obj.params || {}),
+                                        status: 'pending',
+                                    },
                                 )
                             } catch { }
                         }
@@ -234,6 +242,8 @@ export async function POST(req: Request) {
                                 db.objectives.update(existing.id, {
                                     status: r.met ? 'complete' : 'failed',
                                     result: r.reason || '',
+                                    lastValidatedAt: Date.now(),
+                                    lastReportedState: `${r.met ? 'complete' : 'failed'}:${r.reason || ''}`.slice(0, 500),
                                 })
                             }
                         }

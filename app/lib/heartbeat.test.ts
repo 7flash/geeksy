@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { auditFailedSchedules, getHeartbeatStats, getHeartbeatPauseReason, normalizeHeartbeatPauseStateOnStartup, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { auditFailedSchedules, auditPendingObjectives, getHeartbeatStats, getHeartbeatPauseReason, normalizeHeartbeatPauseStateOnStartup, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
 import { db } from './db'
 
 describe('heartbeat stats', () => {
@@ -188,6 +188,31 @@ describe('heartbeat follow-up system', () => {
         expect(message.content).toContain('stderr exploded')
         expect(schedule.lastHeartbeatAuditStatus).toBeDefined()
         expect(schedule.lastHeartbeatAuditAt).toBeGreaterThan(0)
+    })
+
+    it('auditPendingObjectives validates file_exists objectives and reports completion once', async () => {
+        await Bun.write('heartbeat-objective.txt', 'OBJECTIVE_OK')
+        const row = db.objectives.insert({
+            agentId: 1,
+            sessionId: 77,
+            name: 'check_file',
+            description: 'ensure file exists',
+            type: 'file_exists',
+            params: JSON.stringify({ path: 'heartbeat-objective.txt', contains: 'OBJECTIVE_OK' }),
+            status: 'pending',
+        } as any)
+
+        const first = await auditPendingObjectives(1)
+        const second = await auditPendingObjectives(1)
+        const message = (db as any).db.query('SELECT content FROM messages WHERE sessionId = ? ORDER BY id DESC LIMIT 1').get(77)
+        const objective = db.objectives.select().where({ id: row.id }).first() as any
+
+        expect(first).toBe(1)
+        expect(second).toBe(0)
+        expect(objective.status).toBe('complete')
+        expect(objective.result).toContain('File exists')
+        expect(message.content).toContain('Objective validated: check_file')
+        try { await Bun.file('heartbeat-objective.txt').delete() } catch { }
     })
 })
 

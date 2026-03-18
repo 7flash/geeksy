@@ -45,8 +45,11 @@ export const db = new Database(dbPath, {
         name: z.string(),
         description: z.string(),
         type: z.string(),
+        params: z.string().default('{}'),        // JSON planner params for deterministic validation
         status: z.string().default('pending'), // pending | complete | failed
         result: z.string().optional(),
+        lastValidatedAt: z.number().optional(),
+        lastReportedState: z.string().optional(),
     }),
     files: z.object({
         agentId: z.number(),
