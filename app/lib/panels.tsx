@@ -561,6 +561,8 @@ export function renderMemoryPane() {
         }
 
         const coreMemoryUpdatedAt = coreMemoryUpdatedAtEntry?.value ? Number(coreMemoryUpdatedAtEntry.value) : null
+        const coreMemorySessionMatch = coreMemoryEntry?.key.match(/^core_memory\.session\.(\d+)$/)
+        const coreMemorySessionId = coreMemorySessionMatch ? Number(coreMemorySessionMatch[1]) : null
 
         render(
             <div className="memory-list">
@@ -1312,5 +1314,8 @@ async function restartProcess(name: string) {
         body: JSON.stringify({ name, action: 'restart' }),
     })
     fetchProcesses()
+}
+
+esses()
 }
 

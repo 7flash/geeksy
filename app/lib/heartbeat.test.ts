@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { auditFailedSchedules, auditPendingObjectives, buildCoreMemorySummary, getHeartbeatStats, getHeartbeatPauseReason, isHeartbeatChatNoise, normalizeHeartbeatPauseStateOnStartup, pickHeartbeatSessionId, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { auditFailedSchedules, auditPendingObjectives, buildCoreMemorySummary, getCoreMemoryKey, getCoreMemoryUpdatedAtKey, getHeartbeatStats, getHeartbeatPauseReason, isHeartbeatChatNoise, normalizeHeartbeatPauseStateOnStartup, pickHeartbeatSessionId, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
 import { db } from './db'
 
 describe('heartbeat stats', () => {
@@ -48,6 +48,18 @@ describe('heartbeat stats', () => {
     it('starts with empty tool calls', () => {
         const stats = getHeartbeatStats()
         expect(stats.lastToolCalls).toEqual([])
+    })
+})
+
+describe('heartbeat core memory keys', () => {
+    it('uses session-scoped keys when a session id is present', () => {
+        expect(getCoreMemoryKey(16)).toBe('core_memory.session.16')
+        expect(getCoreMemoryUpdatedAtKey(16)).toBe('core_memory_updated_at.session.16')
+    })
+
+    it('falls back to agent-wide keys when no session id is present', () => {
+        expect(getCoreMemoryKey()).toBe('core_memory')
+        expect(getCoreMemoryUpdatedAtKey()).toBe('core_memory_updated_at')
     })
 })
 

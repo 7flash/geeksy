@@ -60,6 +60,14 @@ function drainFollowUps(agentId: number): FollowUp[] {
 // ── Heartbeat telemetry ──
 interface ToolCall { name: string; result?: string; at: number; }
 
+export function getCoreMemoryKey(sessionId?: number): string {
+    return typeof sessionId === 'number' ? `core_memory.session.${sessionId}` : 'core_memory'
+}
+
+export function getCoreMemoryUpdatedAtKey(sessionId?: number): string {
+    return typeof sessionId === 'number' ? `core_memory_updated_at.session.${sessionId}` : 'core_memory_updated_at'
+}
+
 export function buildCoreMemorySummary(messages: Array<{ role: string; content: string }>, extras?: {
     pendingObjectives?: Array<{ name?: string; description?: string }>
     pendingSchedules?: Array<{ name?: string; type?: string; status?: string }>
@@ -565,13 +573,15 @@ export async function runHeartbeat() {
                 pendingSchedules: pendingSchedules as any[],
                 followUps: followUps as any[],
             })
+            const coreMemoryKey = getCoreMemoryKey(heartbeatSessionId)
+            const coreMemoryUpdatedAtKey = getCoreMemoryUpdatedAtKey(heartbeatSessionId)
             db.agentState.upsert(
-                { agentId: agent.id, key: 'core_memory' } as any,
-                { agentId: agent.id, key: 'core_memory', value: coreMemory },
+                { agentId: agent.id, key: coreMemoryKey } as any,
+                { agentId: agent.id, key: coreMemoryKey, value: coreMemory },
             )
             db.agentState.upsert(
-                { agentId: agent.id, key: 'core_memory_updated_at' } as any,
-                { agentId: agent.id, key: 'core_memory_updated_at', value: String(Date.now()) },
+                { agentId: agent.id, key: coreMemoryUpdatedAtKey } as any,
+                { agentId: agent.id, key: coreMemoryUpdatedAtKey, value: String(Date.now()) },
             )
 
             for (const m of toDelete) {
