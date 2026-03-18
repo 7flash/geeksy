@@ -271,8 +271,9 @@ function SecretsSection() {
                 <input type="text" placeholder="Secret name (e.g. OPENAI_API_KEY)" className="backup-input" value={draftKey} onChange={e => setDraftKey((e.target as HTMLInputElement).value)} />
                 <input type="password" placeholder="Secret value" className="backup-input" value={draftValue} onChange={e => setDraftValue((e.target as HTMLInputElement).value)} />
                 <input type="text" placeholder="Optional description" className="backup-input" value={draftDescription} onChange={e => setDraftDescription((e.target as HTMLInputElement).value)} />
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button className="backup-btn primary" onClick={saveSecret}>Save secret</button>
+                    <button className="backup-btn" onClick={insertSecretPrompt}>Add masked prompt to chat</button>
                     {status ? <span style={{ fontSize: '11px', color: 'var(--text-muted, #888)' }}>{status}</span> : null}
                 </div>
             </div>
@@ -510,6 +511,31 @@ function SettingsModal() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
                             <div className="settings-kbd"><span className="kbd">Ctrl+N</span> New agent</div>
                             <div className="settings-kbd"><span className="kbd">Ctrl+L</span> Clear chat</div>
+                            <div className="settings-kbd"><span className="kbd">Enter</span> Send message</div>
+                            <div className="settings-kbd"><span className="kbd">Shift+Enter</span> New line</div>
+                            <div className="settings-kbd"><span className="kbd">Esc</span> Stop agent / Close modal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export async function openSettings() {
+    // Load auth state
+    await fetchUser()
+    if (authUser) await fetchBackups()
+
+    const container = document.getElementById('settings-modal')!
+    render(<SettingsModal />, container)
+}
+
+export function closeSettings() {
+    const container = document.getElementById('settings-modal')!
+    container.innerHTML = ''
+}
+lassName="kbd">Ctrl+L</span> Clear chat</div>
                             <div className="settings-kbd"><span className="kbd">Enter</span> Send message</div>
                             <div className="settings-kbd"><span className="kbd">Shift+Enter</span> New line</div>
                             <div className="settings-kbd"><span className="kbd">Esc</span> Stop agent / Close modal</div>
