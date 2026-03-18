@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { getHeartbeatStats, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { getHeartbeatStats, getHeartbeatPauseReason, normalizeHeartbeatPauseStateOnStartup, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
 import { db } from './db'
 
 describe('heartbeat stats', () => {
@@ -54,6 +54,9 @@ describe('heartbeat stats', () => {
 describe('heartbeat follow-up system', () => {
     beforeEach(() => {
         _clearFollowUpQueue()
+        try { (db as any).db.query('DELETE FROM agentState').run() } catch { }
+        try { (db as any).db.query('DELETE FROM objectives').run() } catch { }
+        try { (db as any).db.query('DELETE FROM schedules').run() } catch { }
         try { (db as any).db.query('INSERT OR IGNORE INTO agents (id, name, model) VALUES (?, ?, ?)').run(1, 'Test Agent 1', 'gemini') } catch { }
         try { (db as any).db.query('INSERT OR IGNORE INTO agents (id, name, model) VALUES (?, ?, ?)').run(2, 'Test Agent 2', 'gemini') } catch { }
         try { (db as any).db.query('INSERT OR IGNORE INTO agents (id, name, model) VALUES (?, ?, ?)').run(42, 'Test Agent 42', 'gemini') } catch { }
@@ -133,6 +136,31 @@ describe('heartbeat follow-up system', () => {
         // scheduledAt should be approximately now (within 50ms)
         expect(fu.scheduledAt).toBeGreaterThanOrEqual(before)
         expect(fu.scheduledAt).toBeLessThanOrEqual(before + 50)
+    })
+
+    it('auto-resumes legacy paused heartbeat when queued work exists', () => {
+        ;(db as any).db.query('INSERT INTO agentState (agentId, key, value) VALUES (?, ?, ?)').run(1, 'heartbeat_paused', 'true')
+        scheduleFollowUp(1, 'queued work', 'ctx')
+
+        const resumed = normalizeHeartbeatPauseStateOnStartup(1)
+        const pausedRow = (db as any).db.query('SELECT value FROM agentState WHERE agentId = ? AND key = ?').get(1, 'heartbeat_paused')
+
+        expect(resumed).toBe(true)
+        expect(pausedRow.value).toBe('false')
+        expect(getHeartbeatPauseReason(1)).toBe('none')
+    })
+
+    it('does not auto-resume manual paused heartbeat', () => {
+        ;(db as any).db.query('INSERT INTO agentState (agentId, key, value) VALUES (?, ?, ?)').run(1, 'heartbeat_paused', 'true')
+        ;(db as any).db.query('INSERT INTO agentState (agentId, key, value) VALUES (?, ?, ?)').run(1, 'heartbeat_pause_reason', 'manual')
+        scheduleFollowUp(1, 'queued work', 'ctx')
+
+        const resumed = normalizeHeartbeatPauseStateOnStartup(1)
+        const pausedRow = (db as any).db.query('SELECT value FROM agentState WHERE agentId = ? AND key = ?').get(1, 'heartbeat_paused')
+
+        expect(resumed).toBe(false)
+        expect(pausedRow.value).toBe('true')
+        expect(getHeartbeatPauseReason(1)).toBe('manual')
     })
 })
 

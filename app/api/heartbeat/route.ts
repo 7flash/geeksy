@@ -1,5 +1,5 @@
 import { db } from '../../lib/db'
-import { getHeartbeatStats, resumeHeartbeat, scheduleFollowUp, _getFollowUpQueue } from '../../lib/heartbeat'
+import { getHeartbeatStats, getHeartbeatPauseReason, resumeHeartbeat, scheduleFollowUp, _getFollowUpQueue } from '../../lib/heartbeat'
 
 export async function GET(req: Request) {
     const row = db.agentState.select().where({ agentId: 1, key: 'heartbeat_paused' }).first()
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
         scheduledAt: fu.scheduledAt,
         readyIn: Math.max(0, fu.scheduledAt - Date.now()),
     }))
-    return Response.json({ paused: row?.value === 'true', ...stats, followUps })
+    return Response.json({ paused: row?.value === 'true', pauseReason: getHeartbeatPauseReason(1), ...stats, followUps })
 }
 
 export async function POST(req: Request) {
@@ -36,12 +36,20 @@ export async function POST(req: Request) {
             db.agentState.insert({ agentId: 1, key: 'heartbeat_paused', value: body.paused ? 'true' : 'false' })
         }
 
+        const reasonRow = db.agentState.select().where({ agentId: 1, key: 'heartbeat_pause_reason' }).first()
+        const reasonValue = body.paused ? 'manual' : 'none'
+        if (reasonRow) {
+            db.agentState.update(reasonRow.id, { value: reasonValue })
+        } else {
+            db.agentState.insert({ agentId: 1, key: 'heartbeat_pause_reason', value: reasonValue })
+        }
+
         // Resume scheduling loop when unpausing (critical after circuit breaker trips)
         if (!body.paused) {
             resumeHeartbeat();
         }
 
-        return Response.json({ success: true, paused: body.paused })
+        return Response.json({ success: true, paused: body.paused, pauseReason: reasonValue })
     }
 
     return Response.json({ error: 'Must provide "paused" or "followUp" in body' }, { status: 400 })

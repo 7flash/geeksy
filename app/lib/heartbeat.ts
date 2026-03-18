@@ -80,6 +80,48 @@ export function getHeartbeatStats() {
     };
 }
 
+export function getHeartbeatPauseReason(agentId: number): string | null {
+    const row = db.agentState.select().where({ agentId, key: 'heartbeat_pause_reason' }).first();
+    return row?.value || null;
+}
+
+function setHeartbeatPauseState(agentId: number, paused: boolean, reason: 'manual' | 'circuit_breaker' | 'none' = 'none') {
+    db.agentState.upsert(
+        { agentId, key: 'heartbeat_paused' },
+        { agentId, key: 'heartbeat_paused', value: paused ? 'true' : 'false' },
+    );
+    db.agentState.upsert(
+        { agentId, key: 'heartbeat_pause_reason' },
+        { agentId, key: 'heartbeat_pause_reason', value: paused ? reason : 'none' },
+    );
+}
+
+function hasQueuedHeartbeatWork(agentId: number): boolean {
+    const hasFollowUps = db.followUps.select().where({ agentId, status: 'pending' }).all().length > 0;
+    const hasObjectives = db.objectives.select().where({ agentId, status: 'pending' }).all().length > 0;
+    const hasSchedules = (db.schedules?.select().all() || []).some((s: any) => {
+        const isForAgent = !s.agentId || s.agentId === agentId;
+        const isActive = s.status === 'pending' || s.status === 'running';
+        return isForAgent && isActive;
+    });
+    return hasFollowUps || hasObjectives || hasSchedules;
+}
+
+export function normalizeHeartbeatPauseStateOnStartup(agentId: number = 1): boolean {
+    const pausedRow = db.agentState.select().where({ agentId, key: 'heartbeat_paused' }).first();
+    if (!pausedRow || pausedRow.value !== 'true') return false;
+
+    const reason = getHeartbeatPauseReason(agentId);
+    if (reason) return false;
+    if (!hasQueuedHeartbeatWork(agentId)) return false;
+
+    console.log('[heartbeat] Auto-resuming legacy paused state because queued work is waiting.');
+    setHeartbeatPauseState(agentId, false, 'none');
+    heartbeatStats.consecutiveFailures = 0;
+    heartbeatStats.lastTickResult = 'pending';
+    return true;
+}
+
 /** @internal — exposed for tests only */
 export function _getFollowUpQueue(): FollowUp[] { return db.followUps.select().where({ status: 'pending' }).all() as FollowUp[]; }
 /** @internal — clear queue for test isolation */
@@ -113,6 +155,7 @@ function scheduleNext() {
 }
 
 export function startHeartbeat() {
+    normalizeHeartbeatPauseStateOnStartup(1);
     // Run once on startup after a small delay, then adaptively
     setTimeout(async () => {
         await runHeartbeat();
@@ -123,7 +166,9 @@ export function startHeartbeat() {
 /** Resume heartbeat after unpause or circuit breaker reset */
 export function resumeHeartbeat() {
     heartbeatStats.consecutiveFailures = 0;
+    heartbeatStats.lastTickResult = 'pending';
     currentInterval = 60_000; // reset to default
+    setHeartbeatPauseState(1, false, 'none');
     console.log('[heartbeat] Resumed — scheduling next tick in 60s');
     scheduleNext();
 }
@@ -168,10 +213,7 @@ export async function runHeartbeat() {
         // Circuit breaker: auto-pause after 5 consecutive failures
         if (heartbeatStats.consecutiveFailures >= 5) {
             console.error(`[heartbeat] Circuit breaker tripped — ${heartbeatStats.consecutiveFailures} consecutive failures. Auto-pausing.`);
-            db.agentState.upsert(
-                { agentId: 1, key: 'heartbeat_paused' },
-                { agentId: 1, key: 'heartbeat_paused', value: 'true' },
-            );
+            setHeartbeatPauseState(1, true, 'circuit_breaker');
             heartbeatStats.lastTickResult = 'paused';
             return;
         }
