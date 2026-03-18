@@ -1,4 +1,4 @@
-import { Session } from 'smart-agent-ai'
+import { Agent, Session } from 'smart-agent-ai'
 import { join } from 'path'
 import { readdirSync } from 'fs'
 import { db } from './db'
@@ -228,7 +228,7 @@ export async function auditPendingObjectives(agentId: number): Promise<number> {
         if (result.met && objective.lastReportedState !== nextFingerprint) {
             db.messages.insert({
                 agentId,
-                sessionId: objective.sessionId,
+                sessionId: typeof objective.sessionId === 'number' ? objective.sessionId : undefined,
                 role: 'assistant',
                 content: `✅ **Objective validated: ${objective.name}**\n${result.reason}`,
             })
@@ -515,27 +515,24 @@ export async function runHeartbeat() {
         }, 5 * 60 * 1000);
 
         try {
-            for await (const event of session.send(prompt)) {
+            const heartbeatAgent = new Agent({
+                ...config,
+                objectives: [{
+                    name: 'heartbeat_tick',
+                    description: 'Inspect the current Geeksy state, use tools when needed, and reply EXACTLY with IDLE when nothing needs attention.',
+                    validate: (state) => ({ met: state.iteration >= 0, reason: 'Heartbeat response delivered' }),
+                }],
+            })
+
+            const recentMessages = db.messages.select().where({ agentId: agent.id }).orderBy('id', 'asc').all().slice(-20)
+            const input = [
+                ...recentMessages.map((m: any) => ({ role: m.role, content: m.content })),
+                { role: 'user' as const, content: prompt },
+            ]
+
+            for await (const event of heartbeatAgent.run(input)) {
                 if (event.type === 'thinking_delta') {
                     fullText += (event as any).delta || '';
-                }
-                if (event.type === 'planning') {
-                    const objectives = (event as any).objectives || []
-                    for (const obj of objectives) {
-                        try {
-                            db.objectives.upsert(
-                                { agentId: agent.id, name: obj.name },
-                                {
-                                    agentId: agent.id,
-                                    name: obj.name,
-                                    description: obj.description || '',
-                                    type: obj.type || 'task',
-                                    params: JSON.stringify(obj.params || {}),
-                                    status: 'pending',
-                                },
-                            )
-                        } catch (e) { console.warn('[heartbeat] objective upsert failed:', obj.name, e); }
-                    }
                 }
                 if (event.type === 'objective_check') {
                     const results = (event as any).results || []

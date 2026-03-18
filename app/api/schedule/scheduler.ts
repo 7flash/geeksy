@@ -512,7 +512,7 @@ class Scheduler {
         try {
             db.messages.insert({
                 agentId: schedule.agentId,
-                sessionId: schedule.sessionId,
+                sessionId: typeof schedule.sessionId === 'number' ? schedule.sessionId : undefined,
                 role: 'assistant',
                 content,
             })
