@@ -142,11 +142,13 @@ export async function POST(req: Request) {
 
     // RAG: Query local vector memory for context injection
     let augmentedMessage = body.message
+    let retrievedMemoryCount = 0
     try {
         const memories = await searchSemanticMemory(body.message, 3, 0.4, {
             agentId: body.agentId,
             sessionId: body.dbSessionId,
         })
+        retrievedMemoryCount = memories.length
         if (memories.length > 0) {
             const contextText = memories.map(m => `- ${m.text}`).join('\n')
             systemPrompt = (systemPrompt || '') + `\n\n[System Auto-Context]: Relevant past conversation memories retrieved from Local Vector Database:\n${contextText}\n\nUse this context to answer the user's latest message if applicable.`
@@ -163,6 +165,17 @@ export async function POST(req: Request) {
         safeMode,
         systemPrompt,
         tools: [createScheduleTool(body.agentId, body.dbSessionId), ...createSecretTools(body.agentId, body.dbSessionId), ...createSkillDiscoveryTools()],
+    }
+
+    const promptTrace = {
+        model,
+        cwd,
+        safeMode,
+        skillCount: skillPaths.length,
+        skills: body.skills || [],
+        memoryCount: retrievedMemoryCount,
+        userMessage: body.message,
+        systemPrompt,
     }
 
     // Get or create session
@@ -201,7 +214,8 @@ export async function POST(req: Request) {
                 } catch { }
             }
 
-            // Emit session ID
+            // Emit debug trace + session ID
+            controller.enqueue(enc.encode(`event: prompt_trace\ndata: ${JSON.stringify(promptTrace)}\n\n`))
             controller.enqueue(enc.encode(`event: session\ndata: ${JSON.stringify({ sessionId: session.id })}\n\n`))
 
             try {
@@ -345,6 +359,14 @@ export async function GET() {
             for (const f of readdirSync(skillsDir)) {
                 if (f.endsWith(".md")) {
                     result.push(f.replace(/\.md$/, ""))
+                }
+            }
+        } catch { }
+        return result
+    })
+    return Response.json(skills)
+}
+               result.push(f.replace(/\.md$/, ""))
                 }
             }
         } catch { }

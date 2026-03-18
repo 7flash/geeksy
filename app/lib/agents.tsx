@@ -322,17 +322,20 @@ export async function sendMessage() {
 
     await measure(`Chat: "${text.substring(0, 40)}"`, async (m) => {
         try {
+            const requestPayload = {
+                message: text,
+                model: dom.modelSelect.value,
+                skills: [...state.activeSkills],
+                sessionId: agent.sessionId,
+                agentId: agent.id,
+                dbSessionId: getActiveSessionId(),
+            }
+            pushDebugLog('request_trace', requestPayload)
+
             const res = await m('POST /api/chat', () => fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: text,
-                    model: dom.modelSelect.value,
-                    skills: [...state.activeSkills],
-                    sessionId: agent.sessionId,
-                    agentId: agent.id,
-                    dbSessionId: getActiveSessionId(),
-                }),
+                body: JSON.stringify(requestPayload),
             }))
 
             if (!res) throw new Error('No response')
@@ -358,6 +361,7 @@ export async function sendMessage() {
                         try {
                             const data = JSON.parse(line.slice(6))
                             eventCount++
+                            pushDebugLog(eventType, data)
                             handleEvent(eventType, data)
                         } catch { }
                         eventType = ''

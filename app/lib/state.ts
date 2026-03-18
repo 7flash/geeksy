@@ -18,6 +18,9 @@ const DEBUG_LOG_MAX = 500
 export function pushDebugLog(type: string, data: any) {
     debugLog.push({ id: ++_debugLogId, at: Date.now(), type, data })
     if (debugLog.length > DEBUG_LOG_MAX) debugLog.splice(0, debugLog.length - DEBUG_LOG_MAX)
+    try {
+        window.dispatchEvent(new CustomEvent('geeksy:debug-log'))
+    } catch { }
 }
 
 export const state: WorkspaceState = {

@@ -1223,6 +1223,8 @@ export function renderPromptPane() {
 // ══════════════════════════════════════
 
 const DEBUG_TYPE_COLORS: Record<string, string> = {
+    request_trace: '#f9a8d4',
+    prompt_trace: '#fb7185',
     planning: '#4ade80',
     replanning: '#facc15',
     awaiting_confirmation: '#f59e0b',
@@ -1237,7 +1239,7 @@ const DEBUG_TYPE_COLORS: Record<string, string> = {
     session: '#c084fc',
 }
 
-function renderDebugPane() {
+export function renderDebugPane() {
     const pane = document.getElementById('pane-debug')
     if (!pane) return
 
@@ -1276,9 +1278,17 @@ function renderDebugPane() {
     )
 }
 
-function formatDebugPreview(entry: { type: string; data: any }): string {
+export function formatDebugPreview(entry: { type: string; data: any }): string {
     const d = entry.data
     switch (entry.type) {
+        case 'request_trace':
+            return `${d.model || '?'} • ${(d.message || '').slice(0, 100)}`
+        case 'prompt_trace':
+            return [
+                d.model || '?',
+                d.memoryCount ? `${d.memoryCount} memories` : null,
+                d.skillCount ? `${d.skillCount} skills` : null,
+            ].filter(Boolean).join(' • ')
         case 'planning':
         case 'replanning': {
             const objs = d.objectives || []

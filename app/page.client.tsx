@@ -43,6 +43,9 @@ export default function mount() {
 
     // Settings
     window.addEventListener('smart-agent:open-settings', openSettings)
+    window.addEventListener('geeksy:debug-log', () => {
+        if (state.activeTab === 'debug') renderDebugPane()
+    })
     window.addEventListener('geeksy:refresh-session-messages', async (e: any) => {
         const targetSessionId = e?.detail?.sessionId
         const activeSessionId = getActiveSessionId()
