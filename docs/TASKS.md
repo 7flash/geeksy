@@ -8,6 +8,7 @@
 - [x] ~~**Verify plugin install/update flows in packaged CLI mode**~~ — ✅ DONE. Smoke-tested plugin install, manifest/config reads, config save, and update handling under a custom `GEEKSY_HOME`; local/unpublished plugins now degrade gracefully when no npm registry version exists.
 - [ ] **Smoke-test published npm plugin upgrades in packaged CLI mode** — The local-workspace path is covered now, but a real registry-backed plugin should still be tested through `bun add` / `bun update` in app-home mode.
 - [ ] **Fix planner output for recurring script schedules** — Live `npx geeksy` browser test for “tell me a joke each minute” wrote a script that imports nonexistent `@geeky/core` helpers instead of using the required inline `getState`/`setState` template, and then created a `once` schedule instead of a repeating `interval` schedule.
+- [x] ~~**Add schedule guardrails for recurring scripts**~~ — ✅ DONE. The schedule tool now rejects scripts importing `@geeky/core`, auto-infers `interval` when an interval is provided, and the chat system prompt explicitly requires self-contained/inline-helper scheduled scripts.
 - [x] ~~**Heartbeat paused state blocks queued follow-ups**~~ — ✅ DONE. Heartbeat now persists pause reasons (`manual`, `circuit_breaker`, `none`) and auto-clears legacy paused state with queued work on startup instead of silently stalling follow-ups.
 
 ## 🟡 Priority: Improve

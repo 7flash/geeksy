@@ -15,6 +15,13 @@ export function parseIntervalStr(str: string): number {
     return num
 }
 
+function validateScheduledScriptContent(scriptPath: string, content: string): string | null {
+    if (content.includes('@geeky/core')) {
+        return `Scheduled scripts must not import @geeky/core. Use plain Bun/TypeScript and inline fetch helpers when state is needed. Fix: ${scriptPath}`
+    }
+    return null
+}
+
 export function createScheduleTool(agentId?: number, sessionId?: number): Tool {
     return {
         name: 'schedule',
@@ -91,7 +98,9 @@ Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` an
                 const name = params.name as string
                 const scriptPath = params.scriptPath as string | undefined
                 const message = params.message as string | undefined
-                const type = ((params.type as string) || 'once').toLowerCase()
+                const requestedType = ((params.type as string) || '').toLowerCase()
+                const inferredType = requestedType || (params.interval ? 'interval' : 'once')
+                const type = inferredType.toLowerCase()
 
                 if (!name) {
                     return { success: false, output: '', error: 'name is required for create.' }
@@ -110,6 +119,11 @@ Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` an
                     const file = Bun.file(scriptPath)
                     if (!await file.exists()) {
                         return { success: false, output: '', error: `Script file not found: ${scriptPath}. Create the file first.` }
+                    }
+                    const content = await file.text()
+                    const validationError = validateScheduledScriptContent(scriptPath, content)
+                    if (validationError) {
+                        return { success: false, output: '', error: validationError }
                     }
                 }
 

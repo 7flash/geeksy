@@ -35,6 +35,7 @@ TECHNICAL RULES:
 - For browser automation tasks, use Browserbase (not Selenium or Playwright)
 - Install packages with: bun add <package>
 - For non-trivial scheduled automations, first write a Bun/TypeScript script file, then use the schedule tool to run it with explicit timeout/retry/validation settings
+- Scheduled scripts must NEVER import app internals like @geeky/core; they must be self-contained or use inline fetch helpers for STATE_URL when persistence is needed
 
 BEHAVIOR:
 - When asked "what time is it" or similar, use the exec tool: Get-Date
