@@ -245,6 +245,34 @@ function SecretsSection() {
         }
     }
 
+    const insertSecretPrompt = async () => {
+        const key = draftKey.trim() || 'DEMO_SECRET'
+        const agentId = state.activeAgentId || 1
+        const dbSessionId = Number(localStorage.getItem('geeksy:activeSessionId') || '0') || 0
+        if (!dbSessionId) {
+            setStatus('Open a conversation first')
+            return
+        }
+        setStatus('Adding masked prompt...')
+        try {
+            await fetch('/api/secrets/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    key,
+                    label: key,
+                    description: draftDescription.trim() || 'Demo prompt for the masked secret flow.',
+                    agentId,
+                    dbSessionId,
+                }),
+            })
+            window.dispatchEvent(new CustomEvent('geeksy:refresh-session-messages', { detail: { sessionId: dbSessionId } }))
+            setStatus('Masked prompt added to the current conversation')
+        } catch {
+            setStatus('Failed to add masked prompt')
+        }
+    }
+
     return (
         <div className="settings-group">
             <span className="settings-label">🔐 Secrets</span>

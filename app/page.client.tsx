@@ -7,7 +7,7 @@ import {
     clearCurrentChat, exportChatAsMarkdown,
     sendMessage, stopAgent, loadSkills, loadModels, restoreState, setupResizeHandle,
 } from './lib/agents'
-import { initSessionUI, getActiveSessionId } from './lib/sessions-ui'
+import { initSessionUI, getActiveSessionId, refreshActiveSessionMessages } from './lib/sessions-ui'
 import { initHeartbeatUI } from './lib/heartbeat-ui'
 import { initMetricsUI } from './lib/metrics-ui'
 import { initSearchUI } from './lib/search-ui'
@@ -43,6 +43,13 @@ export default function mount() {
 
     // Settings
     window.addEventListener('smart-agent:open-settings', openSettings)
+    window.addEventListener('geeksy:refresh-session-messages', async (e: any) => {
+        const targetSessionId = e?.detail?.sessionId
+        const activeSessionId = getActiveSessionId()
+        if (targetSessionId && activeSessionId && Number(targetSessionId) === Number(activeSessionId)) {
+            await refreshActiveSessionMessages()
+        }
+    })
 
     // Header action buttons
     document.getElementById('export-chat-btn')?.addEventListener('click', exportChatAsMarkdown)

@@ -363,6 +363,11 @@ export async function refreshSessions(onSelect?: (id: number, session: any) => v
     renderSessionList(sessions, onSelect || selectSession)
 }
 
+export async function refreshActiveSessionMessages() {
+    if (!activeSessionId) return
+    await loadSessionChat(activeSessionId)
+}
+
 export function openNewSessionModal() {
     const modal = document.getElementById('new-session-modal')
     if (modal) modal.style.display = 'flex'
