@@ -83,6 +83,8 @@ export const db = new Database(dbPath, {
         failCount: z.number().default(0),          // lifetime failed executions
         lastReportedStatus: z.string().optional(), // last status surfaced into chat
         lastReportedAt: z.number().optional(),     // when the last chat report was emitted
+        lastHeartbeatAuditStatus: z.string().optional(), // last failed-state fingerprint reported by heartbeat
+        lastHeartbeatAuditAt: z.number().optional(),     // when heartbeat last surfaced this schedule state
     }),
     agentState: z.object({
         agentId: z.number(),

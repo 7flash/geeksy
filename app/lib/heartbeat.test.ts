@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { getHeartbeatStats, getHeartbeatPauseReason, normalizeHeartbeatPauseStateOnStartup, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { auditFailedSchedules, getHeartbeatStats, getHeartbeatPauseReason, normalizeHeartbeatPauseStateOnStartup, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
 import { db } from './db'
 
 describe('heartbeat stats', () => {
@@ -161,6 +161,33 @@ describe('heartbeat follow-up system', () => {
         expect(resumed).toBe(false)
         expect(pausedRow.value).toBe('true')
         expect(getHeartbeatPauseReason(1)).toBe('manual')
+    })
+
+    it('auditFailedSchedules reports failed schedules once', () => {
+        const row = db.schedules.insert({
+            name: 'Broken job',
+            type: 'once',
+            status: 'failed',
+            agentId: 1,
+            sessionId: 99,
+            lastError: 'stderr exploded',
+            lastOutput: 'partial output',
+            failOnStderr: true,
+            expectedOutput: 'DONE',
+            lastRun: 123456,
+        } as any)
+
+        const first = auditFailedSchedules(1)
+        const second = auditFailedSchedules(1)
+        const message = (db as any).db.query('SELECT content FROM messages WHERE sessionId = ? ORDER BY id DESC LIMIT 1').get(99)
+        const schedule = db.schedules.select().where({ id: row.id }).first() as any
+
+        expect(first).toBe(1)
+        expect(second).toBe(0)
+        expect(message.content).toContain('Heartbeat noticed schedule failure: Broken job')
+        expect(message.content).toContain('stderr exploded')
+        expect(schedule.lastHeartbeatAuditStatus).toBeDefined()
+        expect(schedule.lastHeartbeatAuditAt).toBeGreaterThan(0)
     })
 })
 

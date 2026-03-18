@@ -101,10 +101,63 @@ function hasQueuedHeartbeatWork(agentId: number): boolean {
     const hasObjectives = db.objectives.select().where({ agentId, status: 'pending' }).all().length > 0;
     const hasSchedules = (db.schedules?.select().all() || []).some((s: any) => {
         const isForAgent = !s.agentId || s.agentId === agentId;
-        const isActive = s.status === 'pending' || s.status === 'running';
+        const isActive = s.status === 'pending' || s.status === 'running' || s.status === 'failed';
         return isForAgent && isActive;
     });
     return hasFollowUps || hasObjectives || hasSchedules;
+}
+
+function getScheduleAuditFingerprint(schedule: any): string {
+    return [
+        schedule.status || 'unknown',
+        schedule.lastRun || 0,
+        schedule.lastError || '',
+        schedule.lastOutput || '',
+    ].join('|').slice(0, 500)
+}
+
+function buildHeartbeatScheduleAlert(schedule: any): string {
+    const details = [
+        `⚠️ **Heartbeat noticed schedule failure: ${schedule.name}**`,
+        schedule.type ? `Type: ${schedule.type}` : null,
+        schedule.lastError ? `Error: ${schedule.lastError}` : null,
+        schedule.lastOutput ? `Output: ${schedule.lastOutput}` : null,
+        schedule.expectedOutput ? `Expected marker: ${schedule.expectedOutput}` : null,
+        schedule.failOnStderr ? `Validation: fail on stderr enabled` : null,
+        schedule.lastRun ? `Last run: ${new Date(schedule.lastRun).toLocaleString()}` : null,
+    ].filter(Boolean)
+    return details.join('\n')
+}
+
+export function auditFailedSchedules(agentId: number): number {
+    const failedSchedules = (db.schedules?.select().all() || []).filter((s: any) => {
+        const isForAgent = !s.agentId || s.agentId === agentId
+        return isForAgent && s.status === 'failed'
+    })
+
+    let reported = 0
+    for (const schedule of failedSchedules) {
+        const fingerprint = getScheduleAuditFingerprint(schedule)
+        if (schedule.lastHeartbeatAuditStatus === fingerprint) continue
+
+        try {
+            db.messages.insert({
+                agentId,
+                sessionId: schedule.sessionId,
+                role: 'assistant',
+                content: buildHeartbeatScheduleAlert(schedule),
+            })
+            db.schedules.update(schedule.id, {
+                lastHeartbeatAuditStatus: fingerprint,
+                lastHeartbeatAuditAt: Date.now(),
+            })
+            reported++
+        } catch (err) {
+            console.error('[heartbeat] failed to persist schedule audit alert:', err)
+        }
+    }
+
+    return reported
 }
 
 export function normalizeHeartbeatPauseStateOnStartup(agentId: number = 1): boolean {
@@ -202,9 +255,17 @@ export async function runHeartbeat() {
             return;
         }
 
+        const auditedFailures = auditFailedSchedules(agent.id);
+        if (auditedFailures > 0) {
+            heartbeatStats.lastTickAt = Date.now();
+            heartbeatStats.lastTickResult = 'acted';
+            heartbeatStats.lastToolCalls = [{ name: 'schedule_audit', result: `reported ${auditedFailures} failure(s)`, at: Date.now() }];
+        }
+
         // Guard: skip if no API key is configured (prevents error spam)
         if (!hasApiKey()) {
             heartbeatStats.lastTickAt = Date.now();
+            if (auditedFailures > 0) return;
             heartbeatStats.lastTickResult = 'skipped';
             heartbeatStats.totalSkips++;
             return;
@@ -238,6 +299,10 @@ export async function runHeartbeat() {
 
         if (!hasWork) {
             heartbeatStats.lastTickAt = Date.now();
+            if (auditedFailures > 0) {
+                heartbeatStats.lastTickResult = 'acted';
+                return;
+            }
             heartbeatStats.lastTickResult = 'idle';
             heartbeatStats.totalSkips++;
             return;
