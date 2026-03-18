@@ -11,5 +11,6 @@ temp.html
 # Test files
 app/**/*.test.ts
 .geeksy-keys.json
+.geeksy-secrets.json
 *.bak
 .docs/decisions/

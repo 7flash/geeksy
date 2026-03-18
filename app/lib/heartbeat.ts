@@ -60,6 +60,16 @@ function drainFollowUps(agentId: number): FollowUp[] {
 // ── Heartbeat telemetry ──
 interface ToolCall { name: string; result?: string; at: number; }
 
+export function isHeartbeatChatNoise(content: string, toolCalls: ToolCall[]): boolean {
+    const trimmed = content.trim()
+    if (!trimmed) return false
+
+    const isJsonToolBlock = /^```json\s*\[[\s\S]*\]\s*```$/i.test(trimmed)
+    if (!isJsonToolBlock) return false
+
+    return toolCalls.length > 0
+}
+
 const heartbeatStats = {
     lastTickAt: 0,
     lastTickResult: 'pending' as 'idle' | 'acted' | 'pruned' | 'paused' | 'error' | 'pending' | 'skipped',
@@ -597,7 +607,9 @@ export async function runHeartbeat() {
 
         if (withoutThoughts && withoutThoughts.toUpperCase() !== "IDLE") {
             console.log(`[heartbeat] Agent acted (${withoutThoughts.length} chars):`, withoutThoughts.substring(0, 120));
-            db.messages.insert({ agentId: agent.id, sessionId: heartbeatSessionId, role: 'assistant', content: fullText });
+            if (!isHeartbeatChatNoise(withoutThoughts, toolCalls)) {
+                db.messages.insert({ agentId: agent.id, sessionId: heartbeatSessionId, role: 'assistant', content: fullText });
+            }
             heartbeatStats.lastTickResult = 'acted';
         } else {
             console.log("[heartbeat] Nothing to report (IDLE).");

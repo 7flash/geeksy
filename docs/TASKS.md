@@ -23,6 +23,9 @@
 
 ## 🟢 Priority: Features
 - [x] ~~**Heartbeat-owned objective validation loop**~~ — ✅ DONE. Objectives now persist planner params plus validation/reporting metadata, and heartbeat deterministically validates common objective types (`file_exists`, `file_contains`, `command_succeeds`, `command_output_contains`, `task_scheduled`) in separate turns and reports newly completed objectives back into chat.
+- [x] ~~**Secrets Infrastructure & UI**~~ — ✅ DONE. Implemented file-backed secrets storage (`.geeksy-secrets.json`), `/api/secrets` CRUD routes, a Settings → Secrets manager with masked values, and `/api/secrets/submit` for secure in-chat secret submission without rendering plaintext back into the thread.
+- [x] ~~**ask_user_for_secret Tool**~~ — ✅ DONE. Added `request_secret` + `get_secret` tools to chat sessions so the agent can request a masked secret input in-thread and later retrieve the stored value without asking the user to paste it in plain chat.
+- [ ] **Live browser-proof the masked secret request flow** — Verify end-to-end in the web UI that a `request_secret` tool call renders the masked chat card, `Save & continue` resumes the bound conversation, and no raw secret value leaks into visible chat/tool output.
 - [x] ~~**Live tool execution cards with progress + spoilers**~~ — ✅ DONE. Tool cards now show `$ command` for shell ops, animated progress bar while running, elapsed time on completion, collapsible output spoilers, and red-highlighted error output.
 - [x] ~~**Clarify objective review UX before commit**~~ — ✅ DONE. The confirmation card now shows each proposed objective with icon/name/description, switches to the Objectives tab, and offers clear Proceed/Reject buttons so the user sees exactly what the agent plans to do before execution starts.
 - [x] ~~**Skill-catalog discovery → install → objective-review workflow**~~ — ✅ DONE. Added `search_skills` and `install_skill` agent tools that search installed skills, marketplace, and plugin registry; wired into chat, heartbeat, and Telegram; system prompt instructs agent to discover before executing.
@@ -65,6 +68,7 @@
 
 ## 📝 Architecture Notes
 - **Stack**: Melina.js (Bun), smart-agent-ai, SQLite (sqlite-zod-orm)
+- **Secrets**: file-backed JSON store at `.geeksy-secrets.json` via `app/lib/secrets.ts`; chat uses `request_secret` / `get_secret` tools plus `/api/secrets` and `/api/secrets/submit` routes so secret values do not need to appear in plain chat.
 - **CLI/app paths**: `app/lib/paths.ts` centralizes `GEEKSY_HOME`, `GEEKSY_APP_ROOT`, skills, backups, config, and saved-key locations for packaged CLI mode.
 - **Heartbeat**: Adaptive 30s–5min interval, circuit breaker, follow-up queue
 - **Dashboard**: `app/page.client.tsx` → modules: heartbeat-ui, metrics-ui, sessions-ui, agents, search-ui, panels

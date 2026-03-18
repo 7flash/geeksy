@@ -73,14 +73,9 @@ function showEmptyState() {
     el.className = 'empty-state'
     el.id = 'empty-state'
     el.innerHTML = `
-        <div class="empty-icon">🤖</div>
-        <h2>Geeksy</h2>
-        <p>I am your global intelligent gateway. Start typing to begin.</p>
-        <div class="example-chips">
-            <button class="example-chip" data-prompt="what's the current system status?">📊 system status</button>
-            <button class="example-chip" data-prompt="list all running plugins">🔌 list plugins</button>
-            <button class="example-chip" data-prompt="help me configure the telegram plugin">⚙️ configure telegram</button>
-        </div>
+        <div class="empty-icon">💬</div>
+        <h2>Start a conversation</h2>
+        <p>Ask for work in plain language and keep everything in one thread.</p>
     `
     dom.chatArea.prepend(el)
 }

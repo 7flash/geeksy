@@ -163,7 +163,6 @@ export function handleEvent(type: string, data: any) {
             const sessionId = agent?.sessionId
             card.querySelector('[data-action="confirm-proceed"]')!.addEventListener('click', async () => {
                 card.remove()
-                appendCard('info', '✓ Confirmed', `Proceeding with ${objectives.length} objective${objectives.length !== 1 ? 's' : ''}`)
                 if (sessionId) {
                     await fetch('/api/chat', {
                         method: 'PUT',
@@ -259,8 +258,17 @@ export function handleEvent(type: string, data: any) {
                 renderFilesPane()
             }
             break
-        case 'tool_result':
+        case 'tool_result': {
+            const lastTool = toolCards[toolCards.length - 1]
             updateLastTool(data.result!)
+            if (data.tool === 'request_secret' && lastTool?.params?.key) {
+                appendResponseBubble(`[[GEEKSY_SECRET_REQUEST]]${JSON.stringify({
+                    key: lastTool.params.key,
+                    label: lastTool.params.label || lastTool.params.key,
+                    description: lastTool.params.description || '',
+                })}`)
+                bumpKnownMsgCount(1)
+            }
             if (data.tool === 'schedule' && data.result?.success && data.result?.output) {
                 const parsed = parseScheduleSummary(String(data.result.output))
                 if (parsed) {
@@ -282,6 +290,7 @@ export function handleEvent(type: string, data: any) {
                 }
             }
             break
+        }
         case 'objective_check':
             updateObjectives(data.results || [])
             break

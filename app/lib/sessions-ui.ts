@@ -62,12 +62,7 @@ function renderChatPlaceholder(kind: 'loading' | 'no-session' | 'empty-conversat
         <div class="empty-state empty-state-session">
             <div class="empty-icon">💬</div>
             <h2>This conversation is ready</h2>
-            <p>Ask Geeksy to plan, edit files, track objectives, or schedule follow-ups here.</p>
-            <div class="example-chips">
-                <button class="example-chip" type="button" data-prompt="Help me plan the next step">🧭 next step</button>
-                <button class="example-chip" type="button" data-prompt="Summarize what needs attention">📝 summarize work</button>
-                <button class="example-chip" type="button" data-prompt="Create a follow-up reminder for tomorrow">⏰ schedule follow-up</button>
-            </div>
+            <p>Say what you want and Geeksy will handle it here.</p>
         </div>
     `
     wireChatPlaceholderActions(chatArea)

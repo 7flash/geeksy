@@ -13,6 +13,7 @@ import '../models/route'
 
 import { searchSemanticMemory, addSemanticMemory } from '../../lib/embeddings'
 import { createSkillDiscoveryTools } from '../../lib/skill-discovery-tool'
+import { createSecretTools } from '../../lib/secret-tools'
 import { skillsDir } from '../../lib/paths'
 
 import { sessions, getBoundSmartSessionId, bindDbSessionToSmartSession } from '../../lib/session-store'
@@ -161,7 +162,7 @@ export async function POST(req: Request) {
         maxIterations: 10,
         safeMode,
         systemPrompt,
-        tools: [createScheduleTool(body.agentId, body.dbSessionId), ...createSkillDiscoveryTools()],
+        tools: [createScheduleTool(body.agentId, body.dbSessionId), ...createSecretTools(body.agentId, body.dbSessionId), ...createSkillDiscoveryTools()],
     }
 
     // Get or create session

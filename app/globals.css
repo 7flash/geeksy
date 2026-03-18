@@ -1671,6 +1671,59 @@ body {
     background: rgba(245, 158, 11, .06);
 }
 
+.secret-request-bubble {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: min(520px, 100%);
+}
+
+.secret-request-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-1);
+}
+
+.secret-request-description,
+.secret-request-meta,
+.secret-request-status {
+    font-size: 12px;
+    color: var(--text-2);
+}
+
+.secret-request-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.secret-request-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    color: var(--text-1);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.secret-request-btn {
+    background: var(--accent);
+    color: white;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.secret-request-btn:hover {
+    filter: brightness(1.06);
+}
+
 /* ── Objective Confirmation Card ── */
 .confirmation-card {
     margin: 12px 0;

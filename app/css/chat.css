@@ -491,62 +491,13 @@
     opacity: 1;
 }
 
-/* ── Message Footer & Reactions ── */
+/* ── Message Footer ── */
 .msg-footer {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-top: 2px;
 }
-
-.msg-active-reactions {
-    display: flex;
-    gap: 3px;
-    align-items: center;
-}
-
-.reaction-badge {
-    font-size: 11px;
-    line-height: 1;
-    padding: 1px 3px;
-    border-radius: 4px;
-    background: rgba(99, 102, 241, 0.1);
-    cursor: default;
-}
-
-.reaction-badge.active {
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-}
-
-.reaction-bar {
-    display: flex;
-    gap: 2px;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: opacity 0.15s ease, transform 0.15s ease;
-    pointer-events: none;
-    margin-top: 2px;
-    padding-left: 4px;
-}
-
-.msg-agent:hover .reaction-bar {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-}
-
-.reaction-btn {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 6px;
-    font-size: 13px;
-    width: 28px;
-    height: 26px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: all 0.15s ease;
     line-height: 1;
     padding: 0;

@@ -20,8 +20,9 @@
 - [x] ~~**Raw JSON tool calls leak into chat**~~ — ✅ DONE. Enhanced `cleanThinkingText()` to also strip partial/unclosed ```json blocks and mid-stream tool JSON during streaming.
 - [x] ~~**Telegram bot conversation flow freezes**~~ — ✅ Partially fixed. Simplified prompt from 'Reply via Telegram to user: text' to just raw text, reducing verbose formal reply style.
 - [x] ~~**Plugin Architecture Cleanup**~~ — ✅ DONE. Re-architected `#pane-skills` UI, removed hardcoded plugin mappings, skills are now standalone YAML frontmatter files.
-- [x] ~~**Secrets Infrastructure & UI**~~ — ✅ DONE. Created `secrets` DB table, CRUD endpoints, and robust Secrets UI Dashboard with masked passwords.
-- [x] ~~**ask_user_for_secret Tool**~~ — ✅ DONE. Delivered `createSecretRequestTool` to LLM context to safely stall and securely request missing env variables from the active user.
+- [x] ~~**Secrets Infrastructure & UI**~~ — ✅ DONE. Implemented file-backed secrets storage (`.geeksy-secrets.json`), `/api/secrets` CRUD routes, a Settings → Secrets manager with masked values, and `/api/secrets/submit` for secure in-chat secret submission without rendering plaintext back into the thread.
+- [x] ~~**ask_user_for_secret Tool**~~ — ✅ DONE. Added `request_secret` + `get_secret` tools to chat sessions so the agent can request a masked secret input in-thread and later retrieve the stored value without asking the user to paste it in plain chat.
+- [ ] **Live browser-proof the masked secret request flow** — Verify end-to-end in the web UI that a `request_secret` tool call renders the masked chat card, `Save & continue` resumes the bound conversation, and no raw secret value leaks into visible chat/tool output.
 
 ## 🟡 Priority: Improve
 - [x] ~~**Remove objectives timeline tab and show version badge**~~ — ✅ DONE. Removed the Objectives tab and metrics (objectives now live in chat confirmation cards); added a fixed version+commit badge to the bottom-right corner of the page.
@@ -81,7 +82,8 @@
 - **CLI/app paths**: `app/lib/paths.ts` centralizes `GEEKSY_HOME`, `GEEKSY_APP_ROOT`, skills, backups, config, and saved-key locations for packaged CLI mode.
 - **Agent runtime**: smart-agent-ai (Session/Agent with Classifier-Planner-Executor pipeline)
 - **Port**: 3737 (configured via BUN_PORT)
-- **DB**: SQLite via sqlite-zod-orm (agents, sessions, messages, objectives, plugins, files, skills, schedules, secrets)
+- **DB**: SQLite via sqlite-zod-orm (agents, sessions, messages, objectives, plugins, files, skills, schedules)
+- **Secrets**: file-backed JSON store at `.geeksy-secrets.json` via `app/lib/secrets.ts`; chat uses `request_secret` / `get_secret` tools plus `/api/secrets` and `/api/secrets/submit` routes so secret values do not need to appear in plain chat.
 - **Scheduling**: `app/lib/schedule-tool.ts` can now create chat-prompt schedules and Bun script schedules with `once`, `interval`, or `cron`; execution is handled by `app/api/schedule/scheduler.ts`
 - **Plugins**: geeksy-pumpfun-plugin (port 3457), geeksy-telegram-plugin (port 3738)
 - **Client**: jsx-dom rendering with direct DOM manipulation, SSE streaming for chat events

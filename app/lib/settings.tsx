@@ -193,6 +193,93 @@ function rerender() {
     render(<SettingsModal />, container)
 }
 
+function SecretsSection() {
+    const [secrets, setSecrets] = (window as any)._preact.useState([] as Array<{ key: string; description?: string; updatedAt?: number; hasValue?: boolean }>)
+    const [status, setStatus] = (window as any)._preact.useState('')
+    const [draftKey, setDraftKey] = (window as any)._preact.useState('')
+    const [draftValue, setDraftValue] = (window as any)._preact.useState('')
+    const [draftDescription, setDraftDescription] = (window as any)._preact.useState('')
+
+    const reload = () => {
+        fetch('/api/secrets')
+            .then(res => res.json())
+            .then(rows => setSecrets(Array.isArray(rows) ? rows : []))
+            .catch(() => setStatus('Failed to load secrets'))
+    }
+
+    ;(window as any)._preact.useEffect(() => {
+        reload()
+    }, [])
+
+    const saveSecret = async () => {
+        if (!draftKey.trim()) {
+            setStatus('Enter a secret name')
+            return
+        }
+        setStatus('Saving...')
+        try {
+            await fetch('/api/secrets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: draftKey.trim(), value: draftValue, description: draftDescription.trim() || undefined }),
+            })
+            setDraftKey('')
+            setDraftValue('')
+            setDraftDescription('')
+            setStatus('Saved')
+            reload()
+        } catch {
+            setStatus('Failed to save')
+        }
+    }
+
+    const removeSecret = async (key: string) => {
+        if (!confirm(`Delete ${key}?`)) return
+        setStatus('Deleting...')
+        try {
+            await fetch(`/api/secrets?key=${encodeURIComponent(key)}`, { method: 'DELETE' })
+            setStatus('Deleted')
+            reload()
+        } catch {
+            setStatus('Failed to delete')
+        }
+    }
+
+    return (
+        <div className="settings-group">
+            <span className="settings-label">🔐 Secrets</span>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)', marginTop: '6px', marginBottom: '10px' }}>
+                Store API keys, tokens, and passwords here. Secret values stay masked in the interface.
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                {secrets.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted, #888)' }}>No saved secrets yet.</div>
+                ) : secrets.map((secret: { key: string; description?: string; updatedAt?: number; hasValue?: boolean }) => (
+                    <div key={secret.key} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr auto', gap: '8px', alignItems: 'center' }}>
+                        <div>
+                            <div className="settings-value" style={{ fontWeight: 600 }}>{secret.key}</div>
+                            {secret.description ? <div style={{ fontSize: '11px', color: 'var(--text-muted, #888)' }}>{secret.description}</div> : null}
+                        </div>
+                        <input type="password" readOnly value={secret.hasValue ? '••••••••••••' : ''} className="backup-input" style={{ width: '100%' }} />
+                        <button className="backup-btn-sm danger" onClick={() => removeSecret(secret.key)}>Delete</button>
+                    </div>
+                ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                <input type="text" placeholder="Secret name (e.g. OPENAI_API_KEY)" className="backup-input" value={draftKey} onChange={e => setDraftKey((e.target as HTMLInputElement).value)} />
+                <input type="password" placeholder="Secret value" className="backup-input" value={draftValue} onChange={e => setDraftValue((e.target as HTMLInputElement).value)} />
+                <input type="text" placeholder="Optional description" className="backup-input" value={draftDescription} onChange={e => setDraftDescription((e.target as HTMLInputElement).value)} />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button className="backup-btn primary" onClick={saveSecret}>Save secret</button>
+                    {status ? <span style={{ fontSize: '11px', color: 'var(--text-muted, #888)' }}>{status}</span> : null}
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ── Component ──
 
 function CloudBackupSection() {
@@ -408,6 +495,9 @@ function SettingsModal() {
 
                     {/* Agent Safety */}
                     <AgentSafetySection />
+
+                    {/* Secrets */}
+                    <SecretsSection />
 
                     {/* Telegram Bot */}
                     <TelegramBotSection />

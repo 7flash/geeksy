@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { auditFailedSchedules, auditPendingObjectives, getHeartbeatStats, getHeartbeatPauseReason, normalizeHeartbeatPauseStateOnStartup, pickHeartbeatSessionId, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { auditFailedSchedules, auditPendingObjectives, getHeartbeatStats, getHeartbeatPauseReason, isHeartbeatChatNoise, normalizeHeartbeatPauseStateOnStartup, pickHeartbeatSessionId, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
 import { db } from './db'
 
 describe('heartbeat stats', () => {
@@ -213,6 +213,60 @@ describe('heartbeat follow-up system', () => {
         expect(objective.result).toContain('File exists')
         expect(message.content).toContain('Objective validated: check_file')
         try { await Bun.file('heartbeat-objective.txt').delete() } catch { }
+    })
+
+    it('pickHeartbeatSessionId prefers the newest pending objective session over older schedule sessions', () => {
+        const sessionId = pickHeartbeatSessionId(
+            1,
+            [
+                { id: 10, sessionId: 9, createdAt: 1000, updatedAt: 1000 },
+                { id: 11, sessionId: 16, createdAt: 2000, updatedAt: 2000 },
+            ],
+            [
+                { id: 20, agentId: 1, sessionId: 9, lastRun: 3000 },
+            ],
+        )
+
+        expect(sessionId).toBe(16)
+    })
+
+    it('isHeartbeatChatNoise suppresses schedule list json chatter', () => {
+        const noisy = isHeartbeatChatNoise(
+            '```json\n[{"tool":"schedule","params":{"action":"list"}}]\n```',
+            [{ name: 'schedule', at: Date.now(), result: '[object Object]' }],
+        )
+
+        expect(noisy).toBe(true)
+    })
+
+    it('isHeartbeatChatNoise suppresses schedule create json chatter too', () => {
+        const noisy = isHeartbeatChatNoise(
+            '```json\n[{"tool":"schedule","params":{"action":"create","name":"joke-sender-task"}}]\n```',
+            [{ name: 'schedule', at: Date.now(), result: 'Task scheduled' }],
+        )
+
+        expect(noisy).toBe(true)
+    })
+
+    it('isHeartbeatChatNoise suppresses mixed tool-only json chatter', () => {
+        const noisy = isHeartbeatChatNoise(
+            '```json\n[{"tool":"schedule","params":{"action":"list"}}, {"tool":"exec","params":{"command":"curl http://localhost:3738/api/status"}}]\n```',
+            [
+                { name: 'schedule', at: Date.now(), result: '[object Object]' },
+                { name: 'exec', at: Date.now(), result: '{"plugin":"ok"}' },
+            ],
+        )
+
+        expect(noisy).toBe(true)
+    })
+
+    it('isHeartbeatChatNoise keeps normal text summaries', () => {
+        const noisy = isHeartbeatChatNoise(
+            'Checked plugins and schedule health. Nothing needs attention.',
+            [{ name: 'exec', at: Date.now(), result: '{"plugin":"ok"}' }],
+        )
+
+        expect(noisy).toBe(false)
     })
 })
 

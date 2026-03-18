@@ -118,6 +118,7 @@ export interface ToolCardEntry {
     el: HTMLElement
     name: string
     params: Record<string, any>
+    startTime?: number
     result?: { success: boolean; output: string; error?: string }
 }
 

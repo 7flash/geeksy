@@ -1,37 +1,13 @@
 // app/src/lib/chat-ui.tsx — Chat bubbles, cards, render helpers
 import { render } from 'melina/client'
 import { renderMarkdown } from './markdown'
-import { dom, toolCards } from './state'
-
-// ── Reaction State ──
-const REACTIONS = ['👍', '👎', '⭐'] as const
-type ReactionEmoji = typeof REACTIONS[number]
-const reactionStore = new Map<number, Set<ReactionEmoji>>()
-let reactionCounter = 0
-
-function getReactions(): Record<number, string[]> {
-    try { return JSON.parse(localStorage.getItem('geeksy-reactions') || '{}') } catch { return {} }
-}
-
-function saveReactions() {
-    const data: Record<number, string[]> = {}
-    reactionStore.forEach((set, id) => { if (set.size > 0) data[id] = [...set] })
-    try { localStorage.setItem('geeksy-reactions', JSON.stringify(data)) } catch { }
-}
-
-function restoreReactions(id: number): Set<ReactionEmoji> {
-    const stored = getReactions()
-    return new Set((stored[id] || []) as ReactionEmoji[])
-}
-
-// ── Time Helpers ──
+import { dom, toolCards, state } from './state'
+import { parseSecretRequestMarker } from './secrets'
 
 function timeLabel(ts?: number): string {
     const d = ts ? new Date(ts) : new Date()
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
-
-// ── Bubble Components ──
 
 function UserBubble({ text, ts }: { text: string; ts?: number }) {
     const isTelegram = text.startsWith('[Telegram Message from ')
@@ -51,7 +27,6 @@ function UserBubble({ text, ts }: { text: string; ts?: number }) {
         if (input) {
             input.value = `Reply via Telegram to ${tgUser}: `
             input.focus()
-            // auto resize
             input.style.height = 'auto'
             input.style.height = Math.min(input.scrollHeight, 100) + 'px'
         }
@@ -76,22 +51,77 @@ function UserBubble({ text, ts }: { text: string; ts?: number }) {
     )
 }
 
-function ResponseBubble({ text, ts, msgId }: { text: string; ts?: number; msgId: number }) {
-    // Restore existing reactions
-    if (!reactionStore.has(msgId)) {
-        reactionStore.set(msgId, restoreReactions(msgId))
-    }
-    const activeReactions = reactionStore.get(msgId)!
+function SecretRequestCard({ payload, ts }: { payload: { key: string; label: string; description?: string }; ts?: number }) {
+    const [value, setValue] = (window as any)._preact.useState('')
+    const [status, setStatus] = (window as any)._preact.useState('')
+    const [saved, setSaved] = (window as any)._preact.useState(false)
 
-    const toggleReaction = (emoji: ReactionEmoji, el: HTMLElement) => {
-        if (activeReactions.has(emoji)) {
-            activeReactions.delete(emoji)
-        } else {
-            activeReactions.add(emoji)
+    ;(window as any)._preact.useEffect(() => {
+        fetch(`/api/secrets?key=${encodeURIComponent(payload.key)}`)
+            .then(res => res.json())
+            .then(data => setSaved(!!data?.exists))
+            .catch(() => { })
+    }, [payload.key])
+
+    const submit = async () => {
+        if (!value) {
+            setStatus('Enter the secret value')
+            return
         }
-        saveReactions()
-        // Update button visuals
-        updateReactionButtons(el.closest('.msg-agent')!, msgId)
+
+        const agentId = state.activeAgentId || undefined
+        const dbSessionId = Number(localStorage.getItem('geeksy:activeSessionId') || '0') || undefined
+
+        setStatus('Saving...')
+        try {
+            await fetch('/api/secrets/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    key: payload.key,
+                    value,
+                    description: payload.description || undefined,
+                    agentId,
+                    dbSessionId,
+                }),
+            })
+            setValue('')
+            setSaved(true)
+            setStatus('Saved. Geeksy is continuing...')
+        } catch {
+            setStatus('Failed to save secret')
+        }
+    }
+
+    return (
+        <div className="msg msg-agent">
+            <div className="bubble secret-request-bubble">
+                <div className="secret-request-title">Secret needed: {payload.label}</div>
+                {payload.description ? <div className="secret-request-description">{payload.description}</div> : null}
+                <div className="secret-request-row">
+                    <input
+                        type="password"
+                        className="secret-request-input"
+                        placeholder={saved ? 'A value is already saved for this secret' : `Enter ${payload.label}`}
+                        value={value}
+                        onChange={e => setValue((e.target as HTMLInputElement).value)}
+                    />
+                    <button className="secret-request-btn" onClick={submit}>Save & continue</button>
+                </div>
+                <div className="secret-request-meta">Stored as <code>{payload.key}</code>{saved ? ' • saved' : ''}</div>
+                {status ? <div className="secret-request-status">{status}</div> : null}
+            </div>
+            <div className="msg-footer">
+                <span className="msg-time">{timeLabel(ts)}</span>
+            </div>
+        </div>
+    )
+}
+
+function ResponseBubble({ text, ts }: { text: string; ts?: number }) {
+    const secretRequest = parseSecretRequestMarker(text)
+    if (secretRequest) {
+        return <SecretRequestCard payload={secretRequest} ts={ts} />
     }
 
     return (
@@ -99,47 +129,9 @@ function ResponseBubble({ text, ts, msgId }: { text: string; ts?: number; msgId:
             <div className="bubble" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
             <div className="msg-footer">
                 <span className="msg-time">{timeLabel(ts)}</span>
-                <div className="msg-active-reactions" data-msg-id={msgId}>
-                    {[...activeReactions].map(emoji => (
-                        <span className="reaction-badge active">{emoji}</span>
-                    ))}
-                </div>
-            </div>
-            <div className="reaction-bar">
-                {REACTIONS.map(emoji => (
-                    <button
-                        className={`reaction-btn ${activeReactions.has(emoji) ? 'active' : ''}`}
-                        onClick={(e: any) => toggleReaction(emoji, e.currentTarget)}
-                        title={`React with ${emoji}`}
-                    >{emoji}</button>
-                ))}
             </div>
         </div>
     )
-}
-
-function updateReactionButtons(msgEl: Element, msgId: number) {
-    const reactions = reactionStore.get(msgId)
-    if (!reactions) return
-
-    // Update active badges
-    const badgeContainer = msgEl.querySelector('.msg-active-reactions')
-    if (badgeContainer) {
-        badgeContainer.innerHTML = ''
-        reactions.forEach(emoji => {
-            const badge = document.createElement('span')
-            badge.className = 'reaction-badge active'
-            badge.textContent = emoji
-            badgeContainer.appendChild(badge)
-        })
-    }
-
-    // Update button states
-    const buttons = msgEl.querySelectorAll('.reaction-btn')
-    buttons.forEach((btn) => {
-        const emoji = btn.textContent?.trim() as ReactionEmoji
-        btn.classList.toggle('active', reactions.has(emoji))
-    })
 }
 
 function ThinkingCard({ text }: { text: string }) {
@@ -184,10 +176,12 @@ export function ToolCard({ name, params, result, startTime }: {
     startTime?: number
 }) {
     const isRunning = !result
-    const badgeClass = isRunning ? 'running' : result.success ? 'success' : 'failure'
-    const badgeIcon = isRunning ? '⏳' : result.success ? '✓' : '✗'
-    const badgeText = isRunning ? 'running…' : result.success ? 'done' : 'failed'
-    const output = result ? (result.output || result.error || '') : ''
+    const safeResult = result || { success: false, output: '', error: '' }
+    const badgeClass = isRunning ? 'running' : safeResult.success ? 'success' : 'failure'
+    const badgeIcon = isRunning ? '⏳' : safeResult.success ? '✓' : '✗'
+    const badgeText = isRunning ? 'running…' : safeResult.success ? 'done' : 'failed'
+    const secretTool = name === 'get_secret'
+    const output = result ? (secretTool && safeResult.success ? '[hidden secret value]' : (safeResult.output || safeResult.error || '')) : ''
 
     const toolLabels: Record<string, string> = {
         read_file: '📖 Read File',
@@ -199,14 +193,14 @@ export function ToolCard({ name, params, result, startTime }: {
         search: '🔍 Search',
         list_files: '📂 List Files',
         schedule: '⏰ Schedule',
+        request_secret: '🔐 Request Secret',
+        get_secret: '🔐 Get Secret',
     }
     const displayName = toolLabels[name] || name
 
-    const primaryField = params.command || params.path || params.file || params.query || ''
+    const primaryField = params.command || params.path || params.file || params.query || params.key || ''
     const isShell = ['execute', 'exec', 'run_command'].includes(name)
-    const isFileOp = ['read_file', 'write_file', 'edit_file'].includes(name)
-    const hasExtraParams = Object.keys(params).filter(k => k !== 'command' && k !== 'path' && k !== 'file' && k !== 'query').length > 0
-
+    const hasExtraParams = Object.keys(params).filter(k => !['command', 'path', 'file', 'query', 'key'].includes(k)).length > 0
     const elapsed = startTime && result ? `${((Date.now() - startTime) / 1000).toFixed(1)}s` : ''
 
     return (
@@ -233,25 +227,24 @@ export function ToolCard({ name, params, result, startTime }: {
                 <details className="tool-params-details">
                     <summary className="tool-params-summary">▸ Parameters</summary>
                     <pre className="tool-params">{JSON.stringify(
-                        Object.fromEntries(Object.entries(params).filter(([k]) => k !== 'command' && k !== 'path' && k !== 'file' && k !== 'query')),
-                        null, 2
+                        Object.fromEntries(Object.entries(params).filter(([k]) => !['command', 'path', 'file', 'query', 'key'].includes(k))),
+                        null,
+                        2
                     )}</pre>
                 </details>
             )}
 
-            {output ? (
-                <details className="tool-output-details" open={output.length <= 200 && !result.success ? true : undefined}>
+            {output && result ? (
+                <details className="tool-output-details" open={output.length <= 200 && !safeResult.success ? true : undefined}>
                     <summary className="tool-output-summary">
-                        {result.success ? '▸' : '▾'} Output{output.length > 500 ? ` (${output.length > 1000 ? `${(output.length / 1024).toFixed(1)}KB` : `${output.length} chars`})` : ''}
+                        {safeResult.success ? '▸' : '▾'} Output{output.length > 500 ? ` (${output.length > 1000 ? `${(output.length / 1024).toFixed(1)}KB` : `${output.length} chars`})` : ''}
                     </summary>
-                    <pre className={`tool-output ${!result.success ? 'tool-output-error' : ''}`}>{output.substring(0, 3000)}{output.length > 3000 ? '\n…truncated' : ''}</pre>
+                    <pre className={`tool-output ${!safeResult.success ? 'tool-output-error' : ''}`}>{output.substring(0, 3000)}{output.length > 3000 ? '\n…truncated' : ''}</pre>
                 </details>
             ) : null}
         </div>
     )
 }
-
-// ── Render Helpers ──
 
 function appendJsx(jsx: any): HTMLElement {
     const el = document.createElement('div')
@@ -262,10 +255,7 @@ function appendJsx(jsx: any): HTMLElement {
 }
 
 export function appendUserBubble(text: string) { appendJsx(<UserBubble text={text} ts={Date.now()} />) }
-export function appendResponseBubble(text: string) {
-    const msgId = reactionCounter++
-    appendJsx(<ResponseBubble text={text} ts={Date.now()} msgId={msgId} />)
-}
+export function appendResponseBubble(text: string) { appendJsx(<ResponseBubble text={text} ts={Date.now()} />) }
 export function appendLoading(): HTMLElement { return appendJsx(<Loading />) }
 export function appendDivider(text: string) { appendJsx(<Divider text={text} />) }
 export function appendCard(type: string, label: string, content: string) { appendJsx(<Card type={type} label={label} content={content} />) }
@@ -275,9 +265,7 @@ export function appendThinkingCard(text: string): HTMLElement {
     const card = el.querySelector('.card-thinking') as HTMLElement
     if (card) {
         const toggle = card.querySelector('.thinking-toggle') as HTMLElement
-        if (toggle) {
-            toggle.addEventListener('click', () => card.classList.toggle('collapsed'))
-        }
+        if (toggle) toggle.addEventListener('click', () => card.classList.toggle('collapsed'))
     }
     return el
 }
@@ -301,13 +289,10 @@ export function scrollDown() {
     requestAnimationFrame(() => {
         const { chatArea } = dom
         const isNearBottom = chatArea.scrollTop + chatArea.clientHeight >= chatArea.scrollHeight - 300
-        if (isNearBottom) {
-            chatArea.scrollTop = chatArea.scrollHeight
-        }
+        if (isNearBottom) chatArea.scrollTop = chatArea.scrollHeight
     })
 }
 
-/** Always scroll to bottom — use after user-initiated actions (send, new agent, etc.) */
 export function forceScrollDown() {
     requestAnimationFrame(() => {
         dom.chatArea.scrollTop = dom.chatArea.scrollHeight
