@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { auditFailedSchedules, auditPendingObjectives, getHeartbeatStats, getHeartbeatPauseReason, isHeartbeatChatNoise, normalizeHeartbeatPauseStateOnStartup, pickHeartbeatSessionId, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
+import { auditFailedSchedules, auditPendingObjectives, buildCoreMemorySummary, getHeartbeatStats, getHeartbeatPauseReason, isHeartbeatChatNoise, normalizeHeartbeatPauseStateOnStartup, pickHeartbeatSessionId, scheduleFollowUp, _getFollowUpQueue, _clearFollowUpQueue } from './heartbeat'
 import { db } from './db'
 
 describe('heartbeat stats', () => {
@@ -48,6 +48,29 @@ describe('heartbeat stats', () => {
     it('starts with empty tool calls', () => {
         const stats = getHeartbeatStats()
         expect(stats.lastToolCalls).toEqual([])
+    })
+})
+
+describe('heartbeat core memory summary', () => {
+    it('builds a deterministic summary with recent topics and extras', () => {
+        const summary = buildCoreMemorySummary(
+            [
+                { role: 'user', content: 'tell me a new joke each minute' },
+                { role: 'assistant', content: 'I will schedule that for you.' },
+                { role: 'user', content: 'also keep failures visible' },
+            ],
+            {
+                pendingObjectives: [{ name: 'schedule_jokes', description: 'Create recurring joke automation' }],
+                pendingSchedules: [{ name: 'joke-sender-task', type: 'interval', status: 'pending' }],
+                followUps: [{ reason: 'verify automation', context: 'make sure new jokes keep arriving' }],
+            },
+        )
+
+        expect(summary).toContain('Recent user topics:')
+        expect(summary).toContain('tell me a new joke each minute')
+        expect(summary).toContain('Pending objectives: schedule_jokes')
+        expect(summary).toContain('Active schedules: joke-sender-task (interval, pending)')
+        expect(summary).toContain('Queued follow-ups: verify automation')
     })
 })
 

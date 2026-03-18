@@ -60,6 +60,43 @@ function drainFollowUps(agentId: number): FollowUp[] {
 // ── Heartbeat telemetry ──
 interface ToolCall { name: string; result?: string; at: number; }
 
+export function buildCoreMemorySummary(messages: Array<{ role: string; content: string }>, extras?: {
+    pendingObjectives?: Array<{ name?: string; description?: string }>
+    pendingSchedules?: Array<{ name?: string; type?: string; status?: string }>
+    followUps?: Array<{ reason?: string; context?: string }>
+}): string {
+    const cleaned = messages
+        .map((m) => ({
+            role: m.role,
+            content: String(m.content || '').replace(/\s+/g, ' ').trim(),
+        }))
+        .filter((m) => m.content)
+
+    const recentUsers = cleaned.filter((m) => m.role === 'user').slice(-5)
+    const recentAssistants = cleaned.filter((m) => m.role === 'assistant').slice(-5)
+
+    const lines = [
+        `Core memory updated: ${new Date().toISOString()}`,
+        recentUsers.length > 0
+            ? `Recent user topics: ${recentUsers.map((m) => m.content.slice(0, 160)).join(' | ')}`
+            : null,
+        recentAssistants.length > 0
+            ? `Recent assistant outputs: ${recentAssistants.map((m) => m.content.slice(0, 160)).join(' | ')}`
+            : null,
+        extras?.pendingObjectives && extras.pendingObjectives.length > 0
+            ? `Pending objectives: ${extras.pendingObjectives.map((o) => `${o.name || 'unnamed'}${o.description ? ` — ${o.description}` : ''}`).join(' | ')}`
+            : null,
+        extras?.pendingSchedules && extras.pendingSchedules.length > 0
+            ? `Active schedules: ${extras.pendingSchedules.map((s) => `${s.name || 'unnamed'} (${s.type || 'unknown'}, ${s.status || 'unknown'})`).join(' | ')}`
+            : null,
+        extras?.followUps && extras.followUps.length > 0
+            ? `Queued follow-ups: ${extras.followUps.map((f) => `${f.reason || 'follow-up'}${f.context ? ` — ${f.context}` : ''}`).join(' | ')}`
+            : null,
+    ].filter(Boolean)
+
+    return lines.join('\n').slice(0, 4000)
+}
+
 export function isHeartbeatChatNoise(content: string, toolCalls: ToolCall[]): boolean {
     const trimmed = content.trim()
     if (!trimmed) return false
@@ -523,6 +560,20 @@ export async function runHeartbeat() {
             const toDelete = messages.slice(0, Math.max(0, messages.length - keepCount))
             console.log(`[heartbeat] Agent ${agent.id} reached ${messages.length} messages. Deterministically trimming ${toDelete.length} old messages (keeping ${keepCount}).`)
 
+            const coreMemory = buildCoreMemorySummary(messages, {
+                pendingObjectives: pendingObjectives as any[],
+                pendingSchedules: pendingSchedules as any[],
+                followUps: followUps as any[],
+            })
+            db.agentState.upsert(
+                { agentId: agent.id, key: 'core_memory' } as any,
+                { agentId: agent.id, key: 'core_memory', value: coreMemory },
+            )
+            db.agentState.upsert(
+                { agentId: agent.id, key: 'core_memory_updated_at' } as any,
+                { agentId: agent.id, key: 'core_memory_updated_at', value: String(Date.now()) },
+            )
+
             for (const m of toDelete) {
                 try { db.messages.delete(m.id) } catch { }
             }
@@ -531,7 +582,7 @@ export async function runHeartbeat() {
             heartbeatStats.lastTickResult = 'pruned'
             heartbeatStats.lastToolCalls = [{
                 name: 'message_trim',
-                result: `deleted ${toDelete.length} old messages`,
+                result: `deleted ${toDelete.length} old messages and refreshed core_memory`,
                 at: Date.now(),
             }]
             return
