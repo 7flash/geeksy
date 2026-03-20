@@ -15,8 +15,9 @@ import { initSearchUI } from './lib/search-ui'
 configure({ timestamps: true })
 
 export default function mount() {
-    initDom()
+    try { initDom() } catch (e) { console.error('[geeksy] initDom failed:', e) }
 
+    try {
     // Load skills and models
     loadSkills()
     loadModels()
@@ -59,9 +60,9 @@ export default function mount() {
     document.getElementById('clear-chat-btn')?.addEventListener('click', clearCurrentChat)
 
     // ── Initialize UI modules ──
-    initHeartbeatUI()
-    initMetricsUI()
-    initSearchUI()
+    try { initHeartbeatUI() } catch (e) { console.error('[geeksy] initHeartbeatUI failed:', e) }
+    try { initMetricsUI() } catch (e) { console.error('[geeksy] initMetricsUI failed:', e) }
+    try { initSearchUI() } catch (e) { console.error('[geeksy] initSearchUI failed:', e) }
 
     // Auto-resize textarea
     dom.inputEl.addEventListener('input', () => {
@@ -95,10 +96,11 @@ export default function mount() {
     })
 
     // Overview resize
-    setupResizeHandle()
+    try { setupResizeHandle() } catch (e2) { console.error('[geeksy] setupResizeHandle failed:', e2) }
+    } catch (mountErr) { console.error('[geeksy] mount sync phase failed:', mountErr) }
 
     // Code block copy button delegation
-    dom.chatArea.addEventListener('click', (e) => {
+    dom.chatArea?.addEventListener('click', (e) => {
         const btn = (e.target as HTMLElement).closest('.md-copy-btn') as HTMLElement | null
         if (!btn) return
         const code = btn.dataset.code || ''
@@ -111,14 +113,16 @@ export default function mount() {
 
         // Bootstrap: ensure agent exists, then load session + messages
         ; (async () => {
-            await restoreState()    // Ensure global agent exists in DB
-            await initSessionUI()   // Load sessions, select saved/first, render messages
-        })()
-
-    return () => { }
-}
-exists in DB
-            await initSessionUI()   // Load sessions, select saved/first, render messages
+            try {
+                await restoreState()    // Ensure global agent exists in DB
+            } catch (e) {
+                console.error('[geeksy] restoreState failed:', e)
+            }
+            try {
+                await initSessionUI()   // Load sessions, select saved/first, render messages
+            } catch (e) {
+                console.error('[geeksy] initSessionUI failed:', e)
+            }
         })()
 
     return () => { }

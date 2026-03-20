@@ -18,6 +18,26 @@ import { skillsDir } from '../../lib/paths'
 
 import { sessions, getBoundSmartSessionId, bindDbSessionToSmartSession } from '../../lib/session-store'
 
+/** Derive a short conversation title from the first user message */
+function deriveSessionName(message: string): string {
+    // Strip code blocks, URLs, file paths
+    let text = message
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`[^`]+`/g, '')
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/[A-Z]:\\[\w\\/.]+/g, '')
+        .replace(/\/[\w/.-]+/g, '')
+        .trim()
+
+    // Take first sentence or line
+    const firstLine = text.split(/[.\n!?]/)[0]?.trim() || text
+    
+    // Truncate to ~40 chars at word boundary
+    if (firstLine.length <= 45) return firstLine || 'Conversation'
+    const truncated = firstLine.slice(0, 45).replace(/\s+\S*$/, '')
+    return (truncated || firstLine.slice(0, 40)) + '…'
+}
+
 /** Default system prompt — personality and behavior for Geeksy sessions */
 const DEFAULT_SYSTEM_PROMPT = `You are Geeksy, a personal AI assistant. Be concise, friendly, and proactive.
 
@@ -201,15 +221,25 @@ export async function POST(req: Request) {
             if (body.agentId) {
                 db.messages.insert({ agentId: body.agentId, sessionId: body.dbSessionId, role: 'user', content: body.message })
             }
-            // Update session activity
+            // Update session activity + auto-name on first real message
             if (body.dbSessionId) {
                 try {
-                    const session = db.sessions.select().where({ id: body.dbSessionId }).first()
-                    if (session) {
-                        db.sessions.update(body.dbSessionId, {
-                            messageCount: (session.messageCount || 0) + 1,
+                    const dbSession = db.sessions.select().where({ id: body.dbSessionId }).first()
+                    if (dbSession) {
+                        const updates: Record<string, any> = {
+                            messageCount: (dbSession.messageCount || 0) + 1,
                             lastActiveAt: Date.now(),
-                        })
+                        }
+                        // Auto-name: if session still has a generic name and this is the first/second message
+                        const genericNames = ['New Conversation', 'Web Session', 'Conversation']
+                        if (genericNames.includes(dbSession.name) && (dbSession.messageCount || 0) <= 1) {
+                            updates.name = deriveSessionName(body.message)
+                        }
+                        db.sessions.update(body.dbSessionId, updates)
+                        // Notify client of session rename
+                        if (updates.name) {
+                            controller.enqueue(enc.encode(`event: session_renamed\ndata: ${JSON.stringify({ sessionId: body.dbSessionId, name: updates.name })}\n\n`))
+                        }
                     }
                 } catch { }
             }

@@ -18,6 +18,29 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+    const url = new URL(req.url)
+
+    // POST /api/sessions?action=auto-rename — bulk rename generic sessions
+    if (url.searchParams.get('action') === 'auto-rename') {
+        const sessions = db.sessions.select().all()
+        const genericNames = ['New Conversation', 'Web Session', 'Conversation']
+        let renamed = 0
+        for (const s of sessions) {
+            if (!genericNames.includes(s.name)) continue
+            // Find first user message in this session
+            const firstMsg = db.messages.select()
+                .where({ sessionId: s.id, role: 'user' } as any)
+                .orderBy('id', 'asc')
+                .first()
+            if (firstMsg?.content) {
+                const name = deriveSessionName(firstMsg.content)
+                db.sessions.update(s.id, { name })
+                renamed++
+            }
+        }
+        return Response.json({ ok: true, renamed })
+    }
+
     const body = await req.json()
     const { name, type, model, systemPrompt, config } = body
 
@@ -31,6 +54,22 @@ export async function POST(req: Request) {
     })
 
     return Response.json({ ok: true, session })
+}
+
+/** Derive a short conversation title from the first user message */
+function deriveSessionName(message: string): string {
+    let text = message
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`[^`]+`/g, '')
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/[A-Z]:\\[\w\\/.]+/g, '')
+        .replace(/\/[\w/.-]+/g, '')
+        .trim()
+
+    const firstLine = text.split(/[.\n!?]/)[0]?.trim() || text
+    if (firstLine.length <= 45) return firstLine || 'Conversation'
+    const truncated = firstLine.slice(0, 45).replace(/\s+\S*$/, '')
+    return (truncated || firstLine.slice(0, 40)) + '…'
 }
 
 export async function PUT(req: Request) {

@@ -83,6 +83,7 @@
 - [x] ~~**Prepare production deployment runbook**~~ - ✅ DONE. Added `docs/DEPLOY.md` with the fastest repeatable `bgrun` + Caddy + env-based deployment flow.
 - [x] ~~**Make Geeksy runnable via npx/bunx**~~ - ✅ DONE. Added a real `geeksy` bin, switched local dependency paths to published package versions, and verified the package tarball is CLI-ready.
 - [x] ~~**Publish updated Geeksy npm release**~~ - ✅ DONE. Published `geeksy@1.0.0` to npm; `npx geeksy@1.0.0` now resolves the real CLI while `latest` may take a moment to catch up in caches.
+- [ ] **Fix session selection broken on page load** — `initSessionUI()` silently crashes because `wireExistingSessionList` doesn't bind click handlers to SSR-rendered session items. The async bootstrap IIFE runs but `selectSession()` never activates. Root cause likely in the init chain's interaction with missing DOM elements.
 - [ ] **Verify `npx geeksy` latest-tag/cache propagation** - Confirm plain `npx geeksy` resolves `1.0.0` after registry/client caches catch up, not just `npx geeksy@1.0.0`.
 - [x] ~~**Trim npm package contents**~~ — ✅ DONE. Added .npmignore excluding tests, tmp, backups, .docs, sqlite files. Tarball now 750KB. - The tarball still includes tests/backups and other extra files that should likely be excluded before release.
 - [ ] **Move production secrets out of tracked local config** - Do not rely on repo-local config for deployment secrets; production should use env vars or server-local secret files.

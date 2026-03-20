@@ -692,8 +692,9 @@ export function renderSidebar() {
 // ══════════════════════════════════════
 
 export function setupResizeHandle() {
-    const handle = document.getElementById('overview-resize')!
-    const overview = document.getElementById('overview')!
+    const handle = document.getElementById('overview-resize')
+    const overview = document.getElementById('overview')
+    if (!handle || !overview) return
     let startY = 0
     let startH = 0
 
@@ -717,29 +718,6 @@ export function setupResizeHandle() {
         }
 
         document.addEventListener('mousemove', onMove)
-        document.addEventListener('mouseup', onUp)
-    })
-}
-elect = 'none'
-
-        const onMove = (ev: MouseEvent) => {
-            const delta = startY - ev.clientY
-            const newH = Math.max(120, Math.min(window.innerHeight * 0.6, startH + delta))
-            overview.style.height = newH + 'px'
-        }
-
-        const onUp = () => {
-            document.removeEventListener('mousemove', onMove)
-            document.removeEventListener('mouseup', onUp)
-            document.body.style.cursor = ''
-            document.body.style.userSelect = ''
-        }
-
-        document.addEventListener('mousemove', onMove)
-        document.addEventListener('mouseup', onUp)
-    })
-}
-e', onMove)
         document.addEventListener('mouseup', onUp)
     })
 }

@@ -381,7 +381,7 @@ export async function createWebSession() {
         const res = await fetch('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'New Conversation', type: 'web' })
+            body: JSON.stringify({ name: 'New Conversation', type: 'web' }),
         })
         const data = await res.json()
         await refreshSessions()

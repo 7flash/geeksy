@@ -563,28 +563,3 @@ export function closeSettings() {
     const container = document.getElementById('settings-modal')!
     container.innerHTML = ''
 }
-lassName="kbd">Ctrl+L</span> Clear chat</div>
-                            <div className="settings-kbd"><span className="kbd">Enter</span> Send message</div>
-                            <div className="settings-kbd"><span className="kbd">Shift+Enter</span> New line</div>
-                            <div className="settings-kbd"><span className="kbd">Esc</span> Stop agent / Close modal</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-export async function openSettings() {
-    // Load auth state
-    await fetchUser()
-    if (authUser) await fetchBackups()
-
-    const container = document.getElementById('settings-modal')!
-    render(<SettingsModal />, container)
-}
-
-export function closeSettings() {
-    const container = document.getElementById('settings-modal')!
-    container.innerHTML = ''
-}

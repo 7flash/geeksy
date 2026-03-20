@@ -91,9 +91,9 @@ export function initDom() {
     dom.inputEl = document.getElementById('input') as HTMLTextAreaElement
     dom.sendBtn = document.getElementById('send-btn') as HTMLButtonElement
     dom.modelSelect = document.getElementById('model-select') as HTMLSelectElement
-    dom.agentList = document.getElementById('agent-list')!
-    dom.agentHeaderName = document.getElementById('agent-header-name')!
-    dom.agentStatusDot = document.getElementById('agent-status-dot')!
+    dom.agentList = document.getElementById('agent-list') || document.createElement('div')
+    dom.agentHeaderName = document.getElementById('agent-header-name') || document.createElement('span')
+    dom.agentStatusDot = document.getElementById('agent-status-dot') || document.createElement('span')
 }
 
 // ── Helpers ──

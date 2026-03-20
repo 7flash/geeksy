@@ -84,6 +84,19 @@ export function handleEvent(type: string, data: any) {
         case 'session':
             if (agent) agent.sessionId = data.sessionId
             break
+        case 'session_renamed': {
+            // Update sidebar session name in real-time
+            const { sessionId, name } = data
+            const item = document.querySelector(`.session-item[data-id="${sessionId}"]`)
+            if (item) {
+                const nameEl = item.querySelector('.session-item-name')
+                if (nameEl) nameEl.textContent = name
+            }
+            // Update header if this is the active session
+            const headerName = document.getElementById('agent-header-name')
+            if (headerName) headerName.textContent = name
+            break
+        }
         case 'replanning':
             clearLoading()
             // Only show replanning card for non-quick (task) responses
@@ -360,34 +373,6 @@ export function handleEvent(type: string, data: any) {
             appendCard('cancelled', '■ Cancelled', `Stopped after ${(data.iteration || 0) + 1} iteration${data.iteration > 0 ? 's' : ''} · ${elapsed}s`)
             setLastThinking('', null)
             setQuickResponse(false) // reset
-            break
-        }
-    }
-}
-ull)
-            setQuickResponse(false) // reset
-            break
-        }
-        case 'cancelled': {
-            if (streamingEl) {
-                streamingEl.remove()
-                setStreamingEl(null)
-                setStreamingContent('')
-            }
-            if (lastThinkingMessage) {
-                if (lastThinkingEl) lastThinkingEl.remove()
-                const cleaned = cleanThinkingText(lastThinkingMessage)
-                if (cleaned) appendResponseBubble(cleaned)
-            }
-            const elapsed = ((data.elapsed || 0) / 1000).toFixed(1)
-            appendCard('cancelled', '■ Cancelled', `Stopped after ${(data.iteration || 0) + 1} iteration${data.iteration > 0 ? 's' : ''} · ${elapsed}s`)
-            setLastThinking('', null)
-            setQuickResponse(false) // reset
-            break
-        }
-    }
-}
-tQuickResponse(false) // reset
             break
         }
     }
