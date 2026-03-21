@@ -389,6 +389,9 @@ export async function sendMessage() {
     setSendButtonMode('send')
     dom.inputEl.focus()
 
+    // Refresh session list to pick up auto-renamed sessions
+    refreshSessions().catch(() => {})
+
     // Persist model choice to agent
     const currentModel = dom.modelSelect.value
     if (currentModel && agent.model !== currentModel) {
