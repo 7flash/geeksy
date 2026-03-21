@@ -128,29 +128,37 @@ Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` an
                 if (!name) {
                     return { success: false, output: '', error: 'name is required for create.' }
                 }
-
-                // Deduplicate: reject if a schedule with the same name already exists
-                const existing = db.schedules.select().where({ name } as any).first()
-                if (existing) {
-                    return { success: true, output: `Schedule "${name}" already exists (id: ${existing.id}, type: ${existing.type}, status: ${existing.status}). Use a different name or cancel the existing one first.`, error: '' }
-                }
                 if (!scriptPath && !message) {
                     return { success: false, output: '', error: 'Provide either scriptPath or message for create.' }
                 }
-                if (scriptPath && message) {
-                    return { success: false, output: '', error: 'Use either scriptPath or message, not both.' }
+
+                // If both provided, prefer scriptPath (agent likely wrote a script then tried to schedule it)
+                const effectiveScriptPath = scriptPath || undefined
+                const effectiveMessage = scriptPath ? undefined : message
+
+                // Deduplicate: reject if a schedule with the same name or same scriptPath already exists
+                const existingByName = db.schedules.select().where({ name } as any).first()
+                if (existingByName && existingByName.status !== 'cancelled') {
+                    return { success: true, output: `Schedule "${name}" already exists (id: ${existingByName.id}, type: ${existingByName.type}, status: ${existingByName.status}). It's already running — no action needed.`, error: '' }
+                }
+                if (effectiveScriptPath) {
+                    const existingByScript = db.schedules.select().all()
+                        .find((s: any) => s.scriptPath === effectiveScriptPath && s.status !== 'cancelled')
+                    if (existingByScript) {
+                        return { success: true, output: `A schedule for script "${effectiveScriptPath}" already exists (id: ${existingByScript.id}, name: "${existingByScript.name}", status: ${existingByScript.status}). It's already running — no action needed.`, error: '' }
+                    }
                 }
                 if (!['once', 'interval', 'cron'].includes(type)) {
                     return { success: false, output: '', error: `Unsupported type: ${type}. Use once, interval, or cron.` }
                 }
 
-                if (scriptPath) {
-                    const file = Bun.file(scriptPath)
+                if (effectiveScriptPath) {
+                    const file = Bun.file(effectiveScriptPath)
                     if (!await file.exists()) {
-                        return { success: false, output: '', error: `Script file not found: ${scriptPath}. Create the file first.` }
+                        return { success: false, output: '', error: `Script file not found: ${effectiveScriptPath}. Create the file first.` }
                     }
                     const content = await file.text()
-                    const validationError = validateScheduledScriptContent(scriptPath, content)
+                    const validationError = validateScheduledScriptContent(effectiveScriptPath, content)
                     if (validationError) {
                         return { success: false, output: '', error: validationError }
                     }
@@ -184,8 +192,8 @@ Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` an
                     name,
                     type: type as any,
                     status: 'pending',
-                    scriptPath,
-                    message,
+                    scriptPath: effectiveScriptPath,
+                    message: effectiveMessage,
                     agentId: agentId ?? undefined,
                     sessionId: sessionId ?? undefined,
                     intervalSec,
@@ -201,9 +209,9 @@ Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` an
 
                 scheduler.start()
 
-                const target = scriptPath
-                    ? `Script: ${scriptPath}\nThe scheduler will run "bun run ${scriptPath}" with AGENT_ID=${agentId} and STATE_URL injected.`
-                    : `Message: ${message}`
+                const target = effectiveScriptPath
+                    ? `Script: ${effectiveScriptPath}\nThe scheduler will run "bun run ${effectiveScriptPath}" with AGENT_ID=${agentId} and STATE_URL injected.`
+                    : `Message: ${effectiveMessage}`
 
                 const policy = [
                     `Timeout: ${timeoutSec}s`,

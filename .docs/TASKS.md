@@ -7,6 +7,7 @@
 - [x] ~~**Audit remaining writable paths for npm CLI mode**~~ - ✅ DONE. Added `app/lib/paths.ts` and moved skills, backups, saved model keys, plugin install/update paths, and `.config.toml` lookups onto `GEEKSY_HOME` / `GEEKSY_APP_ROOT` aware locations.
 - [x] ~~**Verify plugin install/update flows in packaged CLI mode**~~ - ✅ DONE. Smoke-tested plugin install, manifest/config reads, config save, and update handling under a custom `GEEKSY_HOME`; local/unpublished plugins now degrade gracefully when no npm registry version exists.
 - [ ] **Smoke-test published npm plugin upgrades in packaged CLI mode** - The local-workspace path is covered now, but a real registry-backed plugin should still be tested through `bun add` / `bun update` in app-home mode.
+- [x] ~~**Fix planner STATE_URL template for scheduled scripts**~~ — ✅ DONE. System prompt now includes exact inline STATE_URL helper template. Agent exec tool gets STATE_URL/AGENT_ID/SESSION_ID env vars automatically. Schedule validator gives specific errors for missing function definitions. smart-agent-ai upgraded to v2.5.1 with env passthrough + graceful empty planner fallback.
 - [x] ~~**Reduce heartbeat schedule-tool chatter**~~ - ✅ DONE. Tightened `isHeartbeatChatNoise(...)` to suppress raw JSON and low-signal schedule boilerplate, then live-verified that new heartbeat ticks no longer persisted fresh `list_dir` / raw tool-JSON chatter into conversation history.
 - [x] ~~**Unstick heartbeat auto-pruning**~~ - ✅ DONE. Replaced the hanging LLM-driven prune path with deterministic message trimming, restoring live heartbeat ticks (`totalTicks` resumed) and preventing `isRunning=true` from getting stuck forever during pruning.
 - [x] ~~**Improve heartbeat pruning quality beyond blunt message trimming**~~ - ✅ DONE. Heartbeat pruning now writes a deterministic `core_memory` summary plus `core_memory_updated_at` into `agentState` before trimming old messages, so pruning preserves recent user topics, assistant outputs, pending objectives, schedules, and follow-ups.
@@ -19,7 +20,7 @@
 - [x] ~~**Harden Memory pane session switching**~~ — ✅ DONE. Restored the Memory tab to the main overview, refreshes memory state on `geeksy:session-changed`, distinguishes session-scoped summaries from `Agent-wide fallback`, and updates the empty-state copy so switching conversations no longer looks stale.
 - [x] ~~**Soften the UI with a friendlier pastel pass**~~ — ✅ DONE. Added a pastel theme override in `app/css/clean.css` with softer backgrounds, gentler chrome, calmer buttons, and lighter message surfaces while keeping the simplified layout and debug split intact.
 - [x] ~~**Live-check session-scoped core memory rendering after a real prune**~~ — ✅ DONE. Browser-verified: "Capture current conversation" captures session-scoped summary (Session 18: "Recent user topics: What time is it?"), switching to Session 17 shows "No retained summary" — correct session isolation.
-- [ ] **Fix planner output for recurring script schedules** - Hardened both Geeksy schedule validation and the local `smart-agent` planner prompt to reject `@geeky/core`, placeholder `declare getState/setState`, and non-inline state-helper variants. Remaining work is the final live browser proof that Proceed now writes one valid inline-`STATE_URL` script and creates exactly one clean interval schedule.
+- [x] ~~**Fix planner output for recurring script schedules**~~ — ✅ DONE. System prompt has exact STATE_URL helper template. Agent exec tool injects STATE_URL/AGENT_ID/SESSION_ID env vars. Schedule validator catches missing function definitions with specific error messages. smart-agent planner gracefully falls back to conversational mode on empty objective lists.
 - [x] ~~**Add schedule guardrails for recurring scripts**~~ - ✅ DONE. The schedule tool now rejects scripts importing `@geeky/core`, auto-infers `interval` when an interval is provided, and the chat system prompt explicitly requires self-contained/inline-helper scheduled scripts.
 - [x] ~~**Harden heartbeat + scheduler null-session reporting**~~ - ✅ DONE. Scheduler/heartbeat chat inserts now normalize nullable `sessionId` instead of crashing background reporting with Zod `Expected number, received null` errors.
 - [x] ~~**Stop heartbeat `IDLE` ticks from crashing planner JSON parsing**~~ - ✅ DONE. Heartbeat no longer routes its `IDLE`-style tick prompt through session task planning; it now runs a direct agent response objective, eliminating `JSON Parse error: Unexpected identifier "IDLE"`.
@@ -87,18 +88,36 @@
 - [x] ~~**Verify `npx geeksy` latest-tag/cache propagation**~~ — ✅ DONE. Published `geeksy@1.1.0` with session fix, auto-naming, client stability. `npm view geeksy version` returns `1.1.0`.
 - [x] ~~**Trim npm package contents**~~ — ✅ DONE. Added .npmignore excluding tests, tmp, backups, .docs, sqlite files. Tarball now 750KB. - The tarball still includes tests/backups and other extra files that should likely be excluded before release.
 - [x] ~~**Move production secrets out of tracked local config**~~ — ✅ DONE. Added `.env.example` with all env vars, `.env` gitignored, Bun auto-loads it. `.config.toml` remains for bgrun compat but both are gitignored.
-- [ ] **Deploy Geeksy to the target server** - Needs the actual server/domain access details to execute the runbook.
+- [x] ~~**Deploy Geeksy to the target server**~~ — ✅ DONE. Deployed to `202.155.132.139` at `https://geeksy.xyz`. Caddy reverse proxy on port 3737. bgrun process `geeksy` with GEMINI_API_KEY. Landing page at `/api/landing`.
+
+## 🟢 Priority: Features (New)
+- [ ] **Publish geeksy@1.2.0 to npm** — Bump includes: Gemini embeddings, STATE_URL env, web search/fetch tools, maxContextTokens, schedule fix, landing page. 82 tests.
+- [ ] **Make landing page the default root** — Currently app is at `/` and landing at `/api/landing`. Consider making landing the default for unauthenticated visitors.
+- [ ] **Web search UI integration** — Show web_search and fetch_page tool results with link previews and source cards in the chat UI (currently renders as plain text).
+- [ ] **Image generation tool** — Add an `image_gen` tool using Gemini's image generation API so the agent can create images in conversation.
+- [ ] **File upload in chat** — Allow users to drag & drop or paste files/images into the chat input for multimodal conversations.
+- [ ] **Conversation export as PDF** — Export chat threads as formatted PDF documents with code highlighting.
+- [ ] **Mobile responsive polish** — Test and fix the UI layout on mobile viewports (sidebar, chat input, tool cards).
+
+## 🟡 Priority: Improve (New)
+- [ ] **Reduce empty catch blocks** — 121 empty `catch {}` blocks across the codebase. Add at minimum `console.warn` for non-trivial operations.
+- [ ] **Heartbeat reliability audit** — Review heartbeat.ts (704 lines) for edge cases, especially around session picking and pruning.
+- [ ] **Test coverage for agents.tsx** — Core chat orchestration file has no dedicated tests.
 
 ## 📝 Architecture Notes
 - **Framework**: Melina.js (Bun-native, file-based routing)
 - **CLI/app paths**: `app/lib/paths.ts` centralizes `GEEKSY_HOME`, `GEEKSY_APP_ROOT`, skills, backups, config, and saved-key locations for packaged CLI mode.
-- **Agent runtime**: smart-agent-ai (Session/Agent with Classifier-Planner-Executor pipeline)
+- **Agent runtime**: smart-agent-ai@2.5.1 (Session/Agent with Classifier-Planner-Executor pipeline)
+- **LLM layer**: jsx-ai (JSX-based LLM interface), gx402@3.0.0 (multi-provider callLLM)
 - **Port**: 3737 (configured via BUN_PORT)
 - **DB**: SQLite via sqlite-zod-orm (agents, sessions, messages, objectives, plugins, files, skills, schedules)
+- **Embeddings**: Gemini text-embedding-004 (free, primary) → OpenAI text-embedding-3-small (fallback) → pseudo-embeddings
 - **Secrets**: file-backed JSON store at `.geeksy-secrets.json` via `app/lib/secrets.ts`; chat uses `request_secret` / `get_secret` tools plus `/api/secrets` and `/api/secrets/submit` routes so secret values do not need to appear in plain chat.
-- **Scheduling**: `app/lib/schedule-tool.ts` can now create chat-prompt schedules and Bun script schedules with `once`, `interval`, or `cron`; execution is handled by `app/api/schedule/scheduler.ts`
+- **Scheduling**: `app/lib/schedule-tool.ts` creates schedules with `once`, `interval`, or `cron`; execution by `app/api/schedule/scheduler.ts`. Scheduler injects STATE_URL/AGENT_ID env vars.
+- **Agent tools**: schedule, request_secret, get_secret, search_skills, install_skill, web_search, fetch_page (+ smart-agent built-in: read/write/edit/exec/list/search)
 - **Plugins**: geeksy-pumpfun-plugin (port 3457), geeksy-telegram-plugin (port 3738)
 - **Client**: jsx-dom rendering with direct DOM manipulation, SSE streaming for chat events
+- **Tests**: 82 tests, 202 expect() calls
 
 ## ✅ Browser-Verified (this session)
 - [x] Session selection on page load

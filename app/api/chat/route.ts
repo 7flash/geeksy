@@ -14,6 +14,7 @@ import '../models/route'
 import { searchSemanticMemory, addSemanticMemory } from '../../lib/embeddings'
 import { createSkillDiscoveryTools } from '../../lib/skill-discovery-tool'
 import { createSecretTools } from '../../lib/secret-tools'
+import { createWebTools } from '../../lib/web-search-tool'
 import { skillsDir } from '../../lib/paths'
 
 import { sessions, getBoundSmartSessionId, bindDbSessionToSmartSession } from '../../lib/session-store'
@@ -75,6 +76,12 @@ BEHAVIOR:
 - When running commands, show what you're doing, don't narrate it
 - If a command fails, try a different approach — don't repeat the same failing command
 - Never output raw JSON tool calls in your response text — use tools properly
+
+WEB SEARCH:
+- You have web_search and fetch_page tools for accessing current information from the internet
+- Use web_search when asked about recent events, documentation, APIs, or facts you might not know
+- Use fetch_page to read specific pages in detail after finding them via search
+- Always cite sources with URLs when using web results
 
 SKILL DISCOVERY:
 - When a user asks for something that might need a specialized capability (YouTube, trading, Discord, browser automation, etc.), use search_skills FIRST to check what's available
@@ -217,7 +224,7 @@ export async function POST(req: Request) {
         maxIterations: 10,
         safeMode,
         systemPrompt,
-        tools: [createScheduleTool(body.agentId, body.dbSessionId), ...createSecretTools(body.agentId, body.dbSessionId), ...createSkillDiscoveryTools()],
+        tools: [createScheduleTool(body.agentId, body.dbSessionId), ...createSecretTools(body.agentId, body.dbSessionId), ...createSkillDiscoveryTools(), ...createWebTools()],
         env: agentEnv,
         maxContextTokens,
     }
