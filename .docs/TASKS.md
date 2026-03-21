@@ -18,7 +18,7 @@
 - [x] ~~**Group Debug by turn**~~ — ✅ DONE. Debug log entries now carry a `traceId`, each user send creates a new trace, incoming SSE/planner/tool events are tagged to that trace, and the Debug pane renders grouped expandable trace blocks instead of one flat stream. Added focused grouping coverage in `app/lib/debug-traces.test.ts`.
 - [x] ~~**Harden Memory pane session switching**~~ — ✅ DONE. Restored the Memory tab to the main overview, refreshes memory state on `geeksy:session-changed`, distinguishes session-scoped summaries from `Agent-wide fallback`, and updates the empty-state copy so switching conversations no longer looks stale.
 - [x] ~~**Soften the UI with a friendlier pastel pass**~~ — ✅ DONE. Added a pastel theme override in `app/css/clean.css` with softer backgrounds, gentler chrome, calmer buttons, and lighter message surfaces while keeping the simplified layout and debug split intact.
-- [ ] **Live-check session-scoped core memory rendering after a real prune** - The Memory pane now has a deterministic `Capture current conversation` action backed by `/api/agent-state/core-memory`, and the session-selection logic is covered by `resolveCoreMemoryEntries()` tests. Remaining work is the actual UI proof that switching conversations changes the pinned `Heartbeat Core Memory` card when multiple session-scoped summaries exist.
+- [x] ~~**Live-check session-scoped core memory rendering after a real prune**~~ — ✅ DONE. Browser-verified: "Capture current conversation" captures session-scoped summary (Session 18: "Recent user topics: What time is it?"), switching to Session 17 shows "No retained summary" — correct session isolation.
 - [ ] **Fix planner output for recurring script schedules** - Hardened both Geeksy schedule validation and the local `smart-agent` planner prompt to reject `@geeky/core`, placeholder `declare getState/setState`, and non-inline state-helper variants. Remaining work is the final live browser proof that Proceed now writes one valid inline-`STATE_URL` script and creates exactly one clean interval schedule.
 - [x] ~~**Add schedule guardrails for recurring scripts**~~ - ✅ DONE. The schedule tool now rejects scripts importing `@geeky/core`, auto-infers `interval` when an interval is provided, and the chat system prompt explicitly requires self-contained/inline-helper scheduled scripts.
 - [x] ~~**Harden heartbeat + scheduler null-session reporting**~~ - ✅ DONE. Scheduler/heartbeat chat inserts now normalize nullable `sessionId` instead of crashing background reporting with Zod `Expected number, received null` errors.
@@ -99,3 +99,15 @@
 - **Scheduling**: `app/lib/schedule-tool.ts` can now create chat-prompt schedules and Bun script schedules with `once`, `interval`, or `cron`; execution is handled by `app/api/schedule/scheduler.ts`
 - **Plugins**: geeksy-pumpfun-plugin (port 3457), geeksy-telegram-plugin (port 3738)
 - **Client**: jsx-dom rendering with direct DOM manipulation, SSE streaming for chat events
+
+## ✅ Browser-Verified (this session)
+- [x] Session selection on page load
+- [x] Chat send + receive with tool execution
+- [x] Auto-naming conversations from first message
+- [x] Session switching loads correct messages
+- [x] Memory tab: session-scoped core memory capture + isolation
+- [x] Schedule tab: 40 runs, 100% success, joke-sender active
+- [x] Files tab: renders correctly
+- [x] Debug tab: ready for live capture
+- [x] Sidebar refresh after send shows renamed session
+- [x] Published geeksy@1.1.0 to npm
