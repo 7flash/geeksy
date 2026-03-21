@@ -120,6 +120,12 @@ Schedules are scoped to the current agent (agentId=${agentId})${sessionId ? ` an
                 if (!name) {
                     return { success: false, output: '', error: 'name is required for create.' }
                 }
+
+                // Deduplicate: reject if a schedule with the same name already exists
+                const existing = db.schedules.select().where({ name } as any).first()
+                if (existing) {
+                    return { success: true, output: `Schedule "${name}" already exists (id: ${existing.id}, type: ${existing.type}, status: ${existing.status}). Use a different name or cancel the existing one first.`, error: '' }
+                }
                 if (!scriptPath && !message) {
                     return { success: false, output: '', error: 'Provide either scriptPath or message for create.' }
                 }
