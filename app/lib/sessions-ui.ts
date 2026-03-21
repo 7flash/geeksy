@@ -510,8 +510,12 @@ export async function initSessionUI() {
         }
     }
 
-    const savedSessionId = localStorage.getItem('geeksy:activeSessionId')
+    // Load sessions and render the list FIRST so DOM is fresh
     const sessions = await loadSessions()
+    renderSessionList(sessions, mobileSelectHandler)
+
+    // Now select the saved/first session (operates on the fresh DOM)
+    const savedSessionId = localStorage.getItem('geeksy:activeSessionId')
     if (savedSessionId) {
         activeSessionId = Number(savedSessionId)
         const session = sessions.find((s: any) => s.id === activeSessionId)
@@ -527,6 +531,4 @@ export async function initSessionUI() {
         applyNoSessionComposerState()
         renderChatPlaceholder('no-session')
     }
-
-    await refreshSessions(mobileSelectHandler)
 }

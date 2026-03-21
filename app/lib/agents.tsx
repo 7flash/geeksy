@@ -1,6 +1,11 @@
 // app/src/lib/agents.tsx — Agent CRUD, chat, skills, sidebar rendering
 import { render } from 'melina/client'
-import { measure, measureSync } from 'measure-fn'
+// measure-fn uses process.* which crashes in browser bundles
+const measure = async (name: string, fn: (m: any) => any) => {
+    const m = (label: string, inner: () => any) => inner()
+    return fn(m)
+}
+const measureSync = (name: string, fn?: () => any) => fn?.();
 import {
     state, dom, agentChatStore, toolCards, getActiveAgent, saveState,
     setActiveLoadingEl, restoreActiveSkills,

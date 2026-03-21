@@ -1,4 +1,7 @@
-import { secretsPath } from './paths'
+// Lazy import to avoid pulling process.cwd() into client bundles
+const getSecretsPath = () => {
+    try { return require('./paths').secretsPath } catch { return '.geeksy-secrets.json' }
+}
 
 export interface StoredSecret {
     key: string
@@ -13,7 +16,7 @@ export interface SecretStore {
 
 async function loadStore(): Promise<SecretStore> {
     try {
-        const file = Bun.file(secretsPath)
+        const file = Bun.file(getSecretsPath())
         if (await file.exists()) {
             const parsed = JSON.parse(await file.text()) as SecretStore
             if (parsed && parsed.secrets && typeof parsed.secrets === 'object') return parsed
@@ -23,7 +26,7 @@ async function loadStore(): Promise<SecretStore> {
 }
 
 async function saveStore(store: SecretStore) {
-    await Bun.write(secretsPath, JSON.stringify(store, null, 2))
+    await Bun.write(getSecretsPath(), JSON.stringify(store, null, 2))
 }
 
 export async function listSecrets(): Promise<Array<{ key: string; description?: string; updatedAt: number; hasValue: boolean }>> {
