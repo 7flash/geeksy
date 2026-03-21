@@ -14,3 +14,4 @@ app/**/*.test.ts
 .geeksy-secrets.json
 *.bak
 .docs/decisions/
+.env

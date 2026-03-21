@@ -86,7 +86,7 @@
 - [x] ~~**Fix session selection broken on page load**~~ — ✅ DONE. Root cause: 3 cascading issues — (1) Melina only loads layout.client, not page.client; (2) measure-fn uses process.* crashing browser bundle; (3) secrets→paths chain imports process.cwd(). Moved all init to layout.client, shimmed measure-fn, made paths import lazy.
 - [x] ~~**Verify `npx geeksy` latest-tag/cache propagation**~~ — ✅ DONE. Published `geeksy@1.1.0` with session fix, auto-naming, client stability. `npm view geeksy version` returns `1.1.0`.
 - [x] ~~**Trim npm package contents**~~ — ✅ DONE. Added .npmignore excluding tests, tmp, backups, .docs, sqlite files. Tarball now 750KB. - The tarball still includes tests/backups and other extra files that should likely be excluded before release.
-- [ ] **Move production secrets out of tracked local config** - Do not rely on repo-local config for deployment secrets; production should use env vars or server-local secret files.
+- [x] ~~**Move production secrets out of tracked local config**~~ — ✅ DONE. Added `.env.example` with all env vars, `.env` gitignored, Bun auto-loads it. `.config.toml` remains for bgrun compat but both are gitignored.
 - [ ] **Deploy Geeksy to the target server** - Needs the actual server/domain access details to execute the runbook.
 
 ## 📝 Architecture Notes

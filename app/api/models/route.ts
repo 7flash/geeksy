@@ -1,5 +1,8 @@
 // app/src/api/models/route.ts — Provider & model management API
-import { measure, measureSync } from 'measure-fn'
+// measure-fn only works server-side
+let measure: any, measureSync: any
+try { const m = require('measure-fn'); measure = m.measure; measureSync = m.measureSync }
+catch { measure = async (_: string, fn: any) => fn((_: string, inner: any) => inner()); measureSync = (_: string, fn?: any) => fn?.() }
 import { keysPath, configPath } from '../../lib/paths'
 
 // ── Provider definitions ──
