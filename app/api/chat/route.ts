@@ -396,11 +396,3 @@ export async function GET() {
     })
     return Response.json(skills)
 }
-               result.push(f.replace(/\.md$/, ""))
-                }
-            }
-        } catch { }
-        return result
-    })
-    return Response.json(skills)
-}
