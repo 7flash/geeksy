@@ -65,4 +65,57 @@ describe('schedule tool guardrails', () => {
         expect(row).toBeUndefined()
         try { await Bun.file(scriptPath).delete() } catch { }
     })
+
+    test('accepts scripts with inline STATE_URL helpers', async () => {
+        const scriptPath = 'scripts/test-valid-state-schedule.ts'
+        const validScript = `const STATE_URL = process.env.STATE_URL!;
+const AGENT_ID = process.env.AGENT_ID!;
+async function getState(key: string) {
+  const res = await fetch(\`\${STATE_URL}?agentId=\${AGENT_ID}&key=\${key}\`);
+  return res.ok ? (await res.json()).value : null;
+}
+async function setState(key: string, value: any) {
+  await fetch(STATE_URL, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({agentId: Number(AGENT_ID), key, value: String(value)}) });
+}
+const idx = await getState('idx') ?? 0;
+console.log('joke', idx);
+await setState('idx', idx + 1);
+`
+        await Bun.write(scriptPath, validScript)
+
+        const tool = createScheduleTool(1, 1)
+        const result = await tool.execute({
+            action: 'create',
+            name: 'valid-state-schedule',
+            scriptPath,
+            interval: '60s',
+        })
+
+        expect(result.success).toBe(true)
+        expect(result.output).toContain('valid-state-schedule')
+
+        const row = db.schedules.select().all().find((s: any) => s.name === 'valid-state-schedule') as any
+        expect(row).toBeTruthy()
+        try { db.schedules.delete(row.id) } catch { }
+        try { await Bun.file(scriptPath).delete() } catch { }
+    })
+
+    test('rejects scripts calling getState without defining it', async () => {
+        const scriptPath = 'scripts/test-missing-def-schedule.ts'
+        await Bun.write(scriptPath, `const STATE_URL = process.env.STATE_URL!;\nconst x = await getState('key');\nconsole.log(x);\n`)
+
+        const tool = createScheduleTool(1, 1)
+        const result = await tool.execute({
+            action: 'create',
+            name: 'missing-def-schedule',
+            scriptPath,
+            interval: '60s',
+        })
+
+        expect(result.success).toBe(false)
+        expect(result.error).toContain('getState')
+        expect(result.error).toContain('define')
+
+        try { await Bun.file(scriptPath).delete() } catch { }
+    })
 })

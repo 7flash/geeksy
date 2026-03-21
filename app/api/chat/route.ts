@@ -56,8 +56,18 @@ TECHNICAL RULES:
 - For browser automation tasks, use Browserbase (not Selenium or Playwright)
 - Install packages with: bun add <package>
 - For non-trivial scheduled automations, first write a Bun/TypeScript script file, then use the schedule tool to run it with explicit timeout/retry/validation settings
-- Scheduled scripts must NEVER import app internals like @geeky/core; they must be self-contained or use inline fetch helpers for STATE_URL when persistence is needed
-- Never use placeholder declarations like "declare function getState(...)" or "declare function setState(...)" in scheduled scripts; if state is needed, inline the real helper functions that call STATE_URL
+- Scheduled scripts must NEVER import app internals like @geeky/core; they must be self-contained
+- When a script needs persistent state, use process.env.STATE_URL (injected automatically by scheduler):
+  const STATE_URL = process.env.STATE_URL!;
+  const AGENT_ID = process.env.AGENT_ID!;
+  async function getState(key: string) {
+    const res = await fetch(\`\${STATE_URL}?agentId=\${AGENT_ID}&key=\${key}\`);
+    return res.ok ? (await res.json()).value : null;
+  }
+  async function setState(key: string, value: any) {
+    await fetch(STATE_URL, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({agentId: Number(AGENT_ID), key, value: String(value)}) });
+  }
+- Never use placeholder declarations like "declare function getState(...)" — always inline the real helpers above
 
 BEHAVIOR:
 - When asked "what time is it" or similar, use the exec tool: Get-Date
@@ -177,6 +187,16 @@ export async function POST(req: Request) {
         // Fallback gracefully without memory if embeddings fail (e.g. no API key)
     }
 
+    // Provide STATE_URL + AGENT_ID to exec tool so agent-created scripts can use state persistence
+    const port = process.env.BUN_PORT || '3737'
+    const baseUrl = `http://127.0.0.1:${port}`
+    const agentEnv: Record<string, string> = {
+        STATE_URL: `${baseUrl}/api/agent-state`,
+        BASE_URL: baseUrl,
+    }
+    if (body.agentId) agentEnv.AGENT_ID = String(body.agentId)
+    if (body.dbSessionId) agentEnv.SESSION_ID = String(body.dbSessionId)
+
     const config: AgentConfig = {
         model,
         cwd,
@@ -185,6 +205,7 @@ export async function POST(req: Request) {
         safeMode,
         systemPrompt,
         tools: [createScheduleTool(body.agentId, body.dbSessionId), ...createSecretTools(body.agentId, body.dbSessionId), ...createSkillDiscoveryTools()],
+        env: agentEnv,
     }
 
     const promptTrace = {

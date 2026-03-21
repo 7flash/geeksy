@@ -25,13 +25,21 @@ function validateScheduledScriptContent(scriptPath: string, content: string): st
         return `Scheduled scripts must not use declared placeholder getState/setState helpers. Inline real STATE_URL fetch helpers in the script instead. Fix: ${scriptPath}`
     }
 
-    const referencesStateHelpers = /\bgetState\s*\(/.test(content) || /\bsetState\s*\(/.test(content)
-    const hasInlineStateHelpers = content.includes('const STATE_URL = process.env.STATE_URL')
-        && content.includes('async function getState(')
-        && content.includes('async function setState(')
+    const usesGetState = /\bgetState\s*\(/.test(content)
+    const usesSetState = /\bsetState\s*\(/.test(content)
+    const referencesStateHelpers = usesGetState || usesSetState
+    const hasStateUrl = content.includes('process.env.STATE_URL') || content.includes('process.env["STATE_URL"]')
+    const definesGetState = /(?:async\s+)?function\s+getState\s*\(/.test(content)
+    const definesSetState = /(?:async\s+)?function\s+setState\s*\(/.test(content)
 
-    if (referencesStateHelpers && !hasInlineStateHelpers) {
-        return `Scheduled scripts that use getState/setState must define the inline STATE_URL fetch helpers in the file. Fix: ${scriptPath}`
+    if (referencesStateHelpers && !hasStateUrl) {
+        return `Scheduled scripts that use getState/setState must use process.env.STATE_URL (injected by scheduler). Fix: ${scriptPath}`
+    }
+    if (usesGetState && !definesGetState) {
+        return `Script calls getState() but doesn't define it. Add an inline getState function using STATE_URL. Fix: ${scriptPath}`
+    }
+    if (usesSetState && !definesSetState) {
+        return `Script calls setState() but doesn't define it. Add an inline setState function using STATE_URL. Fix: ${scriptPath}`
     }
 
     return null

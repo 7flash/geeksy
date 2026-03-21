@@ -1,53 +1,125 @@
 // app/lib/embeddings.ts
 // Handles vector embeddings and semantic search for long-term memory
+// Supports Gemini (free), OpenAI, and pseudo-embedding fallback
 
 import { db } from './db'
 
-export async function generateEmbedding(text: string): Promise<number[]> {
-    // We'll use the OpenAI compatible embeddings endpoint for local models or OpenAI itself.
-    // If not configured, we'll try an open fallback or return dummy numbers.
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
-        console.warn('[geeksy] OPENAI_API_KEY missing - falling back to pseudo-embeddings')
-        // In real environments without a key, you'd integrate a local transformer or return [0].
-        // Fix to pseudo-deterministic predictable array
-        return Array.from({ length: 1536 }, (_, i) => Math.sin(text.length + i) * 0.1)
+const GEMINI_EMBEDDING_DIM = 768
+const OPENAI_EMBEDDING_DIM = 1536
+
+/** Get embedding dimension based on available provider */
+function getEmbeddingDim(): number {
+    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) return GEMINI_EMBEDDING_DIM
+    if (process.env.OPENAI_API_KEY) return OPENAI_EMBEDDING_DIM
+    return GEMINI_EMBEDDING_DIM // pseudo-embeddings match Gemini dim
+}
+
+async function generateEmbeddingGemini(text: string): Promise<number[]> {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+    if (!apiKey) throw new Error('No Gemini API key')
+
+    const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'models/text-embedding-004',
+                content: { parts: [{ text }] },
+            }),
+        }
+    )
+
+    if (!res.ok) {
+        const err = await res.text().catch(() => res.statusText)
+        throw new Error(`Gemini embedding failed (${res.status}): ${err}`)
     }
 
-    try {
-        const res = await fetch('https://api.openai.com/v1/embeddings', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'text-embedding-3-small',
-                input: text
-            })
-        })
-        const data = await res.json()
-        if (data.data && data.data[0]) {
-            return data.data[0].embedding
-        }
-        throw new Error('No embedding returned')
-    } catch (e: any) {
-        console.error('[geeksy] Failed to generate embedding:', e.message)
-        throw e
+    const data = await res.json()
+    const values = data?.embedding?.values
+    if (!Array.isArray(values) || values.length === 0) {
+        throw new Error('Gemini returned empty embedding')
     }
+    return values
+}
+
+async function generateEmbeddingOpenAI(text: string): Promise<number[]> {
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) throw new Error('No OpenAI API key')
+
+    const res = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: 'text-embedding-3-small',
+            input: text
+        })
+    })
+
+    if (!res.ok) {
+        const err = await res.text().catch(() => res.statusText)
+        throw new Error(`OpenAI embedding failed (${res.status}): ${err}`)
+    }
+
+    const data = await res.json()
+    if (data.data?.[0]?.embedding) {
+        return data.data[0].embedding
+    }
+    throw new Error('OpenAI returned empty embedding')
+}
+
+function generatePseudoEmbedding(text: string): number[] {
+    // Deterministic pseudo-embedding for development without API keys
+    const dim = GEMINI_EMBEDDING_DIM
+    const result = new Array(dim)
+    // Use a simple hash-based approach for some semantic spread
+    let hash = 0
+    for (let i = 0; i < text.length; i++) {
+        hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0
+    }
+    for (let i = 0; i < dim; i++) {
+        // Mix character codes and position for variety
+        const charCode = text.charCodeAt(i % text.length) || 0
+        result[i] = Math.sin(hash + i * 0.1 + charCode * 0.01) * 0.1
+    }
+    return result
+}
+
+/** Active provider name for logging */
+let loggedProvider = false
+
+export async function generateEmbedding(text: string): Promise<number[]> {
+    // Priority: Gemini (free) > OpenAI > pseudo-embeddings
+    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+        if (!loggedProvider) { console.log('[geeksy] Using Gemini text-embedding-004 for semantic memory'); loggedProvider = true }
+        return generateEmbeddingGemini(text)
+    }
+
+    if (process.env.OPENAI_API_KEY) {
+        if (!loggedProvider) { console.log('[geeksy] Using OpenAI text-embedding-3-small for semantic memory'); loggedProvider = true }
+        return generateEmbeddingOpenAI(text)
+    }
+
+    if (!loggedProvider) { console.warn('[geeksy] No embedding API key — using pseudo-embeddings (semantic search will be low quality)'); loggedProvider = true }
+    return generatePseudoEmbedding(text)
 }
 
 function cosineSimilarity(A: number[], B: number[]): number {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < A.length; i++) {
-        dotProduct += A[i] * B[i];
-        normA += A[i] * A[i];
-        normB += B[i] * B[i];
+    // Handle dimension mismatch (e.g. switching providers) by using shorter length
+    const len = Math.min(A.length, B.length)
+    let dotProduct = 0
+    let normA = 0
+    let normB = 0
+    for (let i = 0; i < len; i++) {
+        dotProduct += A[i] * B[i]
+        normA += A[i] * A[i]
+        normB += B[i] * B[i]
     }
-    if (normA === 0 || normB === 0) return 0;
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    if (normA === 0 || normB === 0) return 0
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB))
 }
 
 export interface SemanticSearchResult {
@@ -57,8 +129,12 @@ export interface SemanticSearchResult {
     metadata?: any
 }
 
-// In-memory naive vector search map (to avoid binary extensions dependency for portability)
-// Geesky OS stores these locally in SQLite blobs
+export interface SemanticMemoryFilter {
+    agentId?: number
+    sessionId?: number
+}
+
+// In-memory naive vector search (to avoid binary extension dependencies for portability)
 let memoryCache: { id: number, text: string, vector: number[], meta?: string }[] = []
 let cacheLoaded = false
 
@@ -66,7 +142,7 @@ function initVectorCache() {
     if (cacheLoaded) return
 
     // Create vector storage table if it doesn't exist yet
-    (db as any).db.exec(`CREATE TABLE IF NOT EXISTS semantic_memory (
+    ;(db as any).db.exec(`CREATE TABLE IF NOT EXISTS semantic_memory (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         text TEXT NOT NULL,
         vector JSON NOT NULL,
