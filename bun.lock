@@ -14,7 +14,7 @@
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "satidb": "latest",
-        "smart-agent-ai": "2.5.0",
+        "smart-agent-ai": "2.5.1",
         "sqlite-zod-orm": "^3.26.0",
         "zod": "^3.22.0",
       },
@@ -518,7 +518,7 @@
 
     "side-channel-weakmap": ["side-channel-weakmap@1.0.2", "", { "dependencies": { "call-bound": "^1.0.2", "es-errors": "^1.3.0", "get-intrinsic": "^1.2.5", "object-inspect": "^1.13.3", "side-channel-map": "^1.0.1" } }, "sha512-WPS/HvHQTYnHisLo9McqBHOJk2FkHO/tlpvldyrnem4aeQp4hai3gythswg6p01oSoTl58rcpiFAjF2br2Ak2A=="],
 
-    "smart-agent-ai": ["smart-agent-ai@2.5.0", "", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "0.1.5", "measure-fn": "^3.10.2" } }, "sha512-4qH5QTIzHBVyfYja3d3bRSby63aaOmHWAbV3Dl+ADjhPwmyedusbT85WKkh+6HWzUoDDrnE9pXDhj9V5PTzjew=="],
+    "smart-agent-ai": ["smart-agent-ai@2.5.1", "", { "dependencies": { "js-yaml": "^4.1.0", "jsx-ai": "0.1.5", "measure-fn": "^3.10.2" } }, "sha512-wHAfI+vB8F71s0PVaY7Uwu74aqlP/NTSOcQ8tKRE4zLp5+85XLCVCjgIXlRuydsjkJi4Pm2/yLP9K6F5g1Q9yw=="],
 
     "source-map-js": ["source-map-js@1.2.1", "", {}, "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="],
 

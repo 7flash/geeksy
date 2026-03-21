@@ -197,6 +197,19 @@ export async function POST(req: Request) {
     if (body.agentId) agentEnv.AGENT_ID = String(body.agentId)
     if (body.dbSessionId) agentEnv.SESSION_ID = String(body.dbSessionId)
 
+    // Context limits per model family (conservative defaults — leave room for response)
+    const contextLimits: Record<string, number> = {
+        'gemini-2.5-flash': 800_000,
+        'gemini-2.5-pro': 800_000,
+        'gemini-2.0-flash': 800_000,
+        'gemini-3': 800_000,
+        'claude': 150_000,
+        'gpt-4': 100_000,
+        'deepseek': 50_000,
+        'qwen': 100_000,
+    }
+    const maxContextTokens = Object.entries(contextLimits).find(([prefix]) => model.startsWith(prefix))?.[1] ?? 100_000
+
     const config: AgentConfig = {
         model,
         cwd,
@@ -206,6 +219,7 @@ export async function POST(req: Request) {
         systemPrompt,
         tools: [createScheduleTool(body.agentId, body.dbSessionId), ...createSecretTools(body.agentId, body.dbSessionId), ...createSkillDiscoveryTools()],
         env: agentEnv,
+        maxContextTokens,
     }
 
     const promptTrace = {
